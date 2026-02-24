@@ -1,0 +1,783 @@
+﻿@model List<ilkimPlastik.WEB.Entities.Product>
+@using ilkimPlastik.WEB.Entities
+@{
+    Layout = "~/Areas/Admin/Views/Shared/_Layout.cshtml";
+
+    var ok = TempData["OK"] as string;
+    var err = TempData["ERR"] as string;
+
+    var form = ViewBag.Form as Product;
+    var edit = ViewBag.Edit as Product;
+    var isEdit = (form?.Id ?? edit?.Id ?? 0) > 0;
+
+    var categories = ViewBag.Categories as List<Category> ?? new();
+    var devices = ViewBag.Devices as List<ProductDevice> ?? new();
+
+    var selectedDeviceIds = (ViewBag.SelectedDeviceIds as HashSet<int>)
+        ?? ((edit?.ProductDevices ?? new List<ProductDevice>()).Select(x => x.Id).ToHashSet());
+
+    var featureRows = (ViewBag.FeatureRows as List<(string name, string? desc)>)
+        ?? (isEdit ? (edit?.ProductFeatures ?? new List<ProductFeature>()).Select(x => (x.Name, x.Description)).ToList()
+                   : new List<(string, string?)> { ("", "") });
+
+    var sizeRows = (ViewBag.SizeRows as List<(string name, int stock)>)
+        ?? (isEdit ? (edit?.ProductSizes ?? new List<ProductSize>()).Select(x => (x.Name, x.StockCount)).ToList()
+                   : new List<(string, int)> { ("", 0) });
+
+    var vm = form ?? edit ?? new Product();
+
+    bool HasErr(string key) => ViewData.ModelState.ContainsKey(key) && ViewData.ModelState[key]!.Errors.Count > 0;
+    string ErrText(string key) => HasErr(key) ? ViewData.ModelState[key]!.Errors[0].ErrorMessage : "";
+
+    string ImgUrl(ImageItem img) => $"/uploads/products/{img.Filename}";
+    string Money(decimal v) => v.ToString("0.00");
+
+    var grouped = Model
+        .GroupBy(x => string.IsNullOrWhiteSpace(x.ModelCode) ? "(ModelCode Yok)" : x.ModelCode.Trim())
+        .OrderBy(g => g.Key)
+        .ToList();
+
+    const int MAX_OFFER = 95;
+}
+
+<style>
+    :root{
+        --bg:#f6f7fb; --card:#fff; --text:#0f172a; --muted:#64748b; --muted2:#94a3b8;
+        --bd:#e5e7eb; --bd2:#d7dbe6;
+        --pri:#5D12D2; --pri2:#7b3ff0; --priSoft: rgba(93,18,210,.10);
+        --ok:#16a34a; --okSoft: rgba(22,163,74,.10);
+        --warn:#d97706; --warnSoft: rgba(217,119,6,.12);
+        --danger:#e11d48; --dangerSoft: rgba(225,29,72,.10);
+        --shadow:0 18px 45px rgba(15,23,42,.08);
+        --shadow2:0 10px 28px rgba(15,23,42,.08);
+        --radius:18px; --focus:0 0 0 4px rgba(93,18,210,.12);
+    }
+    *{box-sizing:border-box}
+    .page{padding:18px}
+    .shell{max-width:1500px;margin:0 auto;display:grid;grid-template-columns:430px 1fr;gap:16px;align-items:start}
+    .card{background:var(--card);border:1px solid var(--bd);border-radius:var(--radius);box-shadow:var(--shadow2);overflow:hidden}
+    .cardHead{padding:14px 16px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;gap:12px;background:linear-gradient(180deg,#fff,#fbfbff)}
+    .title{display:flex;flex-direction:column;gap:4px;min-width:0}
+    .title b{font-size:14px;font-weight:950;letter-spacing:.2px}
+    .title span{font-size:12px;color:var(--muted)}
+    .btn{border:1px solid var(--bd);background:#fff;padding:10px 12px;border-radius:12px;cursor:pointer;font-weight:900;font-size:13px;transition:.15s ease;display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+    .btn:hover{transform:translateY(-1px);box-shadow:0 10px 18px rgba(15,23,42,.06);border-color:var(--bd2)}
+    .btn.pri{background:linear-gradient(180deg,var(--pri2),var(--pri));border-color:transparent;color:#fff;box-shadow:0 14px 24px rgba(93,18,210,.18)}
+    .btn.danger{border-color:rgba(225,29,72,.22);background:var(--dangerSoft);color:#9f1239}
+    .btn.sm{padding:8px 10px;border-radius:11px;font-size:12px}
+
+    .toast{margin:12px 16px 0 16px;padding:10px 12px;border-radius:14px;border:1px solid var(--bd);background:#fff;font-size:13px}
+    .toast.ok{border-color:rgba(22,163,74,.22);background:var(--okSoft)}
+    .toast.err{border-color:rgba(225,29,72,.22);background:var(--dangerSoft)}
+
+    .searchBar{padding:12px 16px;border-bottom:1px solid var(--bd);background:#fff;display:flex;gap:10px;align-items:center}
+    .searchBar input{width:100%;height:42px;border-radius:14px;border:1px solid var(--bd);padding:0 12px;outline:none;background:#fff;color:var(--text);font-size:14px}
+    .searchBar input:focus{border-color:rgba(93,18,210,.35);box-shadow:var(--focus)}
+
+    .groups{padding:8px 0}
+    .group{border-top:1px solid var(--bd)}
+    .group:first-child{border-top:0}
+    .gHead{padding:12px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;background:#fff}
+    .gHead .left{display:flex;flex-direction:column;gap:3px;min-width:0}
+    .gHead .left b{font-size:13px;font-weight:950;letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:320px}
+    .gHead .left span{font-size:12px;color:var(--muted)}
+    .gHead .chev{width:34px;height:34px;border-radius:12px;border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;background:#fff;color:var(--muted);transition:.15s ease}
+    .gHead:hover .chev{border-color:var(--bd2)}
+    .gItems{padding:12px 12px 6px 12px;background:#fff}
+
+    .item{border:1px solid var(--bd);border-radius:18px;padding:12px;margin:10px 0;background:#fff;box-shadow:0 10px 18px rgba(15,23,42,.04);display:flex;gap:12px;align-items:flex-start;justify-content:space-between;transition:transform .08s ease,box-shadow .12s ease,border-color .12s ease}
+    .item:hover{transform:translateY(-1px);border-color:var(--bd2);box-shadow:0 14px 24px rgba(15,23,42,.06)}
+    .item.sale{border-color:rgba(217,119,6,.22);background:linear-gradient(180deg,#fff,#fff7ed)}
+    .item .t{min-width:0;flex:1}
+    .pTitle{font-weight:950;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:270px}
+    .meta{margin-top:6px;font-size:12px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid var(--bd);background:#fff;font-size:12px;font-weight:900;color:var(--muted);white-space:nowrap}
+    .badge.sale{border-color:rgba(217,119,6,.25);background:var(--warnSoft);color:#9a3412}
+    .priceBox{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+    .pNow{font-weight:950;color:var(--text)}
+    .pOld{color:var(--muted);text-decoration:line-through;font-size:12px}
+    .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+
+    .body{padding:16px}
+    label{display:block;font-size:12px;color:var(--muted);margin:12px 0 7px}
+    input,textarea,select{width:100%;border:1px solid var(--bd);border-radius:14px;padding:11px 12px;outline:none;background:#fff;color:var(--text);font-size:14px}
+    input:focus,textarea:focus,select:focus{border-color:rgba(93,18,210,.35);box-shadow:var(--focus)}
+    textarea{min-height:96px;resize:vertical}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+    .row{display:flex;gap:10px;align-items:center}
+    .row.end{justify-content:flex-end}
+    .fieldErr{margin-top:6px;font-size:12px;font-weight:950;color:#b42318}
+    .inputErr{border-color:#ef4444!important;background:#fff1f2!important}
+
+    .saleCard{margin-top:12px;border:1px solid rgba(217,119,6,.25);background:linear-gradient(180deg,#fff,#fff7ed);border-radius:18px;padding:14px;box-shadow:0 12px 22px rgba(15,23,42,.04)}
+    .saleTop{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+    .saleTop .left{display:flex;flex-direction:column;gap:4px}
+    .saleTop .left b{font-size:13px;font-weight:950}
+    .mini{font-size:12px;color:var(--muted)}
+    .saleQuick{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+    .pill{border:1px solid rgba(217,119,6,.25);background:#fff;color:#9a3412;padding:8px 10px;border-radius:999px;font-weight:950;font-size:12px;cursor:pointer;transition:.15s ease}
+    .pill:hover{transform:translateY(-1px);box-shadow:0 10px 18px rgba(15,23,42,.06)}
+
+    .chipbox{display:flex;flex-wrap:wrap;gap:8px;padding:10px;border:1px solid var(--bd);border-radius:14px;background:#fff;max-height:180px;overflow:auto}
+    .chip{display:flex;align-items:center;gap:8px;border:1px solid var(--bd);border-radius:999px;padding:8px 10px;background:#fff;font-size:13px}
+    .chip input{width:auto}
+
+    .imgGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+    .imgCard{border:1px solid var(--bd);border-radius:16px;overflow:hidden;background:#fff;box-shadow:0 10px 18px rgba(15,23,42,.05)}
+    .imgCard .thumb{width:100%;aspect-ratio:1/1;background:#f3f4f6;overflow:hidden}
+    .imgCard img{width:100%;height:100%;object-fit:cover;display:block}
+    .imgCard .foot{padding:8px 10px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--bd);font-size:12px;color:var(--muted)}
+    .imgCard .foot label{margin:0;display:flex;gap:8px;align-items:center;color:var(--muted)}
+    .imgCard .foot input{width:auto}
+
+    .rep{border:1px solid var(--bd);border-radius:16px;overflow:hidden;background:#fff;box-shadow:0 10px 18px rgba(15,23,42,.05)}
+    .rep .rhead{padding:12px 14px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center;background:linear-gradient(180deg,#fff,#fbfbff)}
+    .rep .rhead .ttl{font-weight:950}
+    .rep table{width:100%;border-collapse:collapse}
+    .rep th,.rep td{padding:10px 12px;border-bottom:1px solid var(--bd);text-align:left;font-size:13px}
+    .rep th{font-size:12px;color:var(--muted);background:#fff}
+    .rep tr:last-child td{border-bottom:0}
+    .iconBtn{border:1px solid var(--bd);background:#fff;width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.15s ease}
+    .iconBtn:hover{border-color:var(--bd2);box-shadow:0 10px 18px rgba(15,23,42,.06)}
+
+    .modalBg{display:none;position:fixed;inset:0;background:rgba(15,23,42,.38);z-index:120;align-items:center;justify-content:center;padding:16px}
+    .modal{width:600px;max-width:100%;background:#fff;border:1px solid var(--bd);border-radius:20px;box-shadow:var(--shadow);overflow:hidden}
+    .modalHd{padding:12px 14px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center;background:linear-gradient(180deg,#fff,#fbfbff)}
+    .modalHd .ttl{font-weight:950}
+    .modalBd{padding:14px}
+    .rangeRow{display:flex;gap:10px;align-items:center}
+    .rangeRow input[type=range]{width:100%}
+    .kpi{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px}
+    .kpi .box{border:1px solid var(--bd);border-radius:16px;padding:10px 12px;background:#fff;min-width:160px}
+    .kpi .box b{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+    .kpi .box span{font-weight:950}
+
+    @@media(max-width:1150px){.shell{grid-template-columns:1fr}.imgGrid{grid-template-columns:repeat(3,1fr)}}
+    @@media(max-width:760px){.grid,.grid3{grid-template-columns:1fr}.imgGrid{grid-template-columns:repeat(2,1fr)}}
+</style>
+
+<div class="page">
+    <div class="shell">
+
+        <div class="card">
+            <div class="cardHead">
+                <div class="title">
+                    <b>Ürünler</b>
+                    <span>ModelCode’a göre gruplanır • Hızlı arama + indirim yönetimi</span>
+                </div>
+                <a class="btn pri" href="/Admin/Product">+ Yeni Ürün</a>
+            </div>
+
+            <div class="searchBar">
+                <input id="listSearch" placeholder="Ürün / model / barkod / kategori ara…" />
+            </div>
+
+            <div class="groups">
+                @foreach (var g in grouped)
+                {
+                    <div class="group">
+                        <div class="gHead" onclick="toggleGroup(this)">
+                            <div class="left">
+                                <b>@g.Key</b>
+                                <span>@g.Count() ürün</span>
+                            </div>
+                            <div class="chev">▼</div>
+                        </div>
+
+                        <div class="gItems">
+                            @foreach (var p in g.OrderByDescending(x => x.Id))
+                            {
+                                var isSale = p.OfferRate > 0;
+                                var catName = p.Category?.Name ?? "Kategori";
+                                var subName = p.SubCategory != null ? " • " + p.SubCategory.Name : "";
+                                var discounted = isSale ? Math.Round(p.Price * (100 - p.OfferRate) / 100m, 2) : p.Price;
+
+                                <div class="item @(isSale ? "sale" : "")"
+                                     data-search="@($"{p.Title} {p.ModelCode} {p.Barcode} {catName} {(p.SubCategory?.Name ?? "")}".ToLower())">
+
+                                    <div class="t">
+                                        <div class="pTitle" title="@p.Title">@p.Title</div>
+
+                                        <div class="meta">
+                                            <span class="badge">@catName@subName</span>
+                                            <span class="badge">Barkod: @p.Barcode</span>
+
+                                            @if (isSale)
+                                            {
+                                                <a class="badge sale" href="javascript:void(0)"
+                                                   onclick="openDiscountModal(@p.Id, '@(p.Title?.Replace("'", "\\'") ?? "")', @p.Price, @p.OfferRate)">
+                                                    İndirim %@p.OfferRate
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <a class="badge" href="javascript:void(0)"
+                                                   onclick="openDiscountModal(@p.Id, '@(p.Title?.Replace("'", "\\'") ?? "")', @p.Price, 0)">
+                                                    + İndirim Tanımla
+                                                </a>
+                                            }
+
+                                            <span class="priceBox">
+                                                @if (isSale)
+                                                {
+                                                    <span class="pOld">₺ @Money(p.Price)</span>
+                                                    <span class="pNow">₺ @Money(discounted)</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="pNow">₺ @Money(p.Price)</span>
+                                                }
+                                            </span>
+                                        </div>
+
+                                        <div class="mini" style="margin-top:10px">
+                                            Model: <b>@p.ModelCode</b> • ID: <b>#@p.Id</b>
+                                        </div>
+                                    </div>
+
+                                    <div class="actions">
+                                        <a class="btn sm" href="/Admin/Product?editId=@p.Id">Düzenle</a>
+
+                                        <form method="post" action="/Admin/Product/Delete" onsubmit="return confirm('Ürün silinsin mi?');">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@p.Id" />
+                                            <button class="btn sm danger" type="submit">Sil</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="cardHead">
+                <div class="title">
+                    <b>@(isEdit ? "Ürün Güncelle" : "Yeni Ürün")</b>
+                    <span>@(isEdit ? $"Düzenlenen: #{vm.Id}" : "Yeni ürün kaydı oluştur")</span>
+                </div>
+                <div class="row">
+                    @if (isEdit)
+                    {<a class="btn" href="/Admin/Product">Kapat</a>}
+                </div>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(ok))
+            {<div class="toast ok">@ok</div>}
+            @if (!string.IsNullOrWhiteSpace(err))
+            {<div class="toast err">@err</div>}
+
+            <div class="body">
+                @if (!ViewData.ModelState.IsValid)
+                {
+                    <div class="toast err">Formda hatalar var. Kırmızı alanları düzeltip tekrar kaydedin.</div>
+                }
+
+                <form method="post" action="/Admin/Product/Upsert" enctype="multipart/form-data">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="Id" value="@(vm.Id)" />
+
+                    <div class="grid">
+                        <div>
+                            <label>Ürün Adı</label>
+                            <input name="Title" value="@(vm.Title ?? "")" class="@(HasErr(nameof(vm.Title)) ? "inputErr" : "")" />
+                            @if (HasErr(nameof(vm.Title)))
+                            {<div class="fieldErr">@ErrText(nameof(vm.Title))</div>}
+                        </div>
+                        <div>
+                            <label>Fiyat (₺)</label>
+                            <input id="Price" name="Price" inputmode="decimal" value="@(vm.Price)" class="@(HasErr(nameof(vm.Price)) ? "inputErr" : "")" />
+                            @if (HasErr(nameof(vm.Price)))
+                            {<div class="fieldErr">@ErrText(nameof(vm.Price))</div>}
+                        </div>
+                        <div>
+                            <label>Slug</label>
+                            <input name="Slug" value="@(vm.Slug ?? "")" class="@(HasErr(nameof(vm.Slug)) ? "inputErr" : "")" />
+                            @if (HasErr(nameof(vm.Slug)))
+                            {
+                                <div class="fieldErr">@ErrText(nameof(vm.Slug))</div>
+                            }
+                        </div>
+                    </div>
+
+
+                    <div class="saleCard">
+                        <div class="saleTop">
+                            <div class="left">
+                                <b>İndirim</b>
+                                <span class="mini">0 = kapalı • Maksimum %95 uygulanabilir.</span>
+                            </div>
+                            <span class="badge sale" id="saleBadge">@(vm.OfferRate > 0 ? $"İndirim %{vm.OfferRate}" : "İndirim Kapalı")</span>
+                        </div>
+
+                        <div class="grid" style="margin-top:10px">
+                            <div>
+                                <label>İndirim Oranı (%)</label>
+                                <input id="OfferRate" name="OfferRate" type="number" min="0" max="@MAX_OFFER" value="@(vm.OfferRate)"
+                                       class="@(HasErr(nameof(vm.OfferRate)) ? "inputErr" : "")" />
+                                @if (HasErr(nameof(vm.OfferRate)))
+                                {<div class="fieldErr">@ErrText(nameof(vm.OfferRate))</div>}
+                            </div>
+                            <div>
+                                <label>İndirimli Fiyat (önizleme)</label>
+                                <input id="DiscountedPreview" value="" readonly />
+                                <div class="mini" id="DiscountedHint"></div>
+                            </div>
+                        </div>
+
+                        <div class="saleQuick">
+                            <button type="button" class="pill" onclick="setOffer(0)">%0</button>
+                            <button type="button" class="pill" onclick="setOffer(5)">%5</button>
+                            <button type="button" class="pill" onclick="setOffer(10)">%10</button>
+                            <button type="button" class="pill" onclick="setOffer(15)">%15</button>
+                            <button type="button" class="pill" onclick="setOffer(20)">%20</button>
+                            <button type="button" class="pill" onclick="setOffer(30)">%30</button>
+                            <button type="button" class="pill" onclick="setOffer(40)">%40</button>
+                            <button type="button" class="pill" onclick="setOffer(50)">%50</button>
+                            <button type="button" class="pill" onclick="setOffer(95)">%95</button>
+                        </div>
+                    </div>
+
+                    <div class="grid3">
+                        <div>
+                            <label>Barcode</label>
+                            <input name="Barcode" value="@(vm.Barcode ?? "")" class="@(HasErr(nameof(vm.Barcode)) ? "inputErr" : "")" />
+                            @if (HasErr(nameof(vm.Barcode)))
+                            {<div class="fieldErr">@ErrText(nameof(vm.Barcode))</div>}
+                        </div>
+                        <div>
+                            <label>Model Kodu</label>
+                            <input name="ModelCode" value="@(vm.ModelCode ?? "")" class="@(HasErr(nameof(vm.ModelCode)) ? "inputErr" : "")" />
+                            @if (HasErr(nameof(vm.ModelCode)))
+                            {<div class="fieldErr">@ErrText(nameof(vm.ModelCode))</div>}
+                        </div>
+                        <div>
+                            <label>Anahtar Kelimeler (ops.)</label>
+                            <input name="Keywords" value="@(vm.Keywords ?? "")" />
+                        </div>
+                    </div>
+
+                    <label>Açıklama (ops.)</label>
+                    <textarea name="Description">@(vm.Description ?? "")</textarea>
+
+                    <div class="grid">
+                        <div>
+                            <label>Kategori</label>
+                            <input id="catText" list="catList" placeholder="Kategori ara ve seç"
+                                   value="@(vm.CategoryId > 0 ? categories.FirstOrDefault(c=>c.Id==vm.CategoryId)?.Name : "")"
+                                   class="@(HasErr(nameof(vm.CategoryId)) ? "inputErr" : "")" />
+                            <datalist id="catList">
+                                @foreach (var c in categories)
+                                {
+                                    <option data-id="@c.Id" value="@c.Name"></option>
+}
+                            </datalist>
+                            <input type="hidden" id="CategoryId" name="CategoryId" value="@(vm.CategoryId)" />
+                            @if (HasErr(nameof(vm.CategoryId)))
+                            {<div class="fieldErr">@ErrText(nameof(vm.CategoryId))</div>}
+                        </div>
+
+                        <div id="subWrap" style="display:none">
+                            <label>Alt Kategori (ops.)</label>
+                            <select id="SubCategoryId" name="SubCategoryId" class="@(HasErr(nameof(vm.SubCategoryId)) ? "inputErr" : "")">
+                                <option value="">Seçmek zorunlu değil</option>
+                            </select>
+                            @if (HasErr(nameof(vm.SubCategoryId)))
+                            {<div class="fieldErr">@ErrText(nameof(vm.SubCategoryId))</div>}
+                        </div>
+                    </div>
+
+                    <div style="display:flex;justify-content:space-between;align-items:end;gap:10px;margin-top:6px">
+                        <div style="flex:1">
+                            <label>Uyumlu Cihazlar (ops.)</label>
+                            <input id="devSearch" placeholder="Cihaz ara…" />
+                        </div>
+                        <button type="button" class="btn" onclick="openDeviceModal()">+ Yeni Cihaz</button>
+                    </div>
+
+                    <div class="chipbox" id="devBox">
+                        @foreach (var d in devices)
+                        {
+                            <label class="chip" data-dev="@d.Name.ToLower()">
+                                <input type="checkbox" name="deviceIds" value="@d.Id" @(selectedDeviceIds.Contains(d.Id) ? "checked" : "") />
+                                <span>@d.Name</span>
+                            </label>
+                        }
+                    </div>
+
+                    <div style="margin-top:14px"></div>
+                    <label>Resimler (çoklu yükleme)</label>
+                    <input type="file" name="newImages" multiple accept=".jpg,.jpeg,.png,.webp" />
+
+                    @if (isEdit && edit != null && edit.ImageItems != null && edit.ImageItems.Any())
+                    {
+                        <div style="margin-top:10px" class="imgGrid">
+                            @foreach (var img in edit.ImageItems.OrderByDescending(x => x.Id))
+                            {
+                                <div class="imgCard">
+                                    <div class="thumb"><img src="@ImgUrl(img)" alt="img" /></div>
+                                    <div class="foot">
+                                        <span>#@img.Id</span>
+                                        <label><input type="checkbox" name="deleteImageIds" value="@img.Id" /> Sil</label>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    <div style="margin-top:14px"></div>
+                    <div class="rep">
+                        <div class="rhead">
+                            <div class="ttl">Özellikler (ops.)</div>
+                            <button class="btn" type="button" onclick="addFeatureRow()">+ Ekle</button>
+                        </div>
+                        <table>
+                            <thead><tr><th>Özellik</th><th>Açıklama</th><th style="width:56px"></th></tr></thead>
+                            <tbody id="featBody">
+                                @if (featureRows.Count == 0)
+                                {
+                                    <tr>
+                                        <td><input name="featureNames" /></td>
+                                        <td><input name="featureDescriptions" /></td>
+                                        <td><button class="iconBtn" type="button" onclick="removeRow(this)">✕</button></td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    foreach (var f in featureRows)
+                                    {
+                                        <tr>
+                                            <td><input name="featureNames" value="@f.name" /></td>
+                                            <td><input name="featureDescriptions" value="@f.desc" /></td>
+                                            <td><button class="iconBtn" type="button" onclick="removeRow(this)">✕</button></td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div style="margin-top:14px"></div>
+                    <div class="rep">
+                        <div class="rhead">
+                            <div class="ttl">Boyut & Stok</div>
+                            <button class="btn" type="button" onclick="addSizeRow()">+ Ekle</button>
+                        </div>
+                        <table>
+                            <thead><tr><th>Boyut</th><th>Stok</th><th style="width:56px"></th></tr></thead>
+                            <tbody id="sizeBody">
+                                @if (sizeRows.Count == 0)
+                                {
+                                    <tr>
+                                        <td><input name="sizeNames" /></td>
+                                        <td><input name="sizeStocks" type="number" min="0" value="0" /></td>
+                                        <td><button class="iconBtn" type="button" onclick="removeRow(this)">✕</button></td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    foreach (var s in sizeRows)
+                                    {
+                                        <tr>
+                                            <td><input name="sizeNames" value="@s.name" /></td>
+                                            <td><input name="sizeStocks" type="number" min="0" value="@s.stock" /></td>
+                                            <td><button class="iconBtn" type="button" onclick="removeRow(this)">✕</button></td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="row end" style="margin-top:14px">
+                        <a class="btn" href="/Admin/Product">Temizle</a>
+                        <button class="btn pri" type="submit">Kaydet</button>
+                    </div>
+                </form>
+
+                <div id="devModal" class="modalBg">
+                    <div class="modal">
+                        <div class="modalHd">
+                            <div class="ttl">Yeni Cihaz Ekle</div>
+                            <button class="btn" type="button" onclick="closeDeviceModal()">Kapat</button>
+                        </div>
+                        <div class="modalBd">
+                            <form method="post" action="/Admin/Product/QuickAddDevice">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="backEditId" value="@(vm.Id > 0 ? vm.Id : (int?)null)" />
+                                <label>Cihaz Adı</label>
+                                <input name="deviceName" />
+                                <div class="row end" style="margin-top:12px">
+                                    <button class="btn pri" type="submit">Ekle</button>
+                                </div>
+                            </form>
+                            <div class="mini" style="margin-top:10px">Ekleme sonrası cihaz listesi güncellenir.</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div id="discountModal" class="modalBg">
+    <div class="modal">
+        <div class="modalHd">
+            <div class="ttl">Hızlı İndirim Tanımla</div>
+            <button class="btn" type="button" onclick="closeDiscountModal()">Kapat</button>
+        </div>
+        <div class="modalBd">
+            <div class="mini" id="dmTitle"></div>
+
+            <form method="post" action="/Admin/Product/SetDiscount">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" id="dmProductId" value="0" />
+                <input type="hidden" name="backEditId" value="@(vm.Id > 0 ? vm.Id : (int?)null)" />
+
+                <label>İndirim Oranı (%) (Maks: @MAX_OFFER)</label>
+                <div class="rangeRow">
+                    <input type="range" min="0" max="@MAX_OFFER" step="1" id="dmRange" oninput="syncDmRate(this.value)" />
+                    <input type="number" min="0" max="@MAX_OFFER" name="OfferRate" id="dmRate" value="0" style="width:120px" oninput="syncDmRange(this.value)" />
+                </div>
+
+                <div class="kpi">
+                    <div class="box"><b>Liste Fiyatı</b><span id="dmPrice">₺ 0.00</span></div>
+                    <div class="box"><b>İndirimli Fiyat</b><span id="dmDiscounted">₺ 0.00</span></div>
+                    <div class="box"><b>İndirim</b><span id="dmBadge">%0</span></div>
+                </div>
+
+                <div class="saleQuick" style="margin-top:12px">
+                    <button type="button" class="pill" onclick="setDmOffer(0)">%0</button>
+                    <button type="button" class="pill" onclick="setDmOffer(10)">%10</button>
+                    <button type="button" class="pill" onclick="setDmOffer(20)">%20</button>
+                    <button type="button" class="pill" onclick="setDmOffer(30)">%30</button>
+                    <button type="button" class="pill" onclick="setDmOffer(40)">%40</button>
+                    <button type="button" class="pill" onclick="setDmOffer(50)">%50</button>
+                    <button type="button" class="pill" onclick="setDmOffer(95)">%95</button>
+                </div>
+
+                <div class="row end" style="margin-top:14px">
+                    <button class="btn" type="button" onclick="setDmOffer(0)">İndirimi Kaldır</button>
+                    <button class="btn pri" type="submit">Uygula</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+const MAX_OFFER = @MAX_OFFER;
+
+/* Grup aç/kapa */
+function toggleGroup(el){
+    const body = el.parentElement.querySelector('.gItems');
+    const chev = el.querySelector('.chev');
+    const open = body.style.display !== 'none';
+    body.style.display = open ? 'none' : 'block';
+    chev.textContent = open ? '►' : '▼';
+}
+
+/* Sol liste arama */
+const search = document.getElementById('listSearch');
+search?.addEventListener('input', () => {
+    const q = (search.value || '').trim().toLowerCase();
+    document.querySelectorAll('.item').forEach(it => {
+        const s = it.getAttribute('data-search') || '';
+        it.style.display = s.includes(q) ? '' : 'none';
+    });
+    document.querySelectorAll('.group').forEach(g => {
+        const anyVisible = Array.from(g.querySelectorAll('.item')).some(x => x.style.display !== 'none');
+        g.style.display = anyVisible ? '' : 'none';
+    });
+});
+
+/* Device search + modal */
+const devSearch = document.getElementById('devSearch');
+devSearch?.addEventListener('input', () => {
+    const q = (devSearch.value || '').trim().toLowerCase();
+    document.querySelectorAll('#devBox .chip').forEach(ch => {
+        const s = ch.getAttribute('data-dev') || '';
+        ch.style.display = s.includes(q) ? '' : 'none';
+    });
+});
+function openDeviceModal(){ document.getElementById('devModal').style.display='flex'; }
+function closeDeviceModal(){ document.getElementById('devModal').style.display='none'; }
+
+/* Repeater */
+function removeRow(btn){
+    const tr = btn.closest('tr');
+    const tbody = tr.parentElement;
+    tr.remove();
+    if (tbody.children.length === 0){
+        if (tbody.id === 'sizeBody') addSizeRow();
+        if (tbody.id === 'featBody') addFeatureRow();
+    }
+}
+function addSizeRow(){
+    const tb = document.getElementById('sizeBody');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+        <td><input name="sizeNames" /></td>
+        <td><input name="sizeStocks" type="number" min="0" value="0" /></td>
+        <td><button class="iconBtn" type="button" onclick="removeRow(this)">✕</button></td>
+    `;
+    tb.appendChild(tr);
+}
+function addFeatureRow(){
+    const tb = document.getElementById('featBody');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+        <td><input name="featureNames" /></td>
+        <td><input name="featureDescriptions" /></td>
+        <td><button class="iconBtn" type="button" onclick="removeRow(this)">✕</button></td>
+    `;
+    tb.appendChild(tr);
+}
+
+/* Kategori -> Alt kategori */
+const catText = document.getElementById('catText');
+const catId = document.getElementById('CategoryId');
+const subWrap = document.getElementById('subWrap');
+const subSel = document.getElementById('SubCategoryId');
+
+function resolveCategoryIdByName(name){
+    const options = document.querySelectorAll('#catList option');
+    for (const o of options){
+        if ((o.value || '').toLowerCase() === (name || '').toLowerCase()){
+            return o.getAttribute('data-id');
+        }
+    }
+    return null;
+}
+async function loadSubs(categoryId, selectedSubId){
+    if(!categoryId || categoryId === "0"){
+        subWrap.style.display = 'none';
+        subSel.innerHTML = `<option value="">Seçmek zorunlu değil</option>`;
+        return;
+    }
+    const res = await fetch(`/Admin/Product/GetSubCategories?categoryId=${categoryId}`);
+    const data = await res.json();
+    if(!data || data.length === 0){
+        subWrap.style.display = 'none';
+        subSel.innerHTML = `<option value="">Seçmek zorunlu değil</option>`;
+        return;
+    }
+    subWrap.style.display = 'block';
+    subSel.innerHTML = `<option value="">Seçmek zorunlu değil</option>` + data.map(x => {
+        const sel = (selectedSubId && String(selectedSubId) === String(x.id)) ? 'selected' : '';
+        return `<option value="${x.id}" ${sel}>${x.name}</option>`;
+    }).join('');
+}
+catText?.addEventListener('change', async () => {
+    const id = resolveCategoryIdByName(catText.value);
+    catId.value = id ? id : 0;
+    await loadSubs(catId.value, null);
+});
+
+/* İndirim önizleme (0–95) */
+const priceEl = document.getElementById('Price');
+const offerEl = document.getElementById('OfferRate');
+const prevEl = document.getElementById('DiscountedPreview');
+const hintEl = document.getElementById('DiscountedHint');
+const saleBadge = document.getElementById('saleBadge');
+
+function clamp(n, min, max){
+    n = Number(String(n).replace(",", "."));
+    if (Number.isNaN(n)) n = 0;
+    return Math.min(max, Math.max(min, n));
+}
+function money(v){
+    const n = Number(v);
+    if (Number.isNaN(n)) return "0.00";
+    return n.toFixed(2);
+}
+function refreshDiscountPreview(){
+    const price = clamp((priceEl?.value || "0"), 0, 999999999);
+    const rate = clamp((offerEl?.value || 0), 0, MAX_OFFER);
+    if (offerEl) offerEl.value = rate;
+
+    const discounted = rate <= 0 ? price : (price * (100 - rate) / 100);
+    if (prevEl) prevEl.value = money(discounted);
+    if (saleBadge) saleBadge.textContent = rate > 0 ? `İndirim %${rate}` : "İndirim Kapalı";
+
+    if (hintEl){
+        hintEl.textContent = rate > 0
+            ? `Liste: ₺ ${money(price)} → İndirimli: ₺ ${money(discounted)}`
+            : "İndirim uygulanmıyor.";
+    }
+}
+function setOffer(rate){
+    if (!offerEl) return;
+    offerEl.value = clamp(rate, 0, MAX_OFFER);
+    refreshDiscountPreview();
+}
+priceEl?.addEventListener('input', refreshDiscountPreview);
+offerEl?.addEventListener('input', refreshDiscountPreview);
+
+/* init */
+(async function init(){
+    const existingCategoryId = catId?.value && catId.value !== "0" ? catId.value : null;
+    const existingSubId = @((vm.SubCategoryId.HasValue ? vm.SubCategoryId.Value : 0));
+    if(existingCategoryId){
+        await loadSubs(existingCategoryId, existingSubId || null);
+        if(existingSubId) subWrap.style.display = 'block';
+    }
+    refreshDiscountPreview();
+})();
+
+/* Hızlı indirim modal (0–95) */
+let dmBasePrice = 0;
+
+function openDiscountModal(id, title, price, offerRate){
+    dmBasePrice = clamp(price, 0, 999999999);
+
+    document.getElementById('dmProductId').value = id;
+    document.getElementById('dmTitle').textContent = `Ürün: ${title} • ID: #${id}`;
+    document.getElementById('dmPrice').textContent = `₺ ${money(dmBasePrice)}`;
+
+    const r = clamp(offerRate, 0, MAX_OFFER);
+    document.getElementById('dmRange').value = r;
+    document.getElementById('dmRate').value = r;
+
+    updateDmKpi(r);
+    document.getElementById('discountModal').style.display='flex';
+}
+function closeDiscountModal(){
+    document.getElementById('discountModal').style.display='none';
+}
+function updateDmKpi(rate){
+    rate = clamp(rate, 0, MAX_OFFER);
+    const discounted = rate <= 0 ? dmBasePrice : (dmBasePrice * (100 - rate) / 100);
+    document.getElementById('dmDiscounted').textContent = `₺ ${money(discounted)}`;
+    document.getElementById('dmBadge').textContent = `%${rate}`;
+}
+function syncDmRate(v){
+    const r = clamp(v, 0, MAX_OFFER);
+    document.getElementById('dmRate').value = r;
+    updateDmKpi(r);
+}
+function syncDmRange(v){
+    const r = clamp(v, 0, MAX_OFFER);
+    document.getElementById('dmRange').value = r;
+    updateDmKpi(r);
+}
+function setDmOffer(r){
+    r = clamp(r, 0, MAX_OFFER);
+    document.getElementById('dmRange').value = r;
+    document.getElementById('dmRate').value = r;
+    updateDmKpi(r);
+}
+
+/* Modal arka plan tıklayınca kapat */
+document.getElementById('discountModal')?.addEventListener('click', (e) => {
+    if (e.target && e.target.id === 'discountModal') closeDiscountModal();
+});
+document.getElementById('devModal')?.addEventListener('click', (e) => {
+    if (e.target && e.target.id === 'devModal') closeDeviceModal();
+});
+</script>

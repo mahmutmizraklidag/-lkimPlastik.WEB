@@ -1,0 +1,462 @@
+﻿@model List<ilkimPlastik.WEB.Entities.Category>
+@using ilkimPlastik.WEB.Entities
+@{
+    Layout = "~/Areas/Admin/Views/Shared/_Layout.cshtml";
+
+    var ok = TempData["OK"] as string;
+    var err = TempData["ERR"] as string;
+
+    var edit = ViewBag.Edit as Category;
+    var isEdit = edit != null;
+
+    var editSub = ViewBag.EditSub as SubCategory;
+    var isEditSub = editSub != null;
+
+    int selectedCatId = (int)(ViewBag.SubCategoryCategoryId ?? 0);
+    var subList = ViewBag.SubList as List<SubCategory> ?? new();
+
+    var adminName = Context.Session.GetString("ADMIN_NAME") ?? "Admin";
+}
+
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Admin • Kategori Yönetimi</title>
+    <style>
+        :root {
+            --bg: #f6f7fb;
+            --card: #ffffff;
+            --text: #0f172a;
+            --muted: #6b7280;
+            --bd: #e5e7eb;
+            --bd2: #d7dbe6;
+            --pri: #5D12D2;
+            --pri2: #7b3ff0;
+            --danger: #e11d48;
+            --shadow: 0 18px 40px rgba(15,23,42,.10);
+            --shadow2: 0 8px 20px rgba(15,23,42,.08);
+            --r: 18px;
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        body {
+            font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial;
+            margin: 0;
+            background: var(--bg);
+            color: var(--text)
+        }
+
+        a {
+            color: var(--pri);
+            text-decoration: none
+        }
+
+        .top {
+            position: sticky;
+            top: 0;
+            z-index: 40;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 18px;
+            background: rgba(255,255,255,.86);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--bd);
+        }
+
+        .left {
+            display: flex;
+            gap: 10px;
+            align-items: center
+        }
+
+        .brand {
+            font-weight: 950
+        }
+
+        .pill {
+            font-size: 12px;
+            padding: 7px 10px;
+            border: 1px solid var(--bd);
+            border-radius: 999px;
+            background: #fff;
+            color: var(--muted)
+        }
+
+        .wrap {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 18px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--bd);
+            border-radius: var(--r);
+            box-shadow: var(--shadow2);
+            overflow: hidden;
+        }
+
+        .head {
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--bd);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(180deg,#fff,#fbfbff);
+        }
+
+            .head b {
+                font-weight: 950
+            }
+
+        .body {
+            padding: 14px
+        }
+
+        .msg {
+            padding: 10px 12px;
+            border-radius: 14px;
+            margin: 0 0 10px 0;
+            font-size: 13px;
+            border: 1px solid var(--bd);
+            background: #fff;
+        }
+
+            .msg.ok {
+                border-color: #b8f2d4;
+                background: #ecfdf5;
+                color: #065f46
+            }
+
+            .msg.er {
+                border-color: #fecdd3;
+                background: #fff1f2;
+                color: #9f1239
+            }
+
+        table {
+            width: 100%;
+            border-collapse: collapse
+        }
+
+        th, td {
+            padding: 10px 0;
+            border-bottom: 1px solid var(--bd);
+            text-align: left;
+            font-size: 13px;
+            vertical-align: top
+        }
+
+        th {
+            font-size: 12px;
+            color: var(--muted);
+            font-weight: 850
+        }
+
+        tr:last-child td {
+            border-bottom: 0
+        }
+
+        .rowbtn {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap
+        }
+
+        label {
+            display: block;
+            font-size: 12px;
+            color: var(--muted);
+            margin: 10px 0 6px
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 11px 12px;
+            border-radius: 14px;
+            border: 1px solid var(--bd2);
+            outline: none;
+            background: #fff;
+            color: var(--text);
+            font-size: 14px;
+            transition: border-color .15s ease, box-shadow .15s ease;
+        }
+
+            input:focus, textarea:focus, select:focus {
+                border-color: rgba(93,18,210,.45);
+                box-shadow: 0 0 0 4px rgba(93,18,210,.12);
+            }
+
+        textarea {
+            min-height: 90px;
+            resize: vertical
+        }
+
+        .btn {
+            border: 1px solid var(--bd);
+            background: #fff;
+            padding: 9px 11px;
+            border-radius: 14px;
+            cursor: pointer;
+            font-weight: 750;
+            font-size: 13px;
+        }
+
+            .btn.pri {
+                background: linear-gradient(180deg,var(--pri2),var(--pri));
+                border-color: transparent;
+                color: #fff;
+                box-shadow: 0 14px 20px rgba(93,18,210,.16);
+            }
+
+            .btn.danger {
+                border-color: #ffd0d8;
+                color: var(--danger);
+                background: #fff
+            }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1.2fr .8fr;
+            gap: 12px
+        }
+
+        .split {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            align-items: center
+        }
+
+        .mini {
+            font-size: 12px;
+            color: var(--muted)
+        }
+
+        @@media(max-width:1100px) {
+            .wrap {
+                grid-template-columns: 1fr
+            }
+        }
+    </style>
+</head>
+<body>
+
+    @*<div class="top">
+        <div class="left">
+            <div class="brand">Kategori Yönetimi</div>
+            <span class="pill">@adminName</span>
+            <a class="pill" href="/Admin/Home">Dashboard</a>
+        </div>
+        <div class="left" style="justify-content:flex-end;gap:10px;flex-wrap:wrap">
+            <a class="pill" href="/Admin/Product">Ürünler</a>
+            <a class="pill" href="/Admin/Device">Cihazlar</a>
+            <a class="pill" href="/Admin/Order">Siparişler</a>
+            <a class="pill" href="/Admin/Auth/Logout">Çıkış</a>
+        </div>
+    </div>*@
+
+    <div class="wrap">
+
+        <!-- SOL: KATEGORİLER -->
+        <div class="card">
+            <div class="head">
+                <b>Kategoriler</b>
+                <a class="btn" href="/Admin/Category">Yeni</a>
+            </div>
+            <div class="body">
+                @if (!string.IsNullOrWhiteSpace(ok))
+                {<div class="msg ok">@ok</div>}
+                @if (!string.IsNullOrWhiteSpace(err))
+                {<div class="msg er">@err</div>}
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:70px">ID</th>
+                            <th>Ad</th>
+                            <th>Açıklama</th>
+                            <th>Slug</th>
+                            <th style="width:160px">Alt Kategori</th>
+                            <th style="width:220px">İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var c in Model)
+                        {
+                            <tr>
+                                <td>@c.Id</td>
+                                <td style="font-weight:850">@c.Name</td>
+                                <td class="mini">@c.Description</td>
+                                <td class="mini">@c.Slug</td>
+                                <td class="mini">@((c.SubCategories?.Count ?? 0))</td>
+                                <td>
+                                    <div class="rowbtn">
+                                        <a class="btn" href="/Admin/Category?editId=@c.Id">Düzenle</a>
+                                        <a class="btn" href="/Admin/Category?subCategoryCategoryId=@c.Id">Alt Kategoriler</a>
+                                        <form method="post" action="/Admin/Category/Delete" onsubmit="return confirm('Kategori silinsin mi?');">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@c.Id" />
+                                            <button class="btn danger" type="submit">Sil</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+                <div style="height:14px"></div>
+
+                <div class="card" style="box-shadow:none;border-radius:14px">
+                    <div class="head">
+                        <b>@(isEdit ? "Kategori Güncelle" : "Yeni Kategori")</b>
+                        @if (isEdit)
+                        {
+                            <a class="btn" href="/Admin/Category">Kapat</a>
+                        }
+                    </div>
+                    <div class="body">
+                        <form method="post" action="/Admin/Category/Upsert">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="Id" value="@(edit?.Id ?? 0)" />
+
+                            <label>Kategori Adı</label>
+                            <input name="Name" value="@(edit?.Name ?? "")" />
+
+                            <label>Açıklama (ops.)</label>
+                            <textarea name="Description">@(edit?.Description ?? "")</textarea>
+
+                            <label>Slug</label>
+                            <input name="Slug" value="@(edit?.Slug ?? "")" />
+
+                            <div class="split" style="margin-top:12px">
+                                <span class="mini"></span>
+                                <button class="btn pri" type="submit">Kaydet</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- SAĞ: ALT KATEGORİLER -->
+        <div class="card">
+            <div class="head">
+                <b>Alt Kategoriler</b>
+                <a class="btn" href="/Admin/Category?subCategoryCategoryId=@selectedCatId">Yenile</a>
+            </div>
+            <div class="body">
+                <div class="grid">
+                    <div>
+                        <label>Kategori Seç</label>
+                        <select id="catSelect">
+                            @foreach (var c in Model.OrderBy(x => x.Name))
+                            {
+                                <option value="@c.Id" selected="@(c.Id == selectedCatId)">@c.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div style="display:flex;align-items:end;gap:10px">
+                        <a class="btn" href="/Admin/Category?subCategoryCategoryId=@selectedCatId">Yeni Alt Kategori</a>
+                    </div>
+                </div>
+
+                <div style="height:10px"></div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:70px">ID</th>
+                            <th>Alt Kategori Adı</th>
+                            <th style="width:220px">İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var s in subList)
+                        {
+                            <tr>
+                                <td>@s.Id</td>
+                                <td style="font-weight:850">@s.Name</td>
+                                <td>
+                                    <div class="rowbtn">
+                                        <a class="btn" href="/Admin/Category?editSubId=@s.Id&subCategoryCategoryId=@selectedCatId">Düzenle</a>
+                                        <form method="post" action="/Admin/Category/DeleteSub" onsubmit="return confirm('Alt kategori silinsin mi?');">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@s.Id" />
+                                            <input type="hidden" name="categoryId" value="@selectedCatId" />
+                                            <button class="btn danger" type="submit">Sil</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+                <div style="height:14px"></div>
+
+                <div class="card" style="box-shadow:none;border-radius:14px">
+                    <div class="head">
+                        <b>@(isEditSub ? "Alt Kategori Güncelle" : "Yeni Alt Kategori")</b>
+                        @if (isEditSub)
+                        {
+                            <a class="btn" href="/Admin/Category?subCategoryCategoryId=@selectedCatId">Kapat</a>
+                        }
+                    </div>
+                    <div class="body">
+                        <form method="post" action="/Admin/Category/UpsertSub">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="Id" value="@(editSub?.Id ?? 0)" />
+
+                            <label>Kategori</label>
+                            <select name="CategoryId" id="subCatCategory">
+                                @foreach (var c in Model.OrderBy(x => x.Name))
+                                {
+                                    var sel = isEditSub ? (editSub!.CategoryId == c.Id) : (selectedCatId == c.Id);
+                                    <option value="@c.Id" selected="@sel">@c.Name</option>
+                                }
+                            </select>
+
+                            <label>Alt Kategori Adı</label>
+                            <input name="Name" value="@(editSub?.Name ?? "")" />
+
+                            <label>Slug</label>
+                            <input name="Slug" value="@(editSub?.Slug ?? "")" />
+
+                            <div class="split" style="margin-top:12px">
+                                <span class="mini"></span>
+                                <button class="btn pri" type="submit">Kaydet</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Sağ panel: kategori seçimi değişince alt kategori listesi o kategoriye göre gelsin
+        const catSelect = document.getElementById('catSelect');
+        if (catSelect) {
+            catSelect.addEventListener('change', function () {
+                const id = this.value;
+                window.location.href = `/Admin/Category?subCategoryCategoryId=${id}`;
+            });
+        }
+    </script>
+
+</body>
+</html>

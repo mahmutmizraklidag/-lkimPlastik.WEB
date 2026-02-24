@@ -1,0 +1,612 @@
+﻿@model ilkimPlastik.WEB.Entities.SiteSettings
+@{
+    Layout = "~/Areas/Admin/Views/Shared/_Layout.cshtml";
+    var ok = TempData["OK"] as string;
+    var err = TempData["ERR"] as string;
+
+    var logoUrl = !string.IsNullOrWhiteSpace(Model.LogoFileName)
+        ? ("/uploads/site/" + Model.LogoFileName.TrimStart('/'))
+        : null;
+
+    var faviconUrl = !string.IsNullOrWhiteSpace(Model.FaviconFileName)
+        ? ("/uploads/site/" + Model.FaviconFileName.TrimStart('/'))
+        : null;
+
+    // PDF url'ler
+    string? PdfUrl(string? file) => string.IsNullOrWhiteSpace(file) ? null : ("/uploads/site/" + file.TrimStart('/'));
+
+    var kvkkUrl = PdfUrl(Model.KvkkPdfName);
+    var privacyUrl = PdfUrl(Model.PrivacyPolicyPdfName);
+    var conditionsUrl = PdfUrl(Model.ConditionsPdfName);
+    var returnUrl = PdfUrl(Model.ReturnPolicyPdfName);
+    var distanceUrl = PdfUrl(Model.DistanceSalesAgreementPdfName);
+
+    var vurguRenk = "#1daaa3";
+}
+
+<!doctype html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Site Ayarları</title>
+    <style>
+        :root{
+            --vurgu:@vurguRenk;--vurgu2:#168d87;
+            --bg:#f6f7fb;--kart:#fff;--yazi:#0f172a;--soluk:#6b7280;
+            --cizgi:#e5e7eb;--cizgi2:#d7dbe6;
+            --golge:0 12px 30px rgba(15,23,42,.10);
+            --r:18px;
+        }
+        *{box-sizing:border-box}
+        body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--yazi)}
+        .wrap{max-width:1200px;margin:0 auto;padding:18px;display:grid;gap:14px}
+        .card{background:var(--kart);border:1px solid var(--cizgi);border-radius:var(--r);box-shadow:var(--golge);overflow:hidden}
+        .head{padding:12px 14px;border-bottom:1px solid var(--cizgi);display:flex;justify-content:space-between;align-items:center;background:linear-gradient(180deg,#fff,#fbfbff)}
+        .head b{font-weight:950}
+        .body{padding:14px}
+        .msg{padding:10px 12px;border-radius:14px;margin:0 0 10px 0;font-size:13px;border:1px solid var(--cizgi);background:#fff}
+        .msg.ok{border-color:#b8f2d4;background:#ecfdf5;color:#065f46}
+        .msg.er{border-color:#fecdd3;background:#fff1f2;color:#9f1239}
+
+        label{display:block;font-size:12px;color:var(--soluk);margin:10px 0 6px;font-weight:800}
+        input,textarea{
+            width:100%;padding:11px 12px;border-radius:14px;border:1px solid var(--cizgi2);
+            outline:none;background:#fff;color:var(--yazi);font-size:14px;font-weight:700;
+            transition:border-color .15s ease, box-shadow .15s ease;
+        }
+        input:focus,textarea:focus{border-color:rgba(29,170,163,.55);box-shadow:0 0 0 4px rgba(29,170,163,.12)}
+        textarea{min-height:110px;resize:vertical}
+
+        .btn{border:1px solid var(--cizgi);background:#fff;padding:10px 12px;border-radius:14px;cursor:pointer;font-weight:900;font-size:13px}
+        .btn.pri{background:linear-gradient(180deg,var(--vurgu2),var(--vurgu));border-color:transparent;color:#fff;box-shadow:0 14px 20px rgba(29,170,163,.16)}
+        .btn.danger{border-color:#ffd0d8;color:#e11d48;background:#fff}
+
+        .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+        .grid1{display:grid;grid-template-columns:1fr;gap:12px}
+        .sectionTitle{font-weight:950;margin:14px 0 0 0}
+        .mini{font-size:12px;color:var(--soluk);margin-top:6px;font-weight:700}
+
+        .box{
+            border:1px dashed var(--cizgi2);border-radius:16px;padding:12px;background:#fff;
+            display:flex;align-items:center;justify-content:center;min-height:110px;overflow:hidden;
+        }
+        .box img{max-height:76px;max-width:100%;object-fit:contain;display:block}
+
+        /* favicon için küçük ikon önizleme */
+        .favBox{
+            border:1px dashed var(--cizgi2);
+            border-radius:16px;
+            padding:12px;
+            background:#fff;
+            display:flex;
+            align-items:center;
+            gap:12px;
+            min-height:110px;
+        }
+        .favIcon{
+            width:54px;height:54px;border-radius:16px;
+            border:1px solid var(--cizgi);
+            background:#fff;
+            display:flex;align-items:center;justify-content:center;
+            overflow:hidden;
+            flex:0 0 auto;
+        }
+        .favIcon img{width:28px;height:28px;object-fit:contain;display:block}
+        .favMeta{min-width:0}
+        .favMeta b{display:block;font-weight:950;font-size:13px;margin-bottom:4px}
+        .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
+        @@media(max-width:980px){.grid{grid-template-columns:1fr}}
+
+        /* PDF kutusu */
+        .pdfBox{
+            border:1px dashed var(--cizgi2);
+            border-radius:16px;
+            padding:12px;
+            background:#fff;
+            display:flex;
+            flex-direction:column;
+            gap:10px;
+            min-height:110px;
+        }
+        .pdfTop{
+            display:flex;
+            gap:10px;
+            align-items:flex-start;
+            justify-content:space-between;
+            flex-wrap:wrap;
+        }
+        .pdfName{
+            font-weight:950;
+            font-size:13px;
+        }
+        .pdfActions{
+            display:flex;
+            gap:8px;
+            flex-wrap:wrap;
+            align-items:center;
+        }
+        .linkBtn{
+            display:inline-flex;
+            align-items:center;
+            gap:8px;
+            padding:8px 10px;
+            border:1px solid var(--cizgi);
+            border-radius:12px;
+            text-decoration:none;
+            color:var(--yazi);
+            font-weight:900;
+            font-size:12px;
+            background:#fff;
+        }
+        .linkBtn:hover{border-color:rgba(29,170,163,.55)}
+        .checkLine{
+            display:flex;
+            gap:10px;
+            align-items:center;
+        }
+        .checkLine input{width:auto}
+    </style>
+</head>
+<body>
+
+    <div class="wrap">
+        <div class="card">
+            <div class="head">
+                <b>Site Ayarları</b>
+                <button form="ayarFormu" class="btn pri" type="submit">Kaydet</button>
+            </div>
+
+            <div class="body">
+                @if (!string.IsNullOrWhiteSpace(ok))
+                {<div class="msg ok">@ok</div>}
+                @if (!string.IsNullOrWhiteSpace(err))
+                {<div class="msg er">@err</div>}
+
+                <form id="ayarFormu" method="post" action="/admin/SiteSettings/Save" enctype="multipart/form-data">
+                    @Html.AntiForgeryToken()
+
+                    <div class="sectionTitle">Genel Bilgiler</div>
+                    <div class="grid">
+                        <div>
+                            <label>Telefon Numarası</label>
+                            <input name="Phone" value="@Model.Phone" placeholder="Örn: +90 5xx xxx xx xx" />
+                        </div>
+                        <div>
+                            <label>E-posta Adresi</label>
+                            <input name="Email" value="@Model.Email" placeholder="Örn: info@site.com" />
+                        </div>
+
+                        <div>
+                            <label>Logo Yükle</label>
+                            <input id="logoDosyasi" type="file" name="LogoFile" accept=".png,.jpg,.jpeg,.webp,.svg" />
+                            <div class="mini">Öneri: PNG/SVG, şeffaf arka plan. Maks: 4MB</div>
+                        </div>
+
+                        <div>
+                            <label>Favicon Yükle</label>
+                            <input id="faviconDosyasi" type="file" name="FaviconFile" accept=".png,.jpg,.jpeg,.webp,.ico" />
+                            <div class="mini">Öneri: ICO/PNG. Tarayıcı sekmesinde ikon. Maks: 2MB</div>
+                        </div>
+
+                        <div>
+                            <label>Çalışma Saatleri</label>
+                            <input name="WorkingHours" value="@Model.WorkingHours" placeholder="Örn: Hafta içi 09:00 - 18:00" />
+                        </div>
+                        <div>
+                            <label>Bildirim E-posta Adresi</label>
+                            <input name="NotificationEmail" value="@Model.NotificationEmail" placeholder="Örn: siparis@site.com" />
+                        </div>
+                    </div>
+
+                    <div class="grid" style="margin-top:12px">
+                        <div>
+                            <label>Logo Önizleme</label>
+                            <div class="box">
+                                @if (!string.IsNullOrWhiteSpace(logoUrl))
+                                {
+                                    <img id="logoOnizlemeResim" src="@logoUrl" alt="Logo" />
+                                }
+                                else
+                                {
+                                    <img id="logoOnizlemeResim" style="display:none" alt="Logo" />
+                                    <div id="logoYokMetni" class="mini">Henüz logo yüklenmedi.</div>
+                                }
+                            </div>
+
+                            @if (!string.IsNullOrWhiteSpace(logoUrl))
+                            {
+                                <div style="margin-top:10px;display:flex;gap:10px;align-items:center">
+                                    <label style="margin:0;display:flex;gap:10px;align-items:center">
+                                        <input type="checkbox" name="removeLogo" value="true" />
+                                        <span class="mini">Mevcut logoyu kaldır</span>
+                                    </label>
+                                </div>
+                            }
+                        </div>
+
+                        <div>
+                            <label>Favicon Önizleme</label>
+                            <div class="favBox">
+                                <div class="favIcon">
+                                    @if (!string.IsNullOrWhiteSpace(faviconUrl))
+                                    {
+                                        <img id="faviconOnizlemeResim" src="@faviconUrl" alt="Favicon" />
+                                    }
+                                    else
+                                    {
+                                        <img id="faviconOnizlemeResim" style="display:none" alt="Favicon" />
+                                        <span id="faviconYokIkon" style="font-weight:950;color:#98a2b3;">★</span>
+                                    }
+                                </div>
+                                <div class="favMeta">
+                                    <b>Tarayıcı Sekmesi İkonu</b>
+                                    <div class="mini" id="faviconMetaText">
+                                        @if (!string.IsNullOrWhiteSpace(faviconUrl))
+                                        {
+                                            @("Yüklü favicon: " + Model.FaviconFileName)
+                                        }
+                                        else
+                                        {
+                                            @("Henüz favicon yüklenmedi.")
+                                        }
+                                    </div>
+
+                                    @if (!string.IsNullOrWhiteSpace(faviconUrl))
+                                    {
+                                        <div style="margin-top:10px;display:flex;gap:10px;align-items:center">
+                                            <label style="margin:0;display:flex;gap:10px;align-items:center">
+                                                <input type="checkbox" name="removeFavicon" value="true" />
+                                                <span class="mini">Mevcut favicon’u kaldır</span>
+                                            </label>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid" style="margin-top:12px">
+                        <div>
+                            <label>Adres Bilgisi</label>
+                            <textarea name="AddressText" rows="4" placeholder="Adresinizi yazın...">@Model.AddressText</textarea>
+                        </div>
+                        <div>
+                            <label>Hakkımızda Metni</label>
+                            <textarea name="AboutText" rows="4" placeholder="Hakkımızda metnini buraya yazın...">@Model.AboutText</textarea>
+                            <div class="mini">HTML tutacaksan sayfada gösterirken güvenliğe dikkat et.</div>
+                        </div>
+                    </div>
+
+                    <div class="sectionTitle">Arama Motoru (SEO) Ayarları</div>
+                    <div class="grid">
+                        <div>
+                            <label>Site Başlığı</label>
+                            <input name="Title" value="@Model.Title" placeholder="Örn: İlkim Plastik" />
+                        </div>
+                        <div>
+                            <label>Yazar / Firma</label>
+                            <input name="Author" value="@Model.Author" placeholder="Örn: İlkim Plastik" />
+                        </div>
+                    </div>
+
+                    <div class="grid">
+                        <div>
+                            <label>Anahtar Kelimeler</label>
+                            <input name="Keywords" value="@Model.Keywords" placeholder="Örn: plastik, ambalaj, üretim" />
+                        </div>
+                        <div>
+                            <label>Site Açıklaması</label>
+                            <textarea name="Description" rows="3" placeholder="Kısa bir açıklama yazın...">@Model.Description</textarea>
+                        </div>
+                    </div>
+
+                    <div class="sectionTitle">Sosyal Medya Bağlantıları</div>
+                    <div class="grid">
+                        <div>
+                            <label>Facebook Bağlantısı</label>
+                            <input name="FacebookUrl" value="@Model.FacebookUrl" placeholder="https://facebook.com/..." />
+                        </div>
+                        <div>
+                            <label>Twitter / X Bağlantısı</label>
+                            <input name="TwitterUrl" value="@Model.TwitterUrl" placeholder="https://x.com/..." />
+                        </div>
+                        <div>
+                            <label>Instagram Bağlantısı</label>
+                            <input name="InstagramUrl" value="@Model.InstagramUrl" placeholder="https://instagram.com/..." />
+                        </div>
+                        <div>
+                            <label>LinkedIn Bağlantısı</label>
+                            <input name="LinkedInUrl" value="@Model.LinkedInUrl" placeholder="https://linkedin.com/..." />
+                        </div>
+                    </div>
+
+                    <div class="sectionTitle">Ödeme Ayarları (iyzico)</div>
+                    <div class="grid">
+                        <div>
+                            <label>API Adresi</label>
+                            <input name="ApiUrl" value="@Model.ApiUrl" placeholder="Örn: https://api.iyzipay.com" />
+                        </div>
+                        <div>
+                            <label>Geri Dönüş (Callback) Adresi</label>
+                            <input name="CallBackUrl" value="@Model.CallBackUrl" placeholder="Örn: https://site.com/odeme/callback" />
+                        </div>
+                        <div>
+                            <label>API Anahtarı (ApiKey)</label>
+                            <input name="IyzicoApiKey" value="@Model.IyzicoApiKey" placeholder="ApiKey" />
+                        </div>
+                        <div>
+                            <label>Gizli Anahtar (SecretKey)</label>
+                            <input name="IyzicoSecretKey" value="@Model.IyzicoSecretKey" placeholder="SecretKey" />
+                        </div>
+                    </div>
+
+                    <!-- =========================
+                         YENİ: PDF Politikalar
+                         ========================= -->
+                    <div class="sectionTitle">Politikalar & Sözleşmeler (PDF)</div>
+                    <div class="mini" style="margin-top:6px">
+                        Sadece PDF kabul edilir. Öneri: 2-10MB arası. Yüklü dosyalar webroot altında tutulur.
+                    </div>
+
+                    <div class="grid" style="margin-top:12px">
+                        <!-- KVKK -->
+                        <div>
+                            <label>KVKK (PDF) Yükle</label>
+                            <input id="kvkkPdf" type="file" name="KvkkPdfFile" accept=".pdf,application/pdf" />
+                            <div class="pdfBox">
+                                <div class="pdfTop">
+                                    <div>
+                                        <div class="pdfName">KVKK Dosyası</div>
+                                        <div class="mini" id="kvkkMeta">
+                                            @if (!string.IsNullOrWhiteSpace(Model.KvkkPdfName))
+                                            {
+                                                @("Yüklü: " + Model.KvkkPdfName)
+                                            }
+                                            else
+                                            {
+                                                @("Henüz yüklenmedi.")
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="pdfActions">
+                                        @if (!string.IsNullOrWhiteSpace(kvkkUrl))
+                                        {
+                                            <a class="linkBtn" href="@kvkkUrl" target="_blank" rel="noopener">Aç</a>
+                                            <a class="linkBtn" href="@kvkkUrl" download>İndir</a>
+                                        }
+                                    </div>
+                                </div>
+
+                                @if (!string.IsNullOrWhiteSpace(Model.KvkkPdfName))
+                                {
+                                    <label class="checkLine" style="margin:0">
+                                        <input type="checkbox" name="removeKvkkPdf" value="true" />
+                                        <span class="mini">KVKK dosyasını kaldır</span>
+                                    </label>
+                                }
+                            </div>
+                        </div>
+
+                        <!-- Gizlilik -->
+                        <div>
+                            <label>Gizlilik Politikası (PDF) Yükle</label>
+                            <input id="privacyPdf" type="file" name="PrivacyPolicyPdfFile" accept=".pdf,application/pdf" />
+                            <div class="pdfBox">
+                                <div class="pdfTop">
+                                    <div>
+                                        <div class="pdfName">Gizlilik Politikası</div>
+                                        <div class="mini" id="privacyMeta">
+                                            @if (!string.IsNullOrWhiteSpace(Model.PrivacyPolicyPdfName))
+                                            {
+                                                @("Yüklü: " + Model.PrivacyPolicyPdfName)
+                                            }
+                                            else
+                                            {
+                                                @("Henüz yüklenmedi.")
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="pdfActions">
+                                        @if (!string.IsNullOrWhiteSpace(privacyUrl))
+                                        {
+                                            <a class="linkBtn" href="@privacyUrl" target="_blank" rel="noopener">Aç</a>
+                                            <a class="linkBtn" href="@privacyUrl" download>İndir</a>
+                                        }
+                                    </div>
+                                </div>
+
+                                @if (!string.IsNullOrWhiteSpace(Model.PrivacyPolicyPdfName))
+                                {
+                                    <label class="checkLine" style="margin:0">
+                                        <input type="checkbox" name="removePrivacyPdf" value="true" />
+                                        <span class="mini">Gizlilik PDF’ini kaldır</span>
+                                    </label>
+                                }
+                            </div>
+                        </div>
+
+                        <!-- Şartlar & Koşullar -->
+                        <div>
+                            <label>Şartlar & Koşullar (PDF) Yükle</label>
+                            <input id="conditionsPdf" type="file" name="ConditionsPdfFile" accept=".pdf,application/pdf" />
+                            <div class="pdfBox">
+                                <div class="pdfTop">
+                                    <div>
+                                        <div class="pdfName">Şartlar & Koşullar</div>
+                                        <div class="mini" id="conditionsMeta">
+                                            @if (!string.IsNullOrWhiteSpace(Model.ConditionsPdfName))
+                                            {
+                                                @("Yüklü: " + Model.ConditionsPdfName)
+                                            }
+                                            else
+                                            {
+                                                @("Henüz yüklenmedi.")
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="pdfActions">
+                                        @if (!string.IsNullOrWhiteSpace(conditionsUrl))
+                                        {
+                                            <a class="linkBtn" href="@conditionsUrl" target="_blank" rel="noopener">Aç</a>
+                                            <a class="linkBtn" href="@conditionsUrl" download>İndir</a>
+                                        }
+                                    </div>
+                                </div>
+
+                                @if (!string.IsNullOrWhiteSpace(Model.ConditionsPdfName))
+                                {
+                                    <label class="checkLine" style="margin:0">
+                                        <input type="checkbox" name="removeConditionsPdf" value="true" />
+                                        <span class="mini">Şartlar PDF’ini kaldır</span>
+                                    </label>
+                                }
+                            </div>
+                        </div>
+
+                        <!-- İade Politikası -->
+                        <div>
+                            <label>İade Politikası (PDF) Yükle</label>
+                            <input id="returnPdf" type="file" name="ReturnPolicyPdfFile" accept=".pdf,application/pdf" />
+                            <div class="pdfBox">
+                                <div class="pdfTop">
+                                    <div>
+                                        <div class="pdfName">İade Politikası</div>
+                                        <div class="mini" id="returnMeta">
+                                            @if (!string.IsNullOrWhiteSpace(Model.ReturnPolicyPdfName))
+                                            {
+                                                @("Yüklü: " + Model.ReturnPolicyPdfName)
+                                            }
+                                            else
+                                            {
+                                                @("Henüz yüklenmedi.")
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="pdfActions">
+                                        @if (!string.IsNullOrWhiteSpace(returnUrl))
+                                        {
+                                            <a class="linkBtn" href="@returnUrl" target="_blank" rel="noopener">Aç</a>
+                                            <a class="linkBtn" href="@returnUrl" download>İndir</a>
+                                        }
+                                    </div>
+                                </div>
+
+                                @if (!string.IsNullOrWhiteSpace(Model.ReturnPolicyPdfName))
+                                {
+                                    <label class="checkLine" style="margin:0">
+                                        <input type="checkbox" name="removeReturnPdf" value="true" />
+                                        <span class="mini">İade PDF’ini kaldır</span>
+                                    </label>
+                                }
+                            </div>
+                        </div>
+
+                        <!-- Mesafeli Satış -->
+                        <div style="grid-column:1 / -1">
+                            <label>Mesafeli Satış Sözleşmesi (PDF) Yükle</label>
+                            <input id="distancePdf" type="file" name="DistanceSalesAgreementPdfFile" accept=".pdf,application/pdf" />
+                            <div class="pdfBox">
+                                <div class="pdfTop">
+                                    <div>
+                                        <div class="pdfName">Mesafeli Satış Sözleşmesi</div>
+                                        <div class="mini" id="distanceMeta">
+                                            @if (!string.IsNullOrWhiteSpace(Model.DistanceSalesAgreementPdfName))
+                                            {
+                                                @("Yüklü: " + Model.DistanceSalesAgreementPdfName)
+                                            }
+                                            else
+                                            {
+                                                @("Henüz yüklenmedi.")
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="pdfActions">
+                                        @if (!string.IsNullOrWhiteSpace(distanceUrl))
+                                        {
+                                            <a class="linkBtn" href="@distanceUrl" target="_blank" rel="noopener">Aç</a>
+                                            <a class="linkBtn" href="@distanceUrl" download>İndir</a>
+                                        }
+                                    </div>
+                                </div>
+
+                                @if (!string.IsNullOrWhiteSpace(Model.DistanceSalesAgreementPdfName))
+                                {
+                                    <label class="checkLine" style="margin:0">
+                                        <input type="checkbox" name="removeDistancePdf" value="true" />
+                                        <span class="mini">Mesafeli Satış PDF’ini kaldır</span>
+                                    </label>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row" style="margin-top:12px">
+                        <button class="btn pri" type="submit">Kaydet</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            // Logo preview
+            var logoInput = document.getElementById('logoDosyasi');
+            var logoImg = document.getElementById('logoOnizlemeResim');
+            var logoEmpty = document.getElementById('logoYokMetni');
+
+            if (logoInput && logoImg) {
+                logoInput.addEventListener('change', function () {
+                    var f = logoInput.files && logoInput.files[0];
+                    if (!f) return;
+                    var url = URL.createObjectURL(f);
+                    logoImg.src = url;
+                    logoImg.style.display = 'block';
+                    if (logoEmpty) logoEmpty.style.display = 'none';
+                });
+            }
+
+            // Favicon preview
+            var favInput = document.getElementById('faviconDosyasi');
+            var favImg = document.getElementById('faviconOnizlemeResim');
+            var favPlaceholder = document.getElementById('faviconYokIkon');
+            var favMeta = document.getElementById('faviconMetaText');
+
+            if (favInput && favImg) {
+                favInput.addEventListener('change', function () {
+                    var f = favInput.files && favInput.files[0];
+                    if (!f) return;
+
+                    var url = URL.createObjectURL(f);
+                    favImg.src = url;
+                    favImg.style.display = 'block';
+                    if (favPlaceholder) favPlaceholder.style.display = 'none';
+                    if (favMeta) favMeta.textContent = "Seçilen favicon: " + f.name;
+                });
+            }
+
+            // PDF meta text güncelle (sadece seçilen dosya adını yazdır)
+            function bindPdfMeta(inputId, metaId, labelPrefix) {
+                var inp = document.getElementById(inputId);
+                var meta = document.getElementById(metaId);
+                if (!inp || !meta) return;
+                inp.addEventListener('change', function () {
+                    var f = inp.files && inp.files[0];
+                    if (!f) return;
+                    meta.textContent = labelPrefix + " " + f.name;
+                });
+            }
+
+            bindPdfMeta("kvkkPdf", "kvkkMeta", "Seçilen:");
+            bindPdfMeta("privacyPdf", "privacyMeta", "Seçilen:");
+            bindPdfMeta("conditionsPdf", "conditionsMeta", "Seçilen:");
+            bindPdfMeta("returnPdf", "returnMeta", "Seçilen:");
+            bindPdfMeta("distancePdf", "distanceMeta", "Seçilen:");
+        })();
+    </script>
+
+</body>
+</html>
+
+

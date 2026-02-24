@@ -1,0 +1,259 @@
+﻿@model ilkimPlastik.WEB.Controllers.ContactController.ContactPageVm
+@using System
+
+@{
+    ViewData["Title"] = "İletişim";
+
+    var s = Model?.Settings ?? new ilkimPlastik.WEB.Entities.SiteSettings();
+
+    // Dinamik alanlar (fallback'lı)
+    var adres = string.IsNullOrWhiteSpace(s.AddressText) ? "Adres bilgisi eklenmemiş." : s.AddressText;
+    var tel = string.IsNullOrWhiteSpace(s.Phone) ? "+90 (___) ___ __ __" : s.Phone;
+    var mail = string.IsNullOrWhiteSpace(s.Email) ? "info@ilkimplastik.com" : s.Email;
+    var bildirimMail = string.IsNullOrWhiteSpace(s.NotificationEmail) ? null : s.NotificationEmail;
+    var calisma = string.IsNullOrWhiteSpace(s.WorkingHours) ? "Hafta içi 09:00 – 18:00" : s.WorkingHours;
+}
+
+<main class="site-main page-spacing">
+    <!-- Page Banner -->
+    <div class="page-banner container-fluid no-padding">
+        <div class="page-banner-content">
+            <h3>İletişim</h3>
+        </div>
+    </div>
+
+    <!-- İletişim -->
+    <div class="contact-us container-fluid no-padding">
+        <div class="section-padding"></div>
+
+        <!-- Container -->
+        <div class="container">
+            <div class="col-md-6 col-sm-6 col-xs-6 contact-form">
+
+                <div class="section-header">
+                    <h3>Bize Ulaşın</h3>
+                </div>
+
+                <!-- Üst genel uyarı -->
+                <div id="form-live-alert" class="alert alert-danger" style="margin-bottom:15px; display:none;">
+                    Lütfen işaretli alanları kontrol edip tekrar deneyin.
+                </div>
+
+                @if (TempData["FormSuccess"] != null)
+                {
+                    <div class="alert alert-success" style="margin-bottom:15px;">
+                        @TempData["FormSuccess"]
+                    </div>
+                }
+                @if (TempData["FormError"] != null)
+                {
+                    <div class="alert alert-danger" style="margin-bottom:15px;">
+                        @TempData["FormError"]
+                    </div>
+                }
+                @if (ViewBag.ShowFormError == true)
+                {
+                    <div class="alert alert-danger" style="margin-bottom:15px;">
+                        Lütfen işaretli alanları kontrol edip tekrar deneyin.
+                    </div>
+                }
+
+                <!-- KRİTİK: action MVC'ye sabit -->
+                <form id="contact-form"
+                      class="row"
+                      method="post"
+                      action="@Url.Action("Index","Contact")"
+                      novalidate>
+
+                    @Html.AntiForgeryToken()
+
+                    <div class="form-group col-md-6 col-sm-6 col-xs-6">
+                        <label>Ad Soyad <span style="color:#d9534f">*</span></label>
+                        <input asp-for="Form.Name" type="text" class="form-control" id="input_name" autocomplete="name" required />
+                        <span asp-validation-for="Form.Name" class="text-danger" style="display:block;margin-top:6px;"></span>
+                    </div>
+
+                    <div class="form-group col-md-6 col-sm-6 col-xs-6">
+                        <label>E-posta <span style="color:#d9534f">*</span></label>
+                        <input asp-for="Form.Email" type="email" class="form-control" id="input_email" autocomplete="email" required />
+                        <span asp-validation-for="Form.Email" class="text-danger" style="display:block;margin-top:6px;"></span>
+                    </div>
+
+                    <div class="form-group col-md-12 col-sm-12 col-xs-12">
+                        <label>Konu <span style="color:#d9534f">*</span></label>
+                        <input asp-for="Form.Subject" type="text" class="form-control" id="input_subject" required />
+                        <span asp-validation-for="Form.Subject" class="text-danger" style="display:block;margin-top:6px;"></span>
+                    </div>
+
+                    <div class="form-group col-md-12 col-sm-12 col-xs-12">
+                        <label>Mesaj <span style="color:#d9534f">*</span></label>
+                        <textarea asp-for="Form.Message" class="form-control" rows="8" id="textarea_message" required></textarea>
+                        <span asp-validation-for="Form.Message" class="text-danger" style="display:block;margin-top:6px;"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <input type="submit" title="Mesaj Gönder" value="Mesaj Gönder" name="btn_submit" />
+                    </div>
+
+                    <div id="alert-msg" class="alert-msg"></div>
+                </form>
+            </div>
+
+            <div class="col-md-6 col-sm-6 col-xs-6 contact-detail">
+                <div class="section-header">
+                    <h3>İletişim Bilgileri</h3>
+                    <p>Talep ve sorularınız için formu doldurabilir veya e-posta ile bize ulaşabilirsiniz. Mesajınız ilgili birime yönlendirilir.</p>
+                    <p>Çalışma saatleri içinde daha hızlı dönüş alabilirsiniz.</p>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 col-sm-6 col-xs-6 contact-content">
+                        <div class="contact-info">
+                            <span class="icon icon-Pointer"></span>
+                            <p>@adres</p>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-sm-6 col-xs-6 contact-content">
+                        <div class="contact-info">
+                            <span class="icon icon-Mail"></span>
+                            <p><a href="mailto:@mail" title="@mail">@mail</a></p>
+
+                            @if (!string.IsNullOrWhiteSpace(bildirimMail) && !string.Equals(bildirimMail, mail, StringComparison.OrdinalIgnoreCase))
+                            {
+                                <p><a href="mailto:@bildirimMail" title="@bildirimMail">@bildirimMail</a></p>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-sm-6 col-xs-6 contact-content">
+                        <div class="contact-info">
+                            <span class="icon icon-Phone"></span>
+                            <p><a href="tel:@tel">@tel</a></p>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-sm-6 col-xs-6 contact-content">
+                        <div class="contact-info">
+                            <span class="icon icon-Phone"></span>
+                            <p>@calisma</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div><!-- Container /- -->
+
+        <div class="section-padding"></div>
+
+        <!-- HARİTA: SiteSettings'te lat/lng yoksa sabit kalır. data-string adres dinamik -->
+        <div class="map container-fluid no-padding">
+            <div class="map-canvas" id="map-canvas-contact"
+                 data-lat="-37.830846"
+                 data-lng="147.611769"
+                 data-string="@adres"
+                 data-zoom="12"></div>
+        </div>
+
+        <div class="section-padding"></div>
+    </div>
+</main>
+
+<script>
+    (function () {
+        // Tema bağımsız canlı doğrulama (jQuery gerektirmez)
+        function qs(sel, root) { return (root || document).querySelector(sel); }
+        function qsa(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+
+        var form = qs('#contact-form');
+        if (!form) return;
+
+        var alertTop = qs('#form-live-alert');
+
+        function setMsg(fieldName, msg) {
+            // asp-validation-for => data-valmsg-for="Form.Name"
+            var span = qs('[data-valmsg-for="' + fieldName + '"]');
+            if (!span) return;
+            span.textContent = msg || '';
+        }
+
+        function showTopAlert(show) {
+            if (!alertTop) return;
+            alertTop.style.display = show ? 'block' : 'none';
+        }
+
+        function isEmail(v) {
+            return /^[^\s@@]+@@[^\s@@]+\.[^\s@@]+$/.test(v);
+        }
+
+        function validateField(el) {
+            var name = el.getAttribute('name') || ''; // Form.Name vb.
+            var v = (el.value || '').trim();
+            var msg = '';
+
+            if (name === 'Form.Name') {
+                if (!v) msg = 'Ad Soyad zorunludur.';
+                else if (v.length < 2) msg = 'Ad Soyad en az 2 karakter olmalıdır.';
+                else if (v.length > 80) msg = 'Ad Soyad en fazla 80 karakter olabilir.';
+                setMsg('Form.Name', msg);
+                return !msg;
+            }
+
+            if (name === 'Form.Email') {
+                if (!v) msg = 'E-posta zorunludur.';
+                else if (v.length > 120) msg = 'E-posta en fazla 120 karakter olabilir.';
+                else if (!isEmail(v)) msg = 'Geçerli bir e-posta adresi giriniz.';
+                setMsg('Form.Email', msg);
+                return !msg;
+            }
+
+            if (name === 'Form.Subject') {
+                if (!v) msg = 'Konu zorunludur.';
+                else if (v.length < 3) msg = 'Konu en az 3 karakter olmalıdır.';
+                else if (v.length > 120) msg = 'Konu en fazla 120 karakter olabilir.';
+                setMsg('Form.Subject', msg);
+                return !msg;
+            }
+
+            if (name === 'Form.Message') {
+                if (!v) msg = 'Mesaj zorunludur.';
+                else if (v.length < 10) msg = 'Mesaj en az 10 karakter olmalıdır.';
+                else if (v.length > 2000) msg = 'Mesaj en fazla 2000 karakter olabilir.';
+                setMsg('Form.Message', msg);
+                return !msg;
+            }
+
+            return true;
+        }
+
+        function validateAll() {
+            showTopAlert(false);
+            var inputs = qsa('input[name="Form.Name"], input[name="Form.Email"], input[name="Form.Subject"], textarea[name="Form.Message"]', form);
+            var ok = true;
+
+            inputs.forEach(function (el) {
+                if (!validateField(el)) ok = false;
+            });
+
+            if (!ok) showTopAlert(true);
+            return ok;
+        }
+
+        // Yazarken + alan dışına çıkınca
+        qsa('input[name="Form.Name"], input[name="Form.Email"], input[name="Form.Subject"], textarea[name="Form.Message"]', form)
+            .forEach(function (el) {
+                el.addEventListener('input', function () { validateField(el); });
+                el.addEventListener('blur', function () { validateField(el); });
+            });
+
+        // Submit kontrolü
+        form.addEventListener('submit', function (e) {
+            if (!validateAll()) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+            showTopAlert(false);
+            return true;
+        });
+    })();
+</script>

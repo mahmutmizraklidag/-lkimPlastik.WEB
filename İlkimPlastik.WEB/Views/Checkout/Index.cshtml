@@ -1,0 +1,1602 @@
+﻿@* =========================================================
+    Views/Checkout/Index.cshtml  (TEK PARÇA - FINAL)
+    ✅ OfferRate indirim gösterimi + toplam indirim (indirimsiz/indirimli)
+    ✅ +/- ajax (/cart/mini/setqty) + totals anlık güncellenir
+    ✅ Sepette değişiklik olunca “Sepeti Güncelle” butonu çıkar (refresh)
+    ✅ Form yazıları + validasyonlar tam:
+       - Adres seçimi zorunlu (snapshot dolu değilse hata)
+       - Kart Üzeri İsim zorunlu
+       - Kart No: format + Luhn
+       - Son Kullanma: format AA/YY + geçmiş tarih engel
+       - CVV: 3-4 hane
+       - Sadece 2 sözleşme: Mesafeli Satış + İade Politikası kabulü zorunlu
+       - Submit butonu sadece tüm kontroller OK ise aktif
+       - Hızlı adres ekle modal: required alanlar + alan bazlı highlight + hata kutusu
+    ========================================================= *@
+
+@model ilkimPlastik.WEB.Controllers.CheckoutController.CheckoutIndexVm
+@using System.Globalization
+
+@{
+    ViewData["Title"] = "Ödeme";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var tr = CultureInfo.GetCultureInfo("tr-TR");
+    string Money(decimal v) => string.Format(tr, "{0:N2}", v);
+
+    string Img(string? f)
+    {
+        if (string.IsNullOrWhiteSpace(f)) return "/images/cart-1.png";
+        return "/uploads/products/" + f.TrimStart('/');
+    }
+
+    var ok = TempData["OK"] as string;
+    var err = TempData["ERR"] as string;
+}
+
+<style>
+    .checkout-page {
+        --accent: #1daaa3;
+        --accent2: #168d87;
+        --text: #101828;
+        --muted: #667085;
+        --line: #eef0f3;
+        --soft: #f6f7f9;
+        --shadow: 0 18px 44px rgba(16,24,40,.12);
+        --shadow2: 0 10px 24px rgba(16,24,40,.10);
+        --r: 16px;
+    }
+
+        .checkout-page * {
+            box-sizing: border-box;
+        }
+
+        .checkout-page a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 900;
+        }
+
+            .checkout-page a:hover {
+                color: var(--accent2);
+                text-decoration: underline;
+            }
+
+        .checkout-page .shell {
+            padding: 48px 0 72px;
+        }
+
+    @@media(max-width:768px) {
+        .checkout-page .shell {
+            padding: 28px 0 48px;
+        }
+    }
+
+    .checkout-page .h1 {
+        font-size: 18px;
+        font-weight: 900;
+        margin: 0 0 8px;
+        color: var(--text);
+    }
+
+    .checkout-page .sub {
+        margin: 0 0 18px;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    .checkout-page .alert {
+        border-radius: 14px;
+        padding: 12px 14px;
+        margin-bottom: 12px;
+        font-size: 13px;
+        font-weight: 800;
+    }
+
+    .checkout-page .alert-ok {
+        background: #ecfdf5;
+        border: 1px solid #b8f2d4;
+        color: #065f46;
+    }
+
+    .checkout-page .alert-er {
+        background: #fff1f2;
+        border: 1px solid #fecdd3;
+        color: #9f1239;
+    }
+
+    .checkout-page .grid {
+        display: grid;
+        grid-template-columns: 1.25fr .85fr;
+        gap: 18px;
+        align-items: start;
+    }
+
+    @@media(max-width:992px) {
+        .checkout-page .grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .checkout-page .stack {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+    }
+
+    .checkout-page .card {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: var(--r);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+    }
+
+    .checkout-page .card-mini {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: var(--r);
+        box-shadow: var(--shadow2);
+        overflow: hidden;
+    }
+
+    .checkout-page .card-h {
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+        .checkout-page .card-h b {
+            font-size: 13px;
+            font-weight: 900;
+            color: var(--text);
+        }
+
+    .checkout-page .card-b {
+        padding: 16px;
+    }
+
+    .checkout-page .kicker {
+        font-size: 12px;
+        color: var(--muted);
+        font-weight: 800;
+    }
+
+    .checkout-page .hint {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+        margin-top: 8px;
+    }
+
+    .checkout-page .errtxt {
+        color: #b42318;
+        font-size: 12px;
+        font-weight: 800;
+        margin-top: 6px;
+        display: none;
+    }
+
+    .checkout-page .row2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+
+    .checkout-page .row1 {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    @@media(max-width:700px) {
+        .checkout-page .row2 {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .checkout-page .label {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+        font-weight: 800;
+        margin: 0 0 6px;
+    }
+
+    .checkout-page .in, .checkout-page .ta {
+        width: 100%;
+        border: 1px solid #e4e7ec;
+        border-radius: 14px;
+        background: #fff;
+        color: var(--text);
+        font-size: 14px;
+        outline: none;
+        transition: .15s ease;
+    }
+
+    .checkout-page .in {
+        height: 46px;
+        padding: 0 12px;
+    }
+
+    .checkout-page .ta {
+        min-height: 96px;
+        padding: 10px 12px;
+        resize: vertical;
+    }
+
+        .checkout-page .in:focus, .checkout-page .ta:focus {
+            border-color: rgba(29,170,163,.55);
+            box-shadow: 0 0 0 4px rgba(29,170,163,.12);
+        }
+
+    .checkout-page .is-invalid {
+        border-color: #fda29b !important;
+        box-shadow: none !important;
+    }
+
+    .checkout-page .is-valid {
+        border-color: #86efac !important;
+        box-shadow: none !important;
+    }
+
+    .checkout-page .btn {
+        border-radius: 14px;
+        font-weight: 900;
+        font-size: 13px;
+        cursor: pointer;
+        transition: .15s ease;
+        border: 1px solid transparent;
+        height: 44px;
+        padding: 0 14px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        white-space: nowrap;
+    }
+
+    .checkout-page .btn-primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+    }
+
+        .checkout-page .btn-primary:hover {
+            background: var(--accent2);
+            border-color: var(--accent2);
+        }
+
+    .checkout-page .btn-ghost {
+        background: #fff;
+        border-color: #e4e7ec;
+        color: #344054;
+    }
+
+        .checkout-page .btn-ghost:hover {
+            background: #fafafa;
+        }
+
+    .checkout-page .btn-full {
+        width: 100%;
+        height: 48px;
+        font-size: 14px;
+    }
+
+    .checkout-page .btn:disabled {
+        opacity: .65;
+        cursor: not-allowed;
+    }
+
+    .checkout-page .addr-box {
+        border: 1px dashed rgba(29,170,163,.40);
+        background: rgba(29,170,163,.06);
+        border-radius: 14px;
+        padding: 12px;
+    }
+
+    .checkout-page .addr-title {
+        font-weight: 900;
+        color: var(--text);
+        font-size: 13px;
+    }
+
+    .checkout-page .addr-text {
+        margin-top: 6px;
+        color: #344054;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1.45;
+    }
+
+    .checkout-page .addr-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+
+    @@media(max-width:700px) {
+        .checkout-page .addr-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .checkout-page .addr-card {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 12px;
+        background: #fff;
+        cursor: pointer;
+        transition: .15s ease;
+        position: relative;
+        min-height: 112px;
+    }
+
+        .checkout-page .addr-card:hover {
+            background: #fafafa;
+        }
+
+        .checkout-page .addr-card.sel {
+            border-color: rgba(29,170,163,.55);
+            box-shadow: 0 0 0 4px rgba(29,170,163,.10);
+        }
+
+    .checkout-page .addr-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: rgba(29,170,163,.10);
+        border: 1px solid rgba(29,170,163,.25);
+        color: var(--accent2);
+        font-size: 11px;
+        font-weight: 900;
+        padding: 4px 8px;
+        border-radius: 999px;
+        display: none;
+    }
+
+    .checkout-page .addr-card.sel .addr-badge {
+        display: inline-flex;
+    }
+
+    .checkout-page .addr-name {
+        font-size: 13px;
+        font-weight: 900;
+        color: var(--text);
+    }
+
+    .checkout-page .addr-meta {
+        margin-top: 6px;
+        font-size: 12px;
+        font-weight: 800;
+        color: #344054;
+    }
+
+        .checkout-page .addr-meta .muted {
+            color: var(--muted);
+            font-weight: 800;
+        }
+
+    .checkout-page .lines {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .checkout-page .line {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        padding: 10px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: #fff;
+    }
+
+        .checkout-page .line img {
+            width: 56px;
+            height: 56px;
+            border-radius: 14px;
+            object-fit: cover;
+            background: #f3f3f3;
+            flex: 0 0 auto;
+        }
+
+    .checkout-page .line-mid {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .checkout-page .line-title {
+        font-weight: 900;
+        font-size: 13px;
+        color: var(--text);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .checkout-page .line-sub {
+        margin-top: 4px;
+        font-size: 12px;
+        color: var(--muted);
+        font-weight: 800;
+    }
+
+    .checkout-page .line-price {
+        margin-top: 6px;
+        font-size: 12px;
+        font-weight: 900;
+        color: var(--text);
+    }
+
+    .checkout-page .price-del {
+        opacity: .6;
+        margin-left: 6px;
+    }
+
+    .checkout-page .disc-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(29,170,163,.10);
+        border: 1px solid rgba(29,170,163,.22);
+        color: var(--accent2);
+        border-radius: 999px;
+        padding: 3px 8px;
+        font-size: 11px;
+        font-weight: 900;
+        margin-left: 8px;
+    }
+
+    .checkout-page .qty {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 8px;
+    }
+
+    .checkout-page .qty-ctrl {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+    }
+
+    .checkout-page .qbtn {
+        width: 34px;
+        height: 34px;
+        border-radius: 12px;
+        border: 1px solid #e4e7ec;
+        background: #fff;
+        font-weight: 900;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+        .checkout-page .qbtn:hover {
+            background: #fafafa;
+        }
+
+    .checkout-page .qval {
+        min-width: 20px;
+        text-align: center;
+        font-weight: 900;
+        font-size: 12px;
+        color: var(--text);
+    }
+
+    .checkout-page .totals {
+        margin-top: 14px;
+        border-top: 1px solid var(--line);
+        padding-top: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .checkout-page .trow {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 13px;
+        font-weight: 800;
+        color: #344054;
+    }
+
+        .checkout-page .trow b {
+            font-weight: 900;
+            color: var(--text);
+        }
+
+        .checkout-page .trow.grand {
+            font-size: 14px;
+        }
+
+            .checkout-page .trow.grand b {
+                font-size: 15px;
+            }
+
+    .checkout-page .hidden-snapshot {
+        position: absolute !important;
+        left: -99999px !important;
+        top: auto !important;
+        width: 1px !important;
+        height: 1px !important;
+        overflow: hidden !important;
+    }
+
+    .checkout-page .cart-refresh-btn {
+        display: none;
+        width: 100%;
+        height: 48px;
+        border-radius: 14px;
+        font-weight: 900;
+        font-size: 14px;
+        background: #fff;
+        color: var(--accent2);
+        border: 1px solid rgba(29,170,163,.35);
+        cursor: pointer;
+        transition: .12s ease;
+        margin-top: 12px;
+    }
+
+        .checkout-page .cart-refresh-btn:hover {
+            background: #f7fffe;
+            border-color: rgba(29,170,163,.55);
+        }
+
+        .checkout-page .cart-refresh-btn.isOpen {
+            display: block;
+        }
+
+    .checkout-page .agree-wrap {
+        margin-top: 14px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 12px;
+        background: #fff;
+    }
+
+    .checkout-page .agree-title {
+        font-weight: 950;
+        font-size: 13px;
+        color: var(--text);
+        margin: 0 0 8px 0;
+    }
+
+    .checkout-page .agree-item {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        padding: 10px 10px;
+        border-radius: 12px;
+        transition: .12s ease;
+        border: 1px solid transparent;
+    }
+
+        .checkout-page .agree-item:hover {
+            background: #fafafa
+        }
+
+        .checkout-page .agree-item.is-invalid {
+            border-color: #fda29b;
+            background: #fff5f5;
+        }
+
+        .checkout-page .agree-item input {
+            margin-top: 3px;
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent);
+            cursor: pointer;
+            flex: 0 0 auto;
+        }
+
+    .checkout-page .agree-txt {
+        font-size: 12px;
+        font-weight: 800;
+        color: #344054;
+        line-height: 1.45;
+    }
+
+        .checkout-page .agree-txt a {
+            font-weight: 950
+        }
+
+    .checkout-page .agree-hint {
+        margin-top: 8px;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--muted);
+    }
+
+    .checkout-page .qa2-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(16,24,40,.55);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 99999;
+        padding: 18px;
+    }
+
+        .checkout-page .qa2-backdrop.qa2-open {
+            display: flex;
+        }
+
+    .checkout-page .qa2-panel {
+        width: 100%;
+        max-width: 760px;
+        background: #fff;
+        border-radius: 18px;
+        box-shadow: 0 18px 44px rgba(16,24,40,.12);
+        overflow: hidden;
+        position: relative;
+        z-index: 100000;
+    }
+
+    .checkout-page .qa2-head {
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+    }
+
+        .checkout-page .qa2-head b {
+            font-size: 13px;
+            font-weight: 900;
+            color: var(--text);
+        }
+
+    .checkout-page .qa2-x {
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+        border: 1px solid #e4e7ec;
+        background: #fff;
+        cursor: pointer;
+        font-weight: 900;
+    }
+
+        .checkout-page .qa2-x:hover {
+            background: #fafafa;
+        }
+
+    .checkout-page .qa2-body {
+        padding: 16px;
+    }
+
+    .checkout-page .qa2-alert {
+        border-radius: 14px;
+        padding: 12px 14px;
+        margin-bottom: 12px;
+        font-size: 13px;
+        font-weight: 800;
+        display: none;
+    }
+
+        .checkout-page .qa2-alert.qa2-err {
+            background: #fff1f2;
+            border: 1px solid #fecdd3;
+            color: #9f1239;
+        }
+
+        .checkout-page .qa2-alert.qa2-ok {
+            background: #ecfdf5;
+            border: 1px solid #b8f2d4;
+            color: #065f46;
+        }
+
+    .checkout-page .qa2-row2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+
+    .checkout-page .qa2-row1 {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    @@media(max-width:700px) {
+        .checkout-page .qa2-row2 {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .checkout-page .qa2-actions {
+        margin-top: 14px;
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .checkout-page .qa2-note {
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+    }
+</style>
+
+<main class="site-main page-spacing checkout-page">
+    <div class="container shell">
+
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;">
+            <div>
+                <h1 class="h1">Ödeme</h1>
+                <p class="sub">Adresinizi seçin, kart bilgilerinizi girin ve siparişi tamamlayın.</p>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(ok))
+        {<div class="alert alert-ok">@ok</div>}
+        @if (!string.IsNullOrWhiteSpace(err))
+        {<div class="alert alert-er">@err</div>}
+
+        <div class="grid">
+
+            <!-- LEFT -->
+            <div class="stack">
+
+                <div class="card">
+                    <div class="card-h">
+                        <b>Teslimat Adresi</b>
+                        <button type="button" class="btn btn-ghost" id="btnAddAddr">+ Hızlı Adres Ekle</button>
+                    </div>
+
+                    <div class="card-b">
+
+                        @if (Model.IsAuth == false)
+                        {
+                            <div class="addr-box">
+                                <div class="addr-title">Adres seçimi için giriş gerekli</div>
+                                <div class="addr-text">
+                                    Bu ekranda manuel adres alanları gizlidir. Lütfen giriş yapın ve kayıtlı adreslerden birini seçin.
+                                    <div style="margin-top:8px;">
+                                        <a href="/account/login?returnUrl=/checkout">Giriş Yap</a>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        else if (Model.AddressBook == null || Model.AddressBook.Count == 0)
+                        {
+                            <div class="addr-box">
+                                <div class="addr-title">Kayıtlı adres bulunamadı</div>
+                                <div class="addr-text">“Hızlı Adres Ekle” ile adres ekleyip seçebilirsiniz.</div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="addr-grid" id="addrGrid">
+                                @foreach (var a in Model.AddressBook)
+                                {
+                                    var selected = Model.SelectedAddressId.HasValue && Model.SelectedAddressId.Value == a.Id;
+                                    <div class="addr-card @(selected ? "sel" : "")"
+                                         tabindex="0"
+                                         role="button"
+                                         aria-pressed="@(selected ? "true" : "false")"
+                                         data-id="@a.Id"
+                                         data-name="@a.Name"
+                                         data-surname="@a.Surname"
+                                         data-phone="@a.Phone"
+                                         data-city="@a.City"
+                                         data-district="@a.District"
+                                         data-postcode="@a.PostCode"
+                                         data-details="@a.Details">
+                                        <span class="addr-badge">Seçili</span>
+                                        <div class="addr-name">@a.Name @a.Surname</div>
+                                        <div class="addr-meta"><span class="muted">Telefon:</span> @a.Phone</div>
+                                        <div class="addr-meta"><span class="muted">Konum:</span> @a.City / @a.District @(!string.IsNullOrWhiteSpace(a.PostCode) ? ("- " + a.PostCode) : "")</div>
+                                        <div class="addr-meta"><span class="muted">Adres:</span> @a.Details</div>
+                                    </div>
+                                }
+                            </div>
+
+                            <div id="addrPreview" class="addr-box" style="margin-top:12px;display:none;">
+                                <div class="addr-title">Seçili Adres Özeti</div>
+                                <div class="addr-text" id="apText"></div>
+                            </div>
+
+                            <div class="hint" style="margin-top:10px;">
+                                Seçtiğiniz adres siparişe kopyalanır (snapshot). Sonradan adres güncellense bile bu siparişin adresi değişmez.
+                            </div>
+                        }
+
+                        <!-- PAY FORM -->
+                        <form method="post" action="/checkout/pay" id="payForm" autocomplete="on" style="margin-top:14px;">
+                            @Html.AntiForgeryToken()
+
+                            <!-- snapshot hidden -->
+                            <div class="hidden-snapshot">
+                                <input class="in" name="Name" id="snapName" value="@Model.Payment.Name" />
+                                <input class="in" name="Surname" id="snapSurname" value="@Model.Payment.Surname" />
+                                <input class="in" name="Email" id="snapEmail" value="@Model.Payment.Email" />
+                                <input class="in" name="Phone" id="snapPhone" value="@Model.Payment.Phone" />
+                                <input class="in" name="City" id="snapCity" value="@Model.Payment.City" />
+                                <input class="in" name="District" id="snapDistrict" value="@Model.Payment.District" />
+                                <input class="in" name="PostCode" id="snapPostCode" value="@Model.Payment.PostCode" />
+                                <textarea class="ta" name="Address" id="snapAddress">@Model.Payment.Address</textarea>
+                                <textarea class="ta" name="OrderNote" id="snapOrderNote"></textarea>
+
+                                @* ✅ SADECE 2 SÖZLEŞME server'a da gitsin *@
+                                <input type="hidden" name="AcceptDistanceSales" id="AcceptDistanceSales_h" value="false" />
+                                <input type="hidden" name="AcceptReturnPolicy" id="AcceptReturnPolicy_h" value="false" />
+                            </div>
+
+                            <div class="row1">
+                                <div>
+                                    <label class="label">T.C. Kimlik No (opsiyonel)</label>
+                                    <input class="in" name="IdentificationNumber" id="IdentificationNumber" value="@Model.Payment.IdentificationNumber" inputmode="numeric" />
+                                    <div class="hint">Zorunlu değildir.</div>
+                                </div>
+                            </div>
+
+                            <div class="card" style="margin-top:16px; box-shadow:none; border:1px solid var(--line);">
+                                <div class="card-h">
+                                    <b>Ödeme Bilgileri</b>
+                                    <span class="kicker">Güvenli ödeme</span>
+                                </div>
+                                <div class="card-b">
+
+                                    <div class="row1">
+                                        <div>
+                                            <label class="label">Kart Üzerindeki İsim *</label>
+                                            <input class="in" name="CardHolderName" id="CardHolderName" value="@Model.Payment.CardHolderName" autocomplete="cc-name" required />
+                                            <div class="errtxt" id="errHolder">Kart üzerindeki isim zorunludur.</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row1" style="margin-top:12px;">
+                                        <div>
+                                            <label class="label">Kart Numarası *</label>
+                                            <input class="in" name="CardNumber" id="CardNumber" value="@Model.Payment.CardNumber" inputmode="numeric" autocomplete="cc-number" required />
+                                            <div class="errtxt" id="errCard">Geçerli bir kart numarası girin.</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row2" style="margin-top:12px;">
+                                        <div>
+                                            <label class="label">Son Kullanma (AA/YY) *</label>
+                                            <input class="in" name="ExpirationDate" id="ExpirationDate" value="@Model.Payment.ExpirationDate" inputmode="numeric" autocomplete="cc-exp" required />
+                                            <div class="errtxt" id="errExp">Geçerli bir tarih girin (AA/YY).</div>
+                                        </div>
+                                        <div>
+                                            <label class="label">CVV *</label>
+                                            <input class="in" name="CVV" id="CVV" value="@Model.Payment.CVV" inputmode="numeric" autocomplete="cc-csc" required />
+                                            <div class="errtxt" id="errCvv">CVV 3 veya 4 haneli olmalıdır.</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="errtxt" id="errAddr" style="margin-top:12px;">
+                                        Siparişi tamamlamak için lütfen bir adres seçin (veya hızlı adres ekleyin).
+                                    </div>
+
+                                    @* ✅ SADECE: MESAFELİ SATIŞ + İADE POLİTİKASI *@
+                                    <div class="agree-wrap" style="margin-top:14px;">
+                                        <div class="agree-title">Sözleşmeler ve Politikalar</div>
+
+                                        <label class="agree-item" id="ag_dist_item">
+                                            <input type="checkbox" id="ag_dist" />
+                                            <div class="agree-txt">
+                                                <a href="#" target="_blank" rel="noopener">Mesafeli Satış Sözleşmesi</a>’ni okudum ve kabul ediyorum. *
+                                            </div>
+                                        </label>
+
+                                        <label class="agree-item" id="ag_ret_item">
+                                            <input type="checkbox" id="ag_ret" />
+                                            <div class="agree-txt">
+                                                <a href="#" target="_blank" rel="noopener">İade Politikası</a>’nı okudum ve kabul ediyorum. *
+                                            </div>
+                                        </label>
+
+                                        <div class="errtxt" id="errAgree" style="margin-top:10px;">
+                                            Devam etmek için zorunlu sözleşmeleri kabul etmelisiniz.
+                                        </div>
+
+                                        <div class="agree-hint">
+                                            Onaylar sipariş kaydına “kabul edildi” olarak eklenebilir.
+                                        </div>
+                                    </div>
+
+                                    <button class="btn btn-primary btn-full" id="payBtn" type="submit" style="margin-top:14px;" disabled>
+                                        Siparişi Tamamla
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- RIGHT -->
+            <div class="stack" style="position:sticky; top:14px;">
+                <div class="card-mini">
+                    <div class="card-h">
+                        <b>Sipariş Özeti</b>
+                        <span class="kicker">@(Model.CartItems?.Count ?? 0) kalem</span>
+                    </div>
+
+                    <div class="card-b">
+                        <div class="lines" id="lines">
+                            @foreach (var it in Model.CartItems)
+                            {
+                                <div class="line"
+                                     data-pid="@it.ProductId"
+                                     data-sid="@it.SizeId"
+                                     data-unit="@it.UnitPrice"
+                                     data-oldunit="@it.OldUnitPrice">
+                                    <a href="/product/details/@it.ProductId" style="display:flex;align-items:center;">
+                                        <img src="@Img(it.ImageFile)" alt="@it.Title" />
+                                    </a>
+
+                                    <div class="line-mid">
+                                        <div class="line-title">
+                                            @it.Title
+                                            @if (it.OfferRate > 0)
+                                            {<span class="disc-badge">% @it.OfferRate İndirim</span>}
+                                        </div>
+
+                                        <div class="line-sub">Beden: @it.SizeName</div>
+
+                                        <div class="line-price">
+                                            Birim:
+                                            <span class="js-unit">₺ @Money(it.UnitPrice)</span>
+                                            @if (it.OfferRate > 0)
+                                            {<del class="price-del js-oldunit">₺ @Money(it.OldUnitPrice)</del>}
+                                        </div>
+
+                                        <div class="line-price">
+                                            <span class="kicker">Tutar:</span>
+                                            <b class="js-line">₺ @Money(it.LineTotal)</b>
+                                            @if (it.OfferRate > 0)
+                                            {<del class="price-del js-oldline">₺ @Money(it.OldLineTotal)</del>}
+                                        </div>
+                                    </div>
+
+                                    <div class="qty">
+                                        <div class="qty-ctrl">
+                                            <button type="button" class="qbtn js-minus" aria-label="Azalt">-</button>
+                                            <div class="qval js-qty">@it.Quantity</div>
+                                            <button type="button" class="qbtn js-plus" aria-label="Arttır">+</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+
+                        <div class="totals">
+                            <div class="trow">
+                                <span>Ara Toplam (İndirimsiz)</span>
+                                <b id="subTotalBefore">₺ @Money(Model.SubTotalBeforeDiscount)</b>
+                            </div>
+                            <div class="trow">
+                                <span>Toplam İndirim</span>
+                                <b id="discTotal">- ₺ @Money(Model.DiscountTotal)</b>
+                            </div>
+                            <div class="trow">
+                                <span>Ara Toplam (İndirimli)</span>
+                                <b id="subTotal">₺ @Money(Model.SubTotal)</b>
+                            </div>
+                            <div class="trow">
+                                <span>Kargo</span>
+                                <b id="shipText">@Model.ShippingLabel</b>
+                            </div>
+                            <div class="trow grand">
+                                <span>Genel Toplam</span>
+                                <b id="grandTotal">₺ @Money(Model.GrandTotal)</b>
+                            </div>
+                        </div>
+
+                        <button type="button" id="checkoutRefreshBtn" class="cart-refresh-btn">
+                            Sepeti Güncelle
+                        </button>
+
+                        <div class="hint" style="margin-top:12px;">
+                            Adet değişikliği yaptığınızda “Sepeti Güncelle” ile sayfayı yenileyip son durumu doğrulayabilirsiniz.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-mini">
+                    <div class="card-h"><b>Güvenlik</b><span class="kicker">SSL</span></div>
+                    <div class="card-b"><div class="hint" style="margin:0;">Kart bilgileriniz tarayıcıda maskelenerek girilir.</div></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Quick Address Modal -->
+    <div class="qa2-backdrop" id="qa2Backdrop" aria-hidden="true">
+        <div class="qa2-panel" role="dialog" aria-modal="true" aria-labelledby="qa2Title">
+            <div class="qa2-head">
+                <b id="qa2Title">Hızlı Adres Ekle</b>
+                <button type="button" class="qa2-x" id="qa2Close" aria-label="Kapat">✕</button>
+            </div>
+
+            <div class="qa2-body">
+                <div class="qa2-alert qa2-err" id="qa2Err"></div>
+                <div class="qa2-alert qa2-ok" id="qa2Ok"></div>
+
+                <form id="qa2Form" autocomplete="on" novalidate>
+                    <div class="qa2-row2">
+                        <div>
+                            <label class="label">Ad *</label>
+                            <input class="in" name="Name" required />
+                        </div>
+                        <div>
+                            <label class="label">Soyad *</label>
+                            <input class="in" name="Surname" required />
+                        </div>
+                    </div>
+
+                    <div class="qa2-row2" style="margin-top:12px;">
+                        <div>
+                            <label class="label">Telefon *</label>
+                            <input class="in" name="Phone" required />
+                        </div>
+                        <div>
+                            <label class="label">Posta Kodu</label>
+                            <input class="in" name="PostCode" />
+                        </div>
+                    </div>
+
+                    <div class="qa2-row2" style="margin-top:12px;">
+                        <div>
+                            <label class="label">İl *</label>
+                            <input class="in" name="City" required />
+                        </div>
+                        <div>
+                            <label class="label">İlçe *</label>
+                            <input class="in" name="District" required />
+                        </div>
+                    </div>
+
+                    <div class="qa2-row1" style="margin-top:12px;">
+                        <div>
+                            <label class="label">Adres *</label>
+                            <textarea class="ta" name="Details" rows="3" required></textarea>
+                        </div>
+                    </div>
+
+                    <div class="qa2-actions">
+                        <button type="button" class="btn btn-ghost" id="qa2Cancel">Vazgeç</button>
+                        <button type="submit" class="btn btn-primary" id="qa2Save">Adresi Kaydet</button>
+                    </div>
+
+                    <div class="qa2-note">Backend: POST /account/address/quick JSON döndürmeli.</div>
+                </form>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script>
+    (function () {
+        // ===== helpers =====
+        function getAntiToken() {
+            var el = document.querySelector('input[name="__RequestVerificationToken"]');
+            return el ? el.value : '';
+        }
+        function moneyTR(n) {
+            try { return new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n); }
+            catch (e) { return n; }
+        }
+        function onlyDigits(s) { return (s || '').replace(/\D/g, ''); }
+
+        // ===== refresh button =====
+        var refreshBtn = document.getElementById('checkoutRefreshBtn');
+        function markDirty() {
+            if (!refreshBtn) return;
+            refreshBtn.classList.add('isOpen');
+        }
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                window.location.reload();
+            });
+        }
+
+        // ===== totals =====
+        function recalcTotals() {
+            var rows = document.querySelectorAll('#lines .line');
+            var subBefore = 0, subAfter = 0;
+
+            rows.forEach(function (r) {
+                var unit = parseFloat(r.getAttribute('data-unit') || '0');
+                var oldUnit = parseFloat(r.getAttribute('data-oldunit') || '0');
+
+                var qtyEl = r.querySelector('.js-qty');
+                var qty = parseInt((qtyEl ? qtyEl.textContent : '0') || '0', 10);
+                if (isNaN(qty) || qty < 0) qty = 0;
+
+                var lineAfter = unit * qty;
+                var lineBefore = oldUnit * qty;
+
+                subAfter += lineAfter;
+                subBefore += lineBefore;
+
+                var lineEl = r.querySelector('.js-line');
+                if (lineEl) lineEl.textContent = '₺ ' + moneyTR(lineAfter);
+
+                var oldLineEl = r.querySelector('.js-oldline');
+                if (oldLineEl) oldLineEl.textContent = '₺ ' + moneyTR(lineBefore);
+            });
+
+            var disc = subBefore - subAfter;
+            if (disc < 0) disc = 0;
+
+            var subBeforeEl = document.getElementById('subTotalBefore');
+            var discEl = document.getElementById('discTotal');
+            var subEl = document.getElementById('subTotal');
+            var grandEl = document.getElementById('grandTotal');
+
+            if (subBeforeEl) subBeforeEl.textContent = '₺ ' + moneyTR(subBefore);
+            if (discEl) discEl.textContent = '- ₺ ' + moneyTR(disc);
+            if (subEl) subEl.textContent = '₺ ' + moneyTR(subAfter);
+            if (grandEl) grandEl.textContent = '₺ ' + moneyTR(subAfter); // kargo ücretsiz varsayımı
+        }
+
+        // ===== address snapshot selection =====
+        var snap = {
+            name: document.getElementById('snapName'),
+            surname: document.getElementById('snapSurname'),
+            phone: document.getElementById('snapPhone'),
+            city: document.getElementById('snapCity'),
+            district: document.getElementById('snapDistrict'),
+            post: document.getElementById('snapPostCode'),
+            addr: document.getElementById('snapAddress')
+        };
+        var addrGrid = document.getElementById('addrGrid');
+        var addrPreview = document.getElementById('addrPreview');
+        var apText = document.getElementById('apText');
+
+        function addressSnapshotValid() {
+            return !!(snap.name && snap.name.value.trim()
+                && snap.surname && snap.surname.value.trim()
+                && snap.phone && snap.phone.value.trim()
+                && snap.city && snap.city.value.trim()
+                && snap.district && snap.district.value.trim()
+                && snap.addr && snap.addr.value.trim());
+        }
+
+        function setAddrSelected(card) {
+            if (!card) return;
+
+            var cards = addrGrid ? addrGrid.querySelectorAll('.addr-card') : [];
+            cards.forEach(function (c) {
+                c.classList.remove('sel');
+                c.setAttribute('aria-pressed', 'false');
+            });
+            card.classList.add('sel');
+            card.setAttribute('aria-pressed', 'true');
+
+            var name = card.getAttribute('data-name') || '';
+            var surname = card.getAttribute('data-surname') || '';
+            var phone = card.getAttribute('data-phone') || '';
+            var city = card.getAttribute('data-city') || '';
+            var district = card.getAttribute('data-district') || '';
+            var post = card.getAttribute('data-postcode') || '';
+            var details = card.getAttribute('data-details') || '';
+
+            if (snap.name) snap.name.value = name;
+            if (snap.surname) snap.surname.value = surname;
+            if (snap.phone) snap.phone.value = phone;
+            if (snap.city) snap.city.value = city;
+            if (snap.district) snap.district.value = district;
+            if (snap.post) snap.post.value = post || '';
+            if (snap.addr) snap.addr.value = details || '';
+
+            if (addrPreview && apText) {
+                apText.innerHTML =
+                    `<div><b>${name} ${surname}</b> · ${phone}</div>
+                     <div style="margin-top:6px;">${city} / ${district} ${post ? ('- ' + post) : ''}</div>
+                     <div style="margin-top:6px;">${details}</div>`;
+                addrPreview.style.display = 'block';
+            }
+
+            validateAll();
+        }
+
+        if (addrGrid) {
+            addrGrid.addEventListener('click', function (e) {
+                var card = e.target.closest('.addr-card');
+                if (!card) return;
+                setAddrSelected(card);
+            });
+            addrGrid.addEventListener('keydown', function (e) {
+                if (e.key !== 'Enter' && e.key !== ' ') return;
+                var card = e.target.closest('.addr-card');
+                if (!card) return;
+                e.preventDefault();
+                setAddrSelected(card);
+            });
+
+            var initial = addrGrid.querySelector('.addr-card.sel') || addrGrid.querySelector('.addr-card');
+            if (initial) setAddrSelected(initial);
+        }
+
+        // ===== agreements (ONLY 2) =====
+        var agDist = document.getElementById('ag_dist');
+        var agRet = document.getElementById('ag_ret');
+
+        var agDistItem = document.getElementById('ag_dist_item');
+        var agRetItem = document.getElementById('ag_ret_item');
+
+        var errAgree = document.getElementById('errAgree');
+
+        // hidden mirror (server'a gitsin)
+        var hDist = document.getElementById('AcceptDistanceSales_h');
+        var hRet = document.getElementById('AcceptReturnPolicy_h');
+
+        function agreementsValid() {
+            return !!(agDist && agDist.checked
+                && agRet && agRet.checked);
+        }
+
+        function paintAgreeState() {
+            if (!agDistItem || !agRetItem) return;
+
+            agDistItem.classList.toggle('is-invalid', !(agDist && agDist.checked));
+            agRetItem.classList.toggle('is-invalid', !(agRet && agRet.checked));
+
+            if (hDist) hDist.value = (agDist && agDist.checked) ? "true" : "false";
+            if (hRet) hRet.value = (agRet && agRet.checked) ? "true" : "false";
+
+            var ok = agreementsValid();
+            if (errAgree) errAgree.style.display = ok ? 'none' : 'block';
+            return ok;
+        }
+
+        if (agDist) agDist.addEventListener('change', function () { paintAgreeState(); validateAll(); });
+        if (agRet) agRet.addEventListener('change', function () { paintAgreeState(); validateAll(); });
+
+        // ===== card form validation =====
+        var payBtn = document.getElementById('payBtn');
+        var payForm = document.getElementById('payForm');
+
+        var holder = document.getElementById('CardHolderName');
+        var cardNo = document.getElementById('CardNumber');
+        var exp = document.getElementById('ExpirationDate');
+        var cvv = document.getElementById('CVV');
+
+        var errHolder = document.getElementById('errHolder');
+        var errCard = document.getElementById('errCard');
+        var errExp = document.getElementById('errExp');
+        var errCvv = document.getElementById('errCvv');
+        var errAddr = document.getElementById('errAddr');
+
+        function showErr(el, show) { if (el) el.style.display = show ? 'block' : 'none'; }
+
+        function setFieldState(el, ok) {
+            if (!el) return;
+            el.classList.remove('is-valid', 'is-invalid');
+            el.classList.add(ok ? 'is-valid' : 'is-invalid');
+        }
+
+        function luhnValid(num) {
+            var s = onlyDigits(num);
+            if (s.length < 13) return false;
+            var sum = 0, alt = false;
+            for (var i = s.length - 1; i >= 0; i--) {
+                var n = parseInt(s.charAt(i), 10);
+                if (alt) { n *= 2; if (n > 9) n -= 9; }
+                sum += n;
+                alt = !alt;
+            }
+            return (sum % 10) === 0;
+        }
+
+        function expValid(v) {
+            var s = onlyDigits(v);
+            if (s.length !== 4) return false;
+            var mm = parseInt(s.slice(0, 2), 10);
+            var yy = parseInt(s.slice(2), 10);
+            if (isNaN(mm) || isNaN(yy)) return false;
+            if (mm < 1 || mm > 12) return false;
+
+            var now = new Date();
+            var curYY = now.getFullYear() % 100;
+            var curMM = now.getMonth() + 1;
+            if (yy < curYY) return false;
+            if (yy === curYY && mm < curMM) return false;
+            return true;
+        }
+
+        function cvvValid(v) {
+            var s = onlyDigits(v);
+            return (s.length === 3 || s.length === 4);
+        }
+
+        function formatCardNumber(val) {
+            var v = onlyDigits(val).slice(0, 19);
+            return v.replace(/(.{4})/g, '$1 ').trim();
+        }
+
+        function formatExp(val) {
+            var v = onlyDigits(val).slice(0, 4);
+            return (v.length >= 3) ? (v.slice(0, 2) + '/' + v.slice(2)) : v;
+        }
+
+        function validateAll() {
+            var okAddr = addressSnapshotValid();
+            showErr(errAddr, !okAddr);
+
+            var okHolder = !!(holder && holder.value.trim().length >= 2);
+            setFieldState(holder, okHolder);
+            showErr(errHolder, !okHolder);
+
+            var okCard = !!(cardNo && luhnValid(cardNo.value));
+            setFieldState(cardNo, okCard);
+            showErr(errCard, !okCard);
+
+            var okExp = !!(exp && expValid(exp.value));
+            setFieldState(exp, okExp);
+            showErr(errExp, !okExp);
+
+            var okCvv = !!(cvv && cvvValid(cvv.value));
+            setFieldState(cvv, okCvv);
+            showErr(errCvv, !okCvv);
+
+            var okAgree = paintAgreeState();
+
+            var allOk = okAddr && okHolder && okCard && okExp && okCvv && okAgree;
+            if (payBtn) payBtn.disabled = !allOk;
+            return allOk;
+        }
+        window.validateAll = validateAll;
+        window.setAddrSelected = setAddrSelected;
+
+        if (cardNo) {
+            cardNo.addEventListener('input', function () {
+                cardNo.value = formatCardNumber(cardNo.value);
+                validateAll();
+            });
+            cardNo.addEventListener('blur', validateAll);
+        }
+        if (exp) {
+            exp.addEventListener('input', function () {
+                exp.value = formatExp(exp.value);
+                validateAll();
+            });
+            exp.addEventListener('blur', validateAll);
+        }
+        if (cvv) {
+            cvv.addEventListener('input', function () {
+                cvv.value = onlyDigits(cvv.value).slice(0, 4);
+                validateAll();
+            });
+            cvv.addEventListener('blur', validateAll);
+        }
+        if (holder) {
+            holder.addEventListener('input', validateAll);
+            holder.addEventListener('blur', validateAll);
+        }
+
+        if (payForm && payBtn) {
+            payForm.addEventListener('submit', function (e) {
+                if (!validateAll()) { e.preventDefault(); return false; }
+                payBtn.disabled = true;
+                payBtn.textContent = 'Sipariş oluşturuluyor...';
+            });
+        }
+
+        async function setQty(row, newQty) {
+            var pid = row.getAttribute('data-pid');
+            var sid = row.getAttribute('data-sid');
+
+            var body = new URLSearchParams();
+            body.append('productId', pid);
+            body.append('sizeId', sid);
+            body.append('quantity', newQty);
+            body.append('__RequestVerificationToken', getAntiToken());
+
+            var res = await fetch('/cart/mini/setqty', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: body.toString()
+            });
+
+            if (!res.ok) return;
+            var data = await res.json();
+            if (!data || !data.ok) return;
+
+            if (data.removed) { row.remove(); }
+            else {
+                var qEl = row.querySelector('.js-qty');
+                if (qEl) qEl.textContent = data.qty;
+            }
+
+            markDirty();
+            recalcTotals();
+            validateAll();
+        }
+
+        document.addEventListener('click', function (e) {
+            var row = e.target.closest && e.target.closest('#lines .line');
+            if (!row) return;
+
+            if (e.target.closest('.js-plus')) {
+                var q = parseInt((row.querySelector('.js-qty') || {}).textContent || '1', 10);
+                if (isNaN(q)) q = 1;
+                setQty(row, q + 1);
+            }
+            if (e.target.closest('.js-minus')) {
+                var q2 = parseInt((row.querySelector('.js-qty') || {}).textContent || '1', 10);
+                if (isNaN(q2)) q2 = 1;
+                setQty(row, q2 - 1);
+            }
+        });
+
+        recalcTotals();
+        paintAgreeState();
+        validateAll();
+
+    })();
+</script>
+
+<script>
+    /* Quick Address v2 + tam client validation */
+    (function () {
+        var openBtn = document.getElementById('btnAddAddr');
+        var bd = document.getElementById('qa2Backdrop');
+        var panel = bd ? bd.querySelector('.qa2-panel') : null;
+        var closeBtn = document.getElementById('qa2Close');
+        var cancelBtn = document.getElementById('qa2Cancel');
+        var form = document.getElementById('qa2Form');
+        var saveBtn = document.getElementById('qa2Save');
+        var errBox = document.getElementById('qa2Err');
+        var okBox = document.getElementById('qa2Ok');
+        var addrGrid = document.getElementById('addrGrid');
+
+        function getAntiToken() {
+            var el = document.querySelector('input[name="__RequestVerificationToken"]');
+            return el ? el.value : '';
+        }
+        function showErr(msg) { if (!errBox) return; errBox.textContent = msg || 'İşlem başarısız.'; errBox.style.display = 'block'; }
+        function hideErr() { if (errBox) { errBox.style.display = 'none'; errBox.textContent = ''; } }
+        function showOk(msg) { if (!okBox) return; okBox.textContent = msg || 'Başarılı.'; okBox.style.display = 'block'; }
+        function hideOk() { if (okBox) { okBox.style.display = 'none'; okBox.textContent = ''; } }
+
+        function openModal() {
+            if (!bd) return;
+            bd.classList.add('qa2-open');
+            bd.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+            hideErr(); hideOk();
+            if (form) {
+                form.reset();
+                form.querySelectorAll('.is-invalid,.is-valid').forEach(function (x) {
+                    x.classList.remove('is-invalid', 'is-valid');
+                });
+            }
+            setTimeout(function () {
+                var first = bd.querySelector('input[name="Name"]');
+                if (first) first.focus();
+            }, 10);
+        }
+        function closeModal() {
+            if (!bd) return;
+            bd.classList.remove('qa2-open');
+            bd.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = '';
+        }
+
+        if (openBtn) openBtn.addEventListener('click', openModal);
+        if (closeBtn) closeBtn.addEventListener('click', closeModal);
+        if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+
+        if (bd) {
+            bd.addEventListener('click', function (e) { if (e.target === bd) closeModal(); });
+            document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && bd.classList.contains('qa2-open')) closeModal(); });
+            if (panel) panel.addEventListener('click', function (e) { e.stopPropagation(); });
+        }
+
+        function validateQa2Form() {
+            if (!form) return false;
+            hideErr(); hideOk();
+
+            var ok = true;
+            var required = form.querySelectorAll('[required]');
+            required.forEach(function (el) {
+                var v = String(el.value || '').trim();
+                var valid = v.length > 0;
+                el.classList.remove('is-valid', 'is-invalid');
+                el.classList.add(valid ? 'is-valid' : 'is-invalid');
+                if (!valid) ok = false;
+            });
+
+            if (!ok) showErr('Lütfen zorunlu alanları doldurun.');
+            return ok;
+        }
+
+        if (form) {
+            form.addEventListener('input', function (e) {
+                var el = e.target;
+                if (!el) return;
+                var isReq = el.hasAttribute('required');
+                if (!isReq) return;
+                var v = String(el.value || '').trim();
+                el.classList.remove('is-valid', 'is-invalid');
+                el.classList.add(v ? 'is-valid' : 'is-invalid');
+            });
+        }
+
+        if (form) {
+            form.addEventListener('submit', async function (ev) {
+                ev.preventDefault();
+
+                if (!validateQa2Form()) return;
+                if (saveBtn) saveBtn.disabled = true;
+
+                try {
+                    var fd = new FormData(form);
+                    fd.append('__RequestVerificationToken', getAntiToken());
+
+                    var res = await fetch('/account/address/quick', { method: 'POST', body: fd });
+                    if (!res.ok) throw new Error('Adres kaydedilemedi.');
+
+                    var data = await res.json();
+                    if (!data || !data.ok) throw new Error((data && data.message) ? data.message : 'Adres kaydedilemedi.');
+
+                    if (addrGrid) {
+                        var card = document.createElement('div');
+                        card.className = 'addr-card';
+                        card.setAttribute('tabindex', '0');
+                        card.setAttribute('role', 'button');
+                        card.setAttribute('aria-pressed', 'false');
+
+                        card.setAttribute('data-id', String(data.id));
+                        card.setAttribute('data-name', data.address.name || '');
+                        card.setAttribute('data-surname', data.address.surname || '');
+                        card.setAttribute('data-phone', data.address.phone || '');
+                        card.setAttribute('data-city', data.address.city || '');
+                        card.setAttribute('data-district', data.address.district || '');
+                        card.setAttribute('data-postcode', data.address.postCode || '');
+                        card.setAttribute('data-details', data.address.details || '');
+
+                        var pc = data.address.postCode ? ('- ' + data.address.postCode) : '';
+                        card.innerHTML = `
+                        <span class="addr-badge">Seçili</span>
+                        <div class="addr-name">${(data.address.name || '')} ${(data.address.surname || '')}</div>
+                        <div class="addr-meta"><span class="muted">Telefon:</span> ${(data.address.phone || '')}</div>
+                        <div class="addr-meta"><span class="muted">Konum:</span> ${(data.address.city || '')} / ${(data.address.district || '')} ${pc}</div>
+                        <div class="addr-meta"><span class="muted">Adres:</span> ${(data.address.details || '')}</div>
+                    `;
+
+                        addrGrid.prepend(card);
+
+                        if (typeof window.setAddrSelected === 'function') window.setAddrSelected(card);
+                        card.click();
+                    }
+
+                    showOk('Adres kaydedildi ve seçildi.');
+                    if (typeof window.validateAll === 'function') window.validateAll();
+                    setTimeout(closeModal, 300);
+
+                } catch (ex) {
+                    showErr(ex && ex.message ? ex.message : 'Adres kaydedilemedi.');
+                } finally {
+                    if (saveBtn) saveBtn.disabled = false;
+                }
+            });
+        }
+    })();
+</script>

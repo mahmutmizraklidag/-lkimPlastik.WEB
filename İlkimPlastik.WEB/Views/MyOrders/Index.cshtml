@@ -1,0 +1,915 @@
+﻿@model ilkimPlastik.WEB.Controllers.MyOrdersController.IndexVm
+@using System.Globalization
+@{
+    ViewData["Title"] = "Siparişlerim";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var tr = CultureInfo.GetCultureInfo("tr-TR");
+    string Money(decimal v) => string.Format(tr, "{0:N2}", v);
+    string Dt(DateTime d) => d.ToString("dd.MM.yyyy HH:mm", tr);
+
+    string StatusText(string s, bool isPay)
+    {
+        s = (s ?? "Pending").Trim();
+        if (s.Equals("Cancelled", StringComparison.OrdinalIgnoreCase)) return "İptal";
+        if (s.Equals("Shipped", StringComparison.OrdinalIgnoreCase)) return "Kargoda";
+        if (s.Equals("Paid", StringComparison.OrdinalIgnoreCase) || isPay) return "Ödendi";
+        return "Hazırlanıyor";
+    }
+
+    string StatusClass(string s, bool isPay)
+    {
+        s = (s ?? "Pending").Trim();
+        if (s.Equals("Cancelled", StringComparison.OrdinalIgnoreCase)) return "st-cancel";
+        if (s.Equals("Shipped", StringComparison.OrdinalIgnoreCase)) return "st-ship";
+        if (s.Equals("Paid", StringComparison.OrdinalIgnoreCase) || isPay) return "st-paid";
+        return "st-pend";
+    }
+}
+
+<style>
+     /* =========================
+    Modern Siparişlerim UI
+    ========================= */
+     .myord {
+         --accent: #1daaa3;
+         --accent2: #168d87;
+         --text: #101828;
+         --muted: #667085;
+         --line: #eef0f3;
+         --soft: #f6f7f9;
+         --shadow: 0 18px 44px rgba(16,24,40,.12);
+         --r: 16px;
+         /* ✅ Footer ile bitişmesin */
+         padding-bottom: 7rem;
+         margin-bottom: 3rem;
+     }
+
+         .myord * {
+             box-sizing: border-box
+         }
+
+         .myord .head {
+             display: flex;
+             align-items: flex-end;
+             justify-content: space-between;
+             gap: 12px;
+             flex-wrap: wrap;
+             margin: 12px 0 14px;
+         }
+
+         .myord .title {
+             margin: 0;
+             font-size: 18px;
+             font-weight: 900;
+             color: var(--text)
+         }
+
+         .myord .sub {
+             margin: 6px 0 0;
+             color: var(--muted);
+             font-size: 13px;
+             font-weight: 800
+         }
+
+         .myord .card {
+             background: #fff;
+             border: 1px solid var(--line);
+             border-radius: var(--r);
+             box-shadow: var(--shadow);
+             overflow: hidden;
+         }
+
+         .myord .card-h {
+             padding: 14px 16px;
+             border-bottom: 1px solid var(--line);
+             display: flex;
+             align-items: center;
+             justify-content: space-between;
+             gap: 10px;
+             flex-wrap: wrap;
+         }
+
+             .myord .card-h b {
+                 font-size: 13px;
+                 font-weight: 900;
+                 color: var(--text)
+             }
+
+         .myord .card-b {
+             padding: 16px
+         }
+
+         .myord .toolbar {
+             display: flex;
+             gap: 10px;
+             flex-wrap: wrap;
+             align-items: center;
+         }
+
+         .myord .inp {
+             height: 44px;
+             border-radius: 14px;
+             border: 1px solid #e4e7ec;
+             padding: 0 12px;
+             min-width: 240px;
+             font-weight: 800;
+             outline: none;
+         }
+
+             .myord .inp:focus {
+                 border-color: rgba(29,170,163,.55);
+                 box-shadow: 0 0 0 4px rgba(29,170,163,.12)
+             }
+
+         .myord .btn {
+             height: 44px;
+             border-radius: 14px;
+             border: 1px solid transparent;
+             cursor: pointer;
+             font-weight: 900;
+             font-size: 13px;
+             padding: 0 14px;
+             display: inline-flex;
+             align-items: center;
+             justify-content: center;
+             gap: 8px;
+             transition: .12s ease;
+             user-select: none;
+         }
+
+             .myord .btn.primary {
+                 background: var(--accent);
+                 border-color: var(--accent);
+                 color: #fff
+             }
+
+                 .myord .btn.primary:hover {
+                     background: var(--accent2);
+                     border-color: var(--accent2)
+                 }
+
+             .myord .btn.ghost {
+                 background: #fff;
+                 border-color: #e4e7ec;
+                 color: #344054
+             }
+
+                 .myord .btn.ghost:hover {
+                     background: #fafafa
+                 }
+
+             .myord .btn.soft {
+                 background: rgba(29,170,163,.10);
+                 border-color: rgba(29,170,163,.22);
+                 color: var(--accent2)
+             }
+
+                 .myord .btn.soft:hover {
+                     background: rgba(29,170,163,.14)
+                 }
+
+         .myord .table {
+             width: 100%;
+             border-collapse: separate;
+             border-spacing: 0 10px;
+         }
+
+         .myord .row {
+             background: #fff;
+             border: 1px solid var(--line);
+             border-radius: 14px;
+             overflow: hidden;
+         }
+
+             .myord .row td {
+                 padding: 12px;
+                 vertical-align: middle;
+                 font-weight: 800;
+                 color: #344054;
+             }
+
+                 .myord .row td:first-child {
+                     border-top-left-radius: 14px;
+                     border-bottom-left-radius: 14px
+                 }
+
+                 .myord .row td:last-child {
+                     border-top-right-radius: 14px;
+                     border-bottom-right-radius: 14px
+                 }
+
+         .myord .muted {
+             color: var(--muted);
+             font-weight: 800;
+             font-size: 12px
+         }
+
+         .myord .k {
+             font-size: 12px;
+             color: var(--muted);
+             font-weight: 900
+         }
+
+         .myord .v {
+             margin-top: 4px;
+             color: var(--text);
+             font-weight: 900
+         }
+
+     .badge {
+         display: inline-flex;
+         align-items: center;
+         justify-content: center;
+         height: 26px;
+         padding: 0 10px;
+         border-radius: 999px;
+         border: 1px solid transparent;
+         font-size: 12px;
+         font-weight: 900;
+     }
+
+     .st-pend {
+         background: #fff7ed;
+         border-color: #fed7aa;
+         color: #9a3412
+     }
+
+     .st-paid {
+         background: #ecfdf5;
+         border-color: #b8f2d4;
+         color: #065f46
+     }
+
+     .st-ship {
+         background: #eff6ff;
+         border-color: #bfdbfe;
+         color: #1d4ed8
+     }
+
+     .st-cancel {
+         background: #fff1f2;
+         border-color: #fecdd3;
+         color: #9f1239
+     }
+
+     @@media(max-width:992px) {
+         .myord .table {
+             border-spacing: 0 12px
+         }
+
+         .myord .hide-md {
+             display: none
+         }
+     }
+
+     /* ===== Modal ===== */
+     .modal-backdrop {
+         position: fixed;
+         inset: 0;
+         background: rgba(16,24,40,.55);
+         display: none;
+         align-items: center;
+         justify-content: center;
+         z-index: 99999;
+         padding: 18px;
+     }
+
+         .modal-backdrop.open {
+             display: flex
+         }
+
+     .modal-panel {
+         width: 100%;
+         max-width: 980px;
+         background: #fff;
+         border-radius: 18px;
+         box-shadow: var(--shadow);
+         overflow: hidden;
+     }
+
+     .modal-h {
+         padding: 14px 16px;
+         border-bottom: 1px solid var(--line);
+         display: flex;
+         align-items: center;
+         justify-content: space-between;
+         gap: 10px;
+     }
+
+         .modal-h b {
+             font-size: 13px;
+             font-weight: 900;
+             color: var(--text)
+         }
+
+     .modal-x {
+         width: 40px;
+         height: 40px;
+         border-radius: 14px;
+         border: 1px solid #e4e7ec;
+         background: #fff;
+         cursor: pointer;
+         font-weight: 900;
+     }
+
+         .modal-x:hover {
+             background: #fafafa
+         }
+
+     .modal-b {
+         padding: 16px
+     }
+
+     .modal-skel {
+         border: 1px dashed #e4e7ec;
+         border-radius: 16px;
+         padding: 14px;
+         color: #667085;
+         font-weight: 800;
+     }
+
+     /* ✅ Kopyalama aksiyonları */
+     .modal-actions {
+         display: flex;
+         gap: 10px;
+         flex-wrap: wrap;
+         justify-content: flex-end;
+         margin-bottom: 12px;
+     }
+
+     .toast {
+         position: fixed;
+         left: 50%;
+         bottom: 26px;
+         transform: translateX(-50%);
+         background: #101828;
+         color: #fff;
+         padding: 10px 12px;
+         border-radius: 999px;
+         font-weight: 900;
+         font-size: 12px;
+         opacity: 0;
+         pointer-events: none;
+         transition: .15s ease;
+         z-index: 100000;
+     }
+
+         .toast.show {
+             opacity: 1
+         }
+
+     .detailGrid {
+         display: grid;
+         grid-template-columns: 1fr 1fr;
+         gap: 12px;
+     }
+
+     @@media(max-width:820px) {
+         .detailGrid {
+             grid-template-columns: 1fr;
+         }
+     }
+
+     .detailBox {
+         border: 1px solid var(--line);
+         border-radius: 16px;
+         background: #fff;
+         padding: 12px;
+     }
+
+         .detailBox .h {
+             font-weight: 900;
+             color: var(--text);
+             margin-bottom: 10px
+         }
+
+         .detailBox .kv {
+             display: grid;
+             grid-template-columns: 1fr 1fr;
+             gap: 10px
+         }
+
+     @@media(max-width:520px) {
+         .detailBox .kv {
+             grid-template-columns: 1fr;
+         }
+     }
+
+     .itemList {
+         display: flex;
+         flex-direction: column;
+         gap: 10px;
+         margin-top: 10px;
+     }
+
+     .item {
+         display: flex;
+         gap: 10px;
+         align-items: center;
+         justify-content: space-between;
+         flex-wrap: wrap;
+         border: 1px solid var(--line);
+         border-radius: 16px;
+         padding: 10px;
+         background: #fff;
+     }
+
+     .itemL {
+         display: flex;
+         gap: 10px;
+         align-items: center;
+         min-width: 260px;
+         flex: 1
+     }
+
+     .itemImg {
+         width: 56px;
+         height: 56px;
+         border-radius: 14px;
+         border: 1px solid #eee;
+         background: #f4f4f4;
+         overflow: hidden;
+         flex: 0 0 auto;
+     }
+
+         .itemImg img {
+             width: 100%;
+             height: 100%;
+             object-fit: cover;
+             display: block
+         }
+
+     .itemT {
+         font-weight: 900;
+         color: var(--text);
+         line-height: 1.25
+     }
+
+     .itemM {
+         font-size: 12px;
+         font-weight: 800;
+         color: var(--muted);
+         margin-top: 4px
+     }
+
+     .itemR {
+         display: flex;
+         gap: 12px;
+         align-items: baseline;
+         justify-content: flex-end
+     }
+
+         .itemR .qty {
+             font-weight: 900;
+             color: #111
+         }
+
+         .itemR .price {
+             font-weight: 900;
+             color: #111
+         }
+
+         .itemR .sum {
+             font-weight: 900;
+             color: #111;
+             opacity: .9
+         }
+
+     hr.sep {
+         border: none;
+         border-top: 1px solid var(--line);
+         margin: 14px 0
+     }
+</style>
+
+<main class="site-main page-spacing myord">
+    <div class="page-banner checkout-banner container-fluid no-padding">
+        <div class="page-banner-content">
+            <h3>Siparişlerim</h3>
+        </div>
+    </div>
+
+    <div class="container" style="margin-top:18px">
+
+        <div class="head">
+            <div>
+                <h1 class="title">Sipariş Geçmişi</h1>
+                <p class="sub">Tüm siparişlerini buradan görüntüleyebilir, detaylarına bakabilirsin.</p>
+            </div>
+
+            <div class="toolbar">
+                <input class="inp" id="q" type="text" placeholder="Sipariş no veya şehir ara..." />
+                <button class="btn ghost" id="btnClear" type="button">Temizle</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-h">
+                <b>Tüm Siparişler</b>
+                <span class="muted">@((Model.Orders?.Count ?? 0)) kayıt</span>
+            </div>
+
+            <div class="card-b">
+                @if (Model.Orders == null || Model.Orders.Count == 0)
+                {
+                    <div style="font-weight:800;color:#667085;">
+                        Henüz siparişin bulunmuyor. Ürünleri inceleyip kolayca sipariş oluşturabilirsin.
+                        <div style="margin-top:10px;">
+                            <a class="btn primary" href="/product" style="text-decoration:none;">Ürünleri Gör</a>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <table class="table" id="ordersTable">
+                        <tbody>
+                            @foreach (var o in Model.Orders)
+                            {
+                                var stText = StatusText(o.Status, o.IsPay);
+                                var stClass = StatusClass(o.Status, o.IsPay);
+
+                                <tr class="row" data-search="@($"{o.Id} {o.City} {o.District} {stText}".ToLowerInvariant())">
+                                    <td style="width:170px;">
+                                        <div class="k">Sipariş No</div>
+                                        <div class="v">#@o.Id</div>
+                                        <div class="muted">@Dt(o.CreatedAt)</div>
+                                    </td>
+
+                                    <td class="hide-md">
+                                        <div class="k">Teslimat</div>
+                                        <div class="v">@o.City / @o.District</div>
+                                        <div class="muted">@o.Name @o.Surname</div>
+                                    </td>
+
+                                    <td style="width:170px;">
+                                        <div class="k">Tutar</div>
+                                        <div class="v">₺ @Money(o.TotalPrice)</div>
+                                    </td>
+
+                                    <td style="width:160px;">
+                                        <div class="k">Durum</div>
+                                        <div class="v"><span class="badge @stClass">@stText</span></div>
+                                    </td>
+
+                                    <td style="width:180px;text-align:right;">
+                                        <button class="btn primary jsOpenDetail" type="button" data-id="@o.Id">
+                                            Sipariş Detayı
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        </div>
+
+    </div>
+</main>
+
+<!-- Detail Modal -->
+<div class="modal-backdrop" id="mDetail">
+    <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="mDetailT">
+        <div class="modal-h">
+            <b id="mDetailT">Sipariş Detayı</b>
+            <button type="button" class="modal-x" data-close="#mDetail">✕</button>
+        </div>
+        <div class="modal-b">
+
+            <!-- ✅ Kopyalama butonları -->
+            <div class="modal-actions">
+                <button type="button" class="btn soft" id="btnCopyOrder">Sipariş No’yu Kopyala</button>
+                <button type="button" class="btn soft" id="btnCopyAddress">Adresi Kopyala</button>
+                <button type="button" class="btn primary" id="btnCopyAll">Tüm Detayı Kopyala</button>
+            </div>
+
+            <div id="detailBody" class="modal-skel">Detaylar hazırlanıyor…</div>
+
+            <!-- Bu alanlar kopyalama için (görünmez) -->
+            <textarea id="copyBuf" style="position:absolute;left:-9999px;top:-9999px;height:0;width:0;opacity:0;"></textarea>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast">Kopyalandı</div>
+
+<script>
+    (function () {
+        // ---------- modal helpers ----------
+        function openModal(sel) {
+            var el = document.querySelector(sel);
+            if (!el) return;
+            el.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeModal(sel) {
+            var el = document.querySelector(sel);
+            if (!el) return;
+            el.classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        document.addEventListener('click', function (e) {
+            var x = e.target.closest && e.target.closest('[data-close]');
+            if (!x) return;
+            e.preventDefault();
+            closeModal(x.getAttribute('data-close'));
+        });
+
+        document.addEventListener('click', function (e) {
+            var bd = e.target.classList && e.target.classList.contains('modal-backdrop') ? e.target : null;
+            if (bd) { bd.classList.remove('open'); document.body.style.overflow = ''; }
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key !== 'Escape') return;
+            document.querySelectorAll('.modal-backdrop.open').forEach(function (m) { m.classList.remove('open'); });
+            document.body.style.overflow = '';
+        });
+
+        // ---------- search filter ----------
+        var q = document.getElementById('q');
+        var btnClear = document.getElementById('btnClear');
+        var table = document.getElementById('ordersTable');
+
+        function applyFilter() {
+            if (!table) return;
+            var term = (q.value || '').trim().toLowerCase();
+            table.querySelectorAll('tr.row').forEach(function (r) {
+                var hay = (r.getAttribute('data-search') || '');
+                r.style.display = (!term || hay.indexOf(term) >= 0) ? '' : 'none';
+            });
+        }
+        if (q) {
+            q.addEventListener('input', applyFilter);
+            q.addEventListener('blur', applyFilter);
+        }
+        if (btnClear) {
+            btnClear.addEventListener('click', function () {
+                if (q) q.value = '';
+                applyFilter();
+            });
+        }
+
+        // ---------- toast ----------
+        var toast = document.getElementById('toast');
+        var toastTimer = null;
+        function showToast(msg) {
+            if (!toast) return;
+            toast.textContent = msg || 'Kopyalandı';
+            toast.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(function () { toast.classList.remove('show'); }, 1400);
+        }
+
+        // ---------- copy helpers ----------
+        var copyBuf = document.getElementById('copyBuf');
+
+        async function copyText(text) {
+            text = String(text || '').trim();
+            if (!text) return false;
+
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(text);
+                    return true;
+                }
+            } catch { }
+
+            try {
+                if (copyBuf) {
+                    copyBuf.value = text;
+                    copyBuf.focus();
+                    copyBuf.select();
+                    var ok = document.execCommand('copy');
+                    return !!ok;
+                }
+            } catch { }
+            return false;
+        }
+
+        // ---------- detail fetch ----------
+        var detailBody = document.getElementById('detailBody');
+        var btnCopyOrder = document.getElementById('btnCopyOrder');
+        var btnCopyAddress = document.getElementById('btnCopyAddress');
+        var btnCopyAll = document.getElementById('btnCopyAll');
+
+        // aktif sipariş detayını burada tutuyoruz (kopyalama için)
+        var currentDetail = null;
+
+        function esc(s) {
+            return String(s ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function moneyTR(n) {
+            try { return Number(n).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+            catch { return n; }
+        }
+
+        function statusText(s, isPay) {
+            s = (s || 'Pending').trim().toLowerCase();
+            if (s === 'cancelled') return 'İptal';
+            if (s === 'shipped') return 'Kargoda';
+            if (s === 'paid' || isPay) return 'Ödendi';
+            return 'Hazırlanıyor';
+        }
+
+        function buildCopyTexts(d) {
+            if (!d) return { order: '', address: '', all: '' };
+
+            var st = statusText(d.status, d.isPay);
+            var name = ((d.name || '') + ' ' + (d.surname || '')).trim();
+            var city = (d.city || '').trim();
+            var dist = (d.district || '').trim();
+            var post = (d.postCode || '').trim();
+            var addr = (d.details || '').trim();
+
+            var addrLine = [city, dist].filter(Boolean).join(' / ') + (post ? (' - ' + post) : '');
+            var addressText =
+                (name ? (name + '\n') : '') +
+                (d.phone ? (String(d.phone).trim() + '\n') : '') +
+                (addrLine ? (addrLine + '\n') : '') +
+                (addr ? addr : '');
+
+            var items = Array.isArray(d.items) ? d.items : [];
+            var itemsText = items.map(function (x) {
+                var qty = Number(x.count || 0);
+                var price = Number(x.price || 0);
+                var sum = qty * price;
+                var cat = (x.categoryName || '').trim();
+                var t = (x.title || '').trim();
+                return '- ' + t + (cat ? (' (' + cat + ')') : '') + ' | x' + qty + ' | ₺ ' + moneyTR(price) + ' | ₺ ' + moneyTR(sum);
+            }).join('\n');
+
+            var allText =
+                'Sipariş No: #' + d.id + '\n' +
+                'Durum: ' + st + '\n' +
+                'Tarih: ' + (d.createdAt ? new Date(d.createdAt).toLocaleString('tr-TR') : '-') + '\n' +
+                'Toplam: ₺ ' + moneyTR(d.totalPrice) + '\n\n' +
+                'Teslimat Bilgisi\n' +
+                addressText + '\n\n' +
+                'Ürünler\n' +
+                (itemsText || '-');
+
+            return {
+                order: '#' + d.id,
+                address: addressText.trim(),
+                all: allText.trim()
+            };
+        }
+
+        function buildDetail(d) {
+            var st = statusText(d.status, d.isPay);
+
+            var addrLine = [d.city, d.district].filter(Boolean).join(' / ');
+            var post = d.postCode ? (' - ' + d.postCode) : '';
+            var details = d.details ? esc(d.details) : '';
+
+            var items = Array.isArray(d.items) ? d.items : [];
+            var itemsHtml = items.map(function (x) {
+                var img = x.imageName
+                    ? ('<img src="/uploads/products/' + encodeURIComponent(String(x.imageName).replace(/^\/+/, '')).replace(/%2F/g, '/') + '" alt="">')
+                    : '';
+                var qty = Number(x.count || 0);
+                var price = Number(x.price || 0);
+                var sum = qty * price;
+
+                return (
+                    '<div class="item">' +
+                    '<div class="itemL">' +
+                    '<div class="itemImg">' + (img || '') + '</div>' +
+                    '<div>' +
+                    '<div class="itemT">' + esc(x.title) + '</div>' +
+                    '<div class="itemM">' + esc(x.categoryName || '') + '</div>' +
+                    '</div>' +
+                    '</div>' +
+                    '<div class="itemR">' +
+                    '<div class="qty">x' + esc(qty) + '</div>' +
+                    '<div class="price">₺ ' + esc(moneyTR(price)) + '</div>' +
+                    '<div class="sum">₺ ' + esc(moneyTR(sum)) + '</div>' +
+                    '</div>' +
+                    '</div>'
+                );
+            }).join('');
+
+            return (
+                '<div class="detailGrid">' +
+                '<div class="detailBox">' +
+                '<div class="h">Sipariş Bilgisi</div>' +
+                '<div class="kv">' +
+                '<div><div class="k">Sipariş No</div><div class="v">#' + esc(d.id) + '</div></div>' +
+                '<div><div class="k">Durum</div><div class="v">' + esc(st) + '</div></div>' +
+                '<div><div class="k">Toplam</div><div class="v">₺ ' + esc(moneyTR(d.totalPrice)) + '</div></div>' +
+                '<div><div class="k">Tarih</div><div class="v">' + esc(new Date(d.createdAt).toLocaleString('tr-TR')) + '</div></div>' +
+                '</div>' +
+                '<hr class="sep">' +
+                '<div class="h">Teslimat Bilgisi</div>' +
+                '<div class="kv">' +
+                '<div><div class="k">Ad Soyad</div><div class="v">' + esc((d.name || '') + ' ' + (d.surname || '')) + '</div></div>' +
+                '<div><div class="k">Telefon</div><div class="v">' + esc(d.phone || '') + '</div></div>' +
+                '<div><div class="k">Konum</div><div class="v">' + esc(addrLine + post) + '</div></div>' +
+                '<div><div class="k">Adres</div><div class="v">' + (details ? details : '<span class="muted">-</span>') + '</div></div>' +
+                '</div>' +
+                '</div>' +
+
+                '<div class="detailBox">' +
+                '<div class="h">Ürünler</div>' +
+                (itemsHtml ? ('<div class="itemList">' + itemsHtml + '</div>') : '<div class="muted">Bu siparişte ürün bulunamadı.</div>') +
+                '</div>' +
+                '</div>'
+            );
+        }
+
+        function setCopyButtonsEnabled(enabled) {
+            [btnCopyOrder, btnCopyAddress, btnCopyAll].forEach(function (b) {
+                if (!b) return;
+                b.disabled = !enabled;
+                b.style.opacity = enabled ? '1' : '.55';
+                b.style.cursor = enabled ? 'pointer' : 'not-allowed';
+            });
+        }
+
+        async function loadDetail(id) {
+            if (!detailBody) return;
+
+            currentDetail = null;
+            setCopyButtonsEnabled(false);
+
+            detailBody.className = 'modal-skel';
+            detailBody.textContent = 'Detaylar hazırlanıyor…';
+
+            try {
+                var res = await fetch('/myorders/detail/' + encodeURIComponent(id), {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' },
+                    credentials: 'same-origin'
+                });
+
+                if (!res.ok) {
+                    detailBody.textContent = 'Detaylar şu an görüntülenemiyor.';
+                    return;
+                }
+
+                var d = await res.json();
+                currentDetail = d;
+
+                detailBody.className = '';
+                detailBody.innerHTML = buildDetail(d);
+
+                setCopyButtonsEnabled(true);
+            } catch {
+                detailBody.textContent = 'Detaylar şu an görüntülenemiyor.';
+            }
+        }
+
+        // ---------- open detail ----------
+        document.addEventListener('click', function (e) {
+            var btn = e.target.closest && e.target.closest('.jsOpenDetail');
+            if (!btn) return;
+
+            var id = btn.getAttribute('data-id');
+            if (!id) return;
+
+            openModal('#mDetail');
+            loadDetail(id);
+        });
+
+        // ---------- copy actions ----------
+        if (btnCopyOrder) {
+            btnCopyOrder.addEventListener('click', async function () {
+                if (!currentDetail) return;
+                var t = buildCopyTexts(currentDetail).order;
+                var ok = await copyText(t);
+                showToast(ok ? 'Sipariş numarası kopyalandı' : 'Kopyalama yapılamadı');
+            });
+        }
+
+        if (btnCopyAddress) {
+            btnCopyAddress.addEventListener('click', async function () {
+                if (!currentDetail) return;
+                var t = buildCopyTexts(currentDetail).address;
+                var ok = await copyText(t);
+                showToast(ok ? 'Adres kopyalandı' : 'Kopyalama yapılamadı');
+            });
+        }
+
+        if (btnCopyAll) {
+            btnCopyAll.addEventListener('click', async function () {
+                if (!currentDetail) return;
+                var t = buildCopyTexts(currentDetail).all;
+                var ok = await copyText(t);
+                showToast(ok ? 'Tüm detay kopyalandı' : 'Kopyalama yapılamadı');
+            });
+        }
+
+        // modal açılınca butonlar hazır değilse pasif dursun
+        setCopyButtonsEnabled(false);
+
+    })();
+</script>

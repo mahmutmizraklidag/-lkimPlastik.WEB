@@ -1,0 +1,263 @@
+﻿@model ilkimPlastik.WEB.Areas.Admin.Controllers.UserController.UserIndexVm
+@using ilkimPlastik.WEB.Entities
+@{
+    Layout = "~/Areas/Admin/Views/Shared/_Layout.cshtml";
+
+    var ok = TempData["OK"] as string;
+    var err = TempData["ERR"] as string;
+
+    var edit = ViewBag.Edit as User;
+    var isEdit = edit != null;
+
+    var adminName = Context.Session.GetString("ADMIN_NAME") ?? "Admin";
+}
+
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Admin • Kullanıcılar</title>
+    <style>
+    :root{
+        --bg:#f6f7fb;
+        --card:#ffffff;
+        --text:#0f172a;
+        --muted:#6b7280;
+        --bd:#e5e7eb;
+        --bd2:#d7dbe6;
+        --pri:#5D12D2;
+        --pri2:#7b3ff0;
+        --danger:#e11d48;
+        --good:#16a34a;
+        --warn:#f59e0b;
+        --shadow2:0 8px 20px rgba(15,23,42,.08);
+        --r:18px;
+    }
+    *{box-sizing:border-box}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:0;background:var(--bg);color:var(--text)}
+    a{color:var(--pri);text-decoration:none}
+    .top{
+        position:sticky;top:0;z-index:40;
+        display:flex;justify-content:space-between;align-items:center;
+        padding:14px 18px;background:rgba(255,255,255,.86);backdrop-filter:blur(10px);
+        border-bottom:1px solid var(--bd);
+    }
+    .left{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .brand{font-weight:950}
+    .pill{font-size:12px;padding:7px 10px;border:1px solid var(--bd);border-radius:999px;background:#fff;color:var(--muted)}
+    .wrap{
+        max-width:1400px;margin:0 auto;padding:18px;
+        display:grid;grid-template-columns: 1.35fr .65fr;gap:14px;
+    }
+    .card{background:var(--card);border:1px solid var(--bd);border-radius:var(--r);box-shadow:var(--shadow2);overflow:hidden}
+    .head{padding:12px 14px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center;background:linear-gradient(180deg,#fff,#fbfbff)}
+    .head b{font-weight:950}
+    .body{padding:14px}
+    .msg{padding:10px 12px;border-radius:14px;margin:0 0 10px 0;font-size:13px;border:1px solid var(--bd);background:#fff}
+    .msg.ok{border-color:#b8f2d4;background:#ecfdf5;color:#065f46}
+    .msg.er{border-color:#fecdd3;background:#fff1f2;color:#9f1239}
+
+    .btn{border:1px solid var(--bd);background:#fff;padding:9px 11px;border-radius:14px;cursor:pointer;font-weight:750;font-size:13px}
+    .btn.pri{background:linear-gradient(180deg,var(--pri2),var(--pri));border-color:transparent;color:#fff;box-shadow:0 14px 20px rgba(93,18,210,.16)}
+    .btn.danger{border-color:#ffd0d8;color:var(--danger);background:#fff}
+
+    input,select{
+        width:100%;padding:11px 12px;border-radius:14px;border:1px solid var(--bd2);
+        outline:none;background:#fff;color:var(--text);font-size:14px;
+        transition:border-color .15s ease, box-shadow .15s ease;
+    }
+    input:focus,select:focus{
+        border-color:rgba(93,18,210,.45);
+        box-shadow:0 0 0 4px rgba(93,18,210,.12);
+    }
+    label{display:block;font-size:12px;color:var(--muted);margin:10px 0 6px}
+    .grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+    .miniCard{border:1px solid var(--bd);border-radius:16px;background:#fff;padding:12px;box-shadow:0 8px 16px rgba(15,23,42,.06)}
+    .k{font-size:12px;color:var(--muted)}
+    .v{font-size:20px;font-weight:950;margin-top:4px}
+
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px 0;border-bottom:1px solid var(--bd);text-align:left;font-size:13px;vertical-align:top}
+    th{font-size:12px;color:var(--muted);font-weight:850}
+    tr:last-child td{border-bottom:0}
+    .rowbtn{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+    .muted{color:var(--muted);font-size:12px}
+
+    .badge{display:inline-flex;gap:6px;align-items:center;font-size:12px;border-radius:999px;padding:6px 10px;border:1px solid var(--bd);background:#fff;color:var(--muted)}
+    .dot{width:8px;height:8px;border-radius:999px;background:var(--muted)}
+    .dot.good{background:var(--good)}
+    .dot.warn{background:var(--warn)}
+
+    .chk{display:flex;align-items:center;gap:10px;margin-top:10px}
+    .chk input{width:auto}
+    @@media(max-width:1100px){.wrap{grid-template-columns:1fr}.grid4{grid-template-columns:repeat(2,1fr)}}
+    </style>
+</head>
+<body>
+
+    @*<div class="top">
+        <div class="left">
+            <div class="brand">Kullanıcılar</div>
+            <span class="pill">@adminName</span>
+            <a class="pill" href="/Admin/Home">Dashboard</a>
+        </div>
+        <div class="left" style="justify-content:flex-end">
+            <a class="pill" href="/Admin/Product">Ürünler</a>
+            <a class="pill" href="/Admin/Category">Kategoriler</a>
+            <a class="pill" href="/Admin/Order">Siparişler</a>
+            <a class="pill" href="/Admin/Auth/Logout">Çıkış</a>
+        </div>
+    </div>*@
+
+    <div class="wrap">
+
+        <!-- SOL: LİSTE + FİLTRE + ÖZET -->
+        <div class="card">
+            <div class="head">
+                <b>Liste</b>
+                <a class="btn" href="/Admin/User">Sıfırla</a>
+            </div>
+            <div class="body">
+
+                @if (!string.IsNullOrWhiteSpace(ok))
+                {<div class="msg ok">@ok</div>}
+                @if (!string.IsNullOrWhiteSpace(err))
+                {<div class="msg er">@err</div>}
+
+                <div class="grid4" style="margin-bottom:12px">
+                    <div class="miniCard">
+                        <div class="k">Toplam Kullanıcı</div>
+                        <div class="v">@Model.TotalUsers</div>
+                    </div>
+                    <div class="miniCard">
+                        <div class="k">Admin</div>
+                        <div class="v">@Model.AdminCount</div>
+                    </div>
+                    <div class="miniCard">
+                        <div class="k">Normal Kullanıcı</div>
+                        <div class="v">@Model.NormalCount</div>
+                    </div>
+                    <div class="miniCard">
+                        <div class="k">Telefon Eksik</div>
+                        <div class="v">@Model.MissingPhone</div>
+                    </div>
+                </div>
+
+                <form method="get" action="/Admin/User" style="display:grid;grid-template-columns:1fr 200px 120px;gap:10px;align-items:end;margin-bottom:12px">
+                    <div>
+                        <div class="k" style="margin:0 0 6px 2px">Arama</div>
+                        <input name="q" value="@Model.Query" placeholder="ID, ad, e-posta, telefon…" />
+                    </div>
+                    <div>
+                        <div class="k" style="margin:0 0 6px 2px">Rol</div>
+                        <select name="role">
+                            <option value="" selected="@string.IsNullOrWhiteSpace(Model.Role)">Tümü</option>
+                            <option value="admin" selected="@(Model.Role=="admin")">Admin</option>
+                            <option value="user" selected="@(Model.Role=="user")">Normal</option>
+                        </select>
+                    </div>
+                    <button class="btn pri" type="submit">Filtrele</button>
+                </form>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:80px">ID</th>
+                            <th>Ad Soyad</th>
+                            <th>E-posta</th>
+                            <th>Telefon</th>
+                            <th style="width:120px">Yetki</th>
+                            <th style="width:260px;text-align:right">İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var x in Model.List)
+                        {
+                            <tr>
+                                <td style="font-weight:900">#@x.Id</td>
+                                <td>
+                                    <div style="font-weight:850">@x.Name @x.Surname</div>
+                                </td>
+                                <td class="muted">@x.Email</td>
+                                <td class="muted">@(!string.IsNullOrWhiteSpace(x.Phone) ? x.Phone : "-")</td>
+                                <td>
+                                    @if (x.IsAdmin)
+                                    {
+                                        <span class="badge"><span class="dot good"></span>Admin</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge"><span class="dot warn"></span>Normal</span>
+                                    }
+                                </td>
+                                <td style="text-align:right">
+                                    <div class="rowbtn">
+                                        <a class="btn" href="/Admin/User?editId=@x.Id">Düzenle</a>
+                                        <form method="post" action="/Admin/User/Delete" onsubmit="return confirm('Kullanıcı silinsin mi?');">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@x.Id" />
+                                            <button class="btn danger" type="submit">Sil</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                        @if (Model.List.Count == 0)
+                        {
+                            <tr><td colspan="6" class="muted">Kayıt yok.</td></tr>
+                        }
+                    </tbody>
+                </table>
+
+            </div>
+        </div>
+
+        <!-- SAĞ: FORM -->
+        <div class="card">
+            <div class="head">
+                <b>@(isEdit ? "Kullanıcı Güncelle" : "Yeni Kullanıcı")</b>
+                @if (isEdit)
+                {
+                    <a class="btn" href="/Admin/User">Kapat</a>
+                }
+            </div>
+            <div class="body">
+
+                <form method="post" action="/Admin/User/Upsert">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="Id" value="@(edit?.Id ?? 0)" />
+
+                    <label>Ad</label>
+                    <input name="Name" value="@(edit?.Name ?? "")" />
+
+                    <label>Soyad</label>
+                    <input name="Surname" value="@(edit?.Surname ?? "")" />
+
+                    <label>E-posta</label>
+                    <input name="Email" value="@(edit?.Email ?? "")" />
+
+                    <label>Telefon (opsiyonel)</label>
+                    <input name="Phone" value="@(edit?.Phone ?? "")" />
+
+                    <div class="chk">
+                        <input type="checkbox" name="IsAdmin" value="true" @(edit?.IsAdmin == true ? "checked" : "") />
+                        <span style="font-weight:800">Admin Yetkisi</span>
+                        <span class="muted">(dikkatli kullan)</span>
+                    </div>
+
+                    <label>Şifre @(isEdit ? "(boş bırakılırsa değişmez)" : "(zorunlu)")</label>
+                    <input name="newPassword" type="password" placeholder="@(isEdit ? "Yeni şifre gir" : "Şifre gir")" />
+
+                    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
+                        <a class="btn" href="/Admin/User">Temizle</a>
+                        <button class="btn pri" type="submit">Kaydet</button>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>

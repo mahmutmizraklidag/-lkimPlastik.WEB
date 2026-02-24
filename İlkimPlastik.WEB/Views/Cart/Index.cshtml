@@ -1,0 +1,601 @@
+﻿@* ===============================
+    Views/Cart/Index.cshtml
+    (GÜNCEL - Satır İndirimi + Toplam İndirim + %X İndirim badge)
+    =============================== *@
+
+@model ilkimPlastik.WEB.Controllers.CartController.CartIndexVm
+@using System.Globalization
+@{
+    ViewData["Title"] = "Sepet";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var tr = CultureInfo.GetCultureInfo("tr-TR");
+    string Money(decimal v) => string.Format(tr, "{0:N2}", v);
+
+    string Img(string? f)
+    {
+        if (string.IsNullOrWhiteSpace(f)) return "/images/cart-1.png";
+        return "/uploads/products/" + f.TrimStart('/');
+    }
+
+    var ok = TempData["OK"] as string;
+    var err = TempData["ERR"] as string;
+}
+
+<style>
+    /* Modern + Responsive Cart (tek parça) - İndirim dahil */
+    .cart-alert {
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-bottom: 12px;
+        border: 1px solid transparent
+    }
+
+        .cart-alert.ok {
+            background: #ecfdf5;
+            border-color: #b8f2d4;
+            color: #065f46
+        }
+
+        .cart-alert.err {
+            background: #fff1f2;
+            border-color: #fecdd3;
+            color: #9f1239
+        }
+
+    .cart-empty {
+        background: #fafafa;
+        border: 1px dashed #ccc;
+        padding: 22px;
+        text-align: center;
+        border-radius: 14px
+    }
+
+    .cart-grid {
+        margin-top: 10px
+    }
+
+    .cart-head, .cart-row {
+        display: grid;
+        grid-template-columns: 90px 1fr 140px 160px 140px 44px;
+        gap: 12px;
+        align-items: center
+    }
+
+    .cart-head {
+        padding: 10px 12px;
+        background: #f7f7f7;
+        border-radius: 12px;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 10px
+    }
+
+    .cart-row {
+        padding: 12px;
+        background: #fff;
+        border: 1px solid #eee;
+        border-radius: 14px;
+        margin-bottom: 12px;
+        position: relative;
+    }
+
+    .cart-thumb {
+        position: relative;
+    }
+
+        .cart-thumb img {
+            width: 90px;
+            height: 90px;
+            object-fit: cover;
+            border-radius: 12px;
+            border: 1px solid #eee;
+            display: block
+        }
+
+    /* ✅ Sepette indirim badge */
+    .cart-discount-badge {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        z-index: 10;
+        background: #111;
+        color: #fff;
+        padding: 3px 8px;
+        font-size: 11px;
+        font-weight: 700;
+        border-radius: 999px;
+        line-height: 1.1;
+        white-space: nowrap;
+    }
+
+    .cart-title {
+        font-size: 15px;
+        font-weight: 600;
+        margin: 0 0 6px 0;
+        line-height: 1.25
+    }
+
+        .cart-title a {
+            color: #222;
+            text-decoration: none
+        }
+
+    .cart-meta {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        opacity: .85;
+        font-size: 13px
+    }
+
+        .cart-meta li {
+            margin: 2px 0
+        }
+
+    .cart-price, .cart-total {
+        font-weight: 600
+    }
+
+        .cart-price .val, .cart-total .val {
+            white-space: nowrap
+        }
+
+        .cart-price .lbl, .cart-qty .lbl, .cart-total .lbl {
+            display: none
+        }
+
+    .price-stack strong {
+        font-weight: 800;
+    }
+
+    .price-stack del {
+        margin-left: 6px;
+        opacity: .6;
+        font-weight: 600;
+    }
+
+    .price-stack .line-discount {
+        display: block;
+        margin-top: 4px;
+        font-size: 12px;
+        opacity: .75;
+    }
+
+    .cart-qty .qty-wrap {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        justify-content: flex-start
+    }
+
+    .cart-qty input[type=number] {
+        width: 120px;
+        max-width: 100%;
+        border-radius: 10px
+    }
+
+    .cart-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        flex-direction: row;
+        padding: 1rem;
+        justify-content: flex-end;
+        align-items: center;
+        margin-top: 12px
+    }
+
+    .cart-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        border-radius: 12px;
+        padding: 11px 16px;
+        border: 1px solid #e6e6e6;
+        background: #fff;
+        color: #111;
+        text-decoration: none;
+        line-height: 1;
+        cursor: pointer;
+        transition: transform .05s ease, box-shadow .15s ease, background .15s ease;
+        box-shadow: 0 1px 0 rgba(0,0,0,.03);
+        font-weight: 600;
+    }
+
+        .cart-btn:hover {
+            background: #f7f7f7
+        }
+
+        .cart-btn:active {
+            transform: translateY(1px)
+        }
+
+        .cart-btn.primary {
+            background: #1daaa3;
+            border-color: #1daaa3;
+            color: #fff;
+            box-shadow: 0 6px 16px rgba(0,0,0,.10);
+        }
+
+            .cart-btn.primary:hover {
+                background: #fff ;
+                color:#1daaa3;
+            }
+
+    .cart-remove {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+        .cart-remove .remove-x {
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            border: 1px solid #eee;
+            background: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            line-height: 1;
+            transition: background .15s ease, transform .05s ease, border-color .15s ease;
+            font-size: 20px;
+            font-weight: 700;
+            color: #444;
+        }
+
+            .cart-remove .remove-x:hover {
+                background: #f5f5f5;
+                border-color: #e2e2e2
+            }
+
+            .cart-remove .remove-x:active {
+                transform: translateY(1px)
+            }
+
+            .cart-remove .remove-x:focus {
+                outline: none;
+                box-shadow: 0 0 0 3px rgba(0,0,0,.12)
+            }
+
+    .cart-collaterals .box {
+        background: #fafafa;
+        border: 1px solid #eee;
+        padding: 14px;
+        border-radius: 14px
+    }
+
+    .cart_totals_table table {
+        width: 100%
+    }
+
+    .cart_totals_table th, .cart_totals_table td {
+        padding: 8px 0
+    }
+
+    .cart_totals_table th {
+        color: #333;
+        font-weight: 600
+    }
+
+    .cart_totals_table td {
+        text-align: right
+    }
+
+    @@media (max-width:767px) {
+        .cart-head {
+            display: none
+        }
+
+        .cart-row {
+            grid-template-columns: 90px 1fr;
+            grid-template-areas:
+                "thumb info"
+                "thumb info"
+                "price price"
+                "qty qty"
+                "total total";
+            padding-top: 14px;
+        }
+
+        .cart-thumb {
+            grid-area: thumb
+        }
+
+        .cart-info {
+            grid-area: info
+        }
+
+        .cart-price {
+            grid-area: price;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 6px
+        }
+
+        .cart-qty {
+            grid-area: qty;
+            display: flex;
+            align-items: center;
+            justify-content: space-between
+        }
+
+        .cart-total {
+            grid-area: total;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-weight: 700
+        }
+
+            .cart-price .lbl, .cart-qty .lbl, .cart-total .lbl {
+                display: inline-block;
+                opacity: .75;
+                font-weight: 600;
+                font-size: 13px
+            }
+
+            .cart-price .val, .cart-total .val {
+                font-size: 14px
+            }
+
+        .cart-remove {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+
+        .cart-actions {
+            justify-content: stretch
+        }
+
+            .cart-actions .cart-btn {
+                width: 100%
+            }
+    }
+</style>
+
+<main class="site-main page-spacing">
+    <div class="page-banner cart-banner container-fluid no-padding">
+        <div class="page-banner-content">
+            <h3>Sepet</h3>
+        </div>
+    </div>
+
+    <div id="cart-main" class="cart-main">
+        <div class="section-padding"></div>
+        <div class="container">
+            <div class="woocommerce">
+
+                @if (!string.IsNullOrWhiteSpace(ok))
+                {
+                    <div class="cart-alert ok">@ok</div>
+                }
+                @if (!string.IsNullOrWhiteSpace(err))
+                {
+                    <div class="cart-alert err">@err</div>
+                }
+
+                @if (Model.Items.Count == 0)
+                {
+                    <div class="cart-empty">
+                        Sepetiniz şu an boş. <a href="/product">Ürünleri görüntüle</a>
+                    </div>
+                }
+                else
+                {
+                    <form id="updateForm" method="post" action="/cart/update" class="col-md-12 col-sm-12 col-xs-12 no-padding">
+                        @Html.AntiForgeryToken()
+
+                        <div class="cart-grid">
+                            <div class="cart-head">
+                                <div></div>
+                                <div>Ürün</div>
+                                <div>Birim Fiyat</div>
+                                <div>Adet</div>
+                                <div>Toplam</div>
+                                <div></div>
+                            </div>
+
+                            @for (int i = 0; i < Model.Items.Count; i++)
+                            {
+                                var it = Model.Items[i];
+
+                                <div class="cart-row">
+                                    <div class="cart-thumb">
+                                        @if (it.OfferRate > 0)
+                                        {
+                                            <span class="cart-discount-badge">% @it.OfferRate İndirim</span>
+                                        }
+                                        <a href="/product/details/@it.ProductId" title="@it.Title">
+                                            <img src="@Img(it.ImageFile)" alt="@it.Title" />
+                                        </a>
+                                    </div>
+
+                                    <div class="cart-info">
+                                        <div class="cart-title">
+                                            <a href="/product/details/@it.ProductId">@it.Title</a>
+                                        </div>
+                                        <ul class="cart-meta">
+                                            <li><strong>Barkod:</strong> @(string.IsNullOrWhiteSpace(it.Barcode) ? "-" : it.Barcode)</li>
+                                            <li><strong>Beden:</strong> @it.SizeName</li>
+                                        </ul>
+                                    </div>
+
+                                    <div class="cart-price">
+                                        <span class="lbl">Birim Fiyat</span>
+                                        <span class="val price-stack">
+                                            @if (it.OfferRate > 0)
+                                            {
+                                                <strong>₺ @Money(it.UnitPrice)</strong>
+                                                <del>₺ @Money(it.OldUnitPrice)</del>
+                                            }
+                                            else
+                                            {
+                                                <strong>₺ @Money(it.UnitPrice)</strong>
+                                            }
+                                        </span>
+                                    </div>
+
+                                    <div class="cart-qty">
+                                        <span class="lbl">Adet</span>
+
+                                        <input type="hidden" name="items[@i].ProductId" value="@it.ProductId" />
+                                        <input type="hidden" name="items[@i].SizeId" value="@it.SizeId" />
+
+                                        <div class="qty-wrap">
+                                            <input type="number"
+                                                   name="items[@i].Quantity"
+                                                   value="@it.Quantity"
+                                                   min="1"
+                                                   class="form-control"
+                                                   style="max-width:160px" />
+                                        </div>
+                                    </div>
+
+                                    <div class="cart-total">
+                                        <span class="lbl">Toplam</span>
+                                        <span class="val price-stack">
+                                            @if (it.OfferRate > 0)
+                                            {
+                                                <strong>₺ @Money(it.LineTotal)</strong>
+                                                <del>₺ @Money(it.OldLineTotal)</del>
+                                                <span class="line-discount">Kazanç: ₺ @Money(it.LineDiscount)</span>
+                                            }
+                                            else
+                                            {
+                                                <strong>₺ @Money(it.LineTotal)</strong>
+                                            }
+                                        </span>
+                                    </div>
+
+                                    <div class="cart-remove">
+                                        <button type="submit"
+                                                form="removeForm-@i"
+                                                class="remove-x"
+                                                title="Kaldır"
+                                                aria-label="Sepetten kaldır">
+                                            ×
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+
+                        <div class="cart-actions">
+                            <button type="submit" class="cart-btn" title="Sepeti Güncelle">Sepeti Güncelle</button>
+                            <a class="cart-btn primary" title="Ödeme" href="/checkout">Ödemeye Geç</a>
+                        </div>
+                    </form>
+
+                    @for (int i = 0; i < Model.Items.Count; i++)
+                    {
+                        var it = Model.Items[i];
+                        <form id="removeForm-@i" method="post" action="/cart/remove" style="display:none">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="productId" value="@it.ProductId" />
+                            <input type="hidden" name="sizeId" value="@it.SizeId" />
+                        </form>
+                    }
+
+                    <div class="cart-collaterals row" style="margin-top:20px">
+                        <div class="col-md-6 col-sm-6 col-xs-12" style="margin-bottom:12px">
+                            <div class="box">
+                                <h4 style="margin-top:0">Not</h4>
+                                <p style="margin:0;opacity:.8">Sepet tutarları ürün fiyatlarına göre hesaplanır. Kargo koşulları ödeme adımında gösterilir.</p>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 col-sm-6 col-xs-12" style="margin-bottom:12px">
+                            <div class="box cart_totals">
+                                <h4 style="margin-top:0">Sepet Özeti</h4>
+                                <div class="cart_totals_table">
+                                    <table>
+                                        <tbody>
+                                            <tr class="cart-subtotal">
+                                                <th>Ara Toplam (İndirimsiz)</th>
+                                                <td><span class="amount">₺ @Money(Model.SubTotalBeforeDiscount)</span></td>
+                                            </tr>
+
+                                            <tr class="cart-discount">
+                                                <th>Toplam İndirim</th>
+                                                <td>
+                                                    @if (Model.DiscountTotal > 0)
+                                                    {
+                                                        <span class="amount">- ₺ @Money(Model.DiscountTotal)</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="amount">₺ @Money(0)</span>
+                                                    }
+                                                </td>
+                                            </tr>
+
+                                            <tr class="cart-subtotal">
+                                                <th>Ara Toplam (İndirimli)</th>
+                                                <td><span class="amount">₺ @Money(Model.SubTotal)</span></td>
+                                            </tr>
+
+                                            <tr class="shipping">
+                                                <th>Kargo</th>
+                                                <td><span class="amount">@Model.ShippingLabel</span></td>
+                                            </tr>
+
+                                            <tr class="order-total">
+                                                <th>Genel Toplam</th>
+                                                <td><strong><span class="amount">₺ @Money(Model.GrandTotal)</span></strong></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div class="cart-actions" style="margin-top:10px;justify-content:stretch">
+                                    <a class="cart-btn primary" title="Ödeme" href="/checkout" style="width:100%">Ödemeye Geç</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    @if (Model.Related != null && Model.Related.Any())
+                    {
+                        <div class="latest-product container-fluid no-padding woocommerce" style="margin-top:25px">
+                            <div class="container">
+                                <div class="section-header">
+                                    <h3>İlgili Ürünler</h3>
+                                </div>
+                                <ul class="products">
+                                    @foreach (var rp in Model.Related)
+                                    {
+                                        <li class="product">
+                                            <a href="/product/details/@rp.Id" title="@rp.Title">
+                                                <span class="product-img" style="position:relative;display:block">
+                                                    @if (rp.OfferRate > 0)
+                                                    {
+                                                        <span class="cart-discount-badge">% @rp.OfferRate İndirim</span>
+                                                    }
+                                                    <img src="@Img(rp.ImageFile)" width="270" height="360" alt="@rp.Title" />
+                                                </span>
+
+                                                <h3>@rp.Title</h3>
+
+                                                @* Related kartında istersen indirimli fiyatı da gösterebiliriz,
+                                                    şimdilik mevcut Price alanı korunuyor *@
+                                                <span class="price"><span class="amount">₺ @Money(rp.Price)</span></span>
+                                            </a>
+                                        </li>
+                                    }
+                                </ul>
+                            </div>
+                        </div>
+                    }
+                }
+
+            </div>
+        </div>
+        <div class="section-padding"></div>
+    </div>
+</main>

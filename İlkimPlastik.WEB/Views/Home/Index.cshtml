@@ -1,0 +1,757 @@
+﻿@* =========================================================
+    Views/Home/Index.cshtml (GÜNCEL - TEK PARÇA)
+    ✅ İndirim: Product.OfferRate (INT yüzde) ile belirlenir
+       - OfferRate > 0 ise indirimli
+       - Badge: SADECE indirim oranı yazar (%X)
+       - Fiyat alanı: indirimli fiyat vurgulu + eski fiyat üstü çizili
+    ✅ Razor hataları giderildi (Saleup hesap bloğu)
+    ✅ DistinctBy yok (GroupBy ile uyumlu)
+    ✅ Tema sınıfları korunur
+    ========================================================= *@
+
+@model ilkimPlastik.WEB.Controllers.HomeController.HomeVm
+@using System.Globalization
+@using System.Linq
+
+@{
+    ViewData["Title"] = "Anasayfa";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var tr = CultureInfo.GetCultureInfo("tr-TR");
+    string Money(decimal v) => string.Format(tr, "{0:N2}", v);
+
+    string Img(string? f)
+    {
+        if (string.IsNullOrWhiteSpace(f)) return "";
+        return "/uploads/products/" + f.TrimStart('/');
+    }
+
+    string FirstImg(ilkimPlastik.WEB.Entities.Product p)
+    {
+        var f = p.ImageItems?.FirstOrDefault()?.Filename;
+        return string.IsNullOrWhiteSpace(f) ? "" : Img(f);
+    }
+
+    // OfferRate: int yüzde (0..100) - güvenli kırpma
+    int OfferPct(ilkimPlastik.WEB.Entities.Product p)
+    {
+        var pct = p.OfferRate;
+
+        if (pct < 0) pct = 0;
+        if (pct > 95) pct = 95; // uç değerleri engellemek için (istersen 99 yaparız)
+        return pct;
+    }
+
+    (decimal oldP, decimal newP, int pct) CalcOffer(decimal price, int pct)
+    {
+        var oldP = decimal.Round(price, 2);
+
+        if (pct <= 0) return (oldP, oldP, 0);
+
+        var rate = pct / 100m;
+        var newP = decimal.Round(price * (1m - rate), 2);
+        if (newP < 0m) newP = 0m;
+
+        return (oldP, newP, pct);
+    }
+
+    // ===== Görsel havuzları (resimli) =====
+    var latestImg = Model.Latest.Where(p => !string.IsNullOrWhiteSpace(FirstImg(p))).ToList();
+    var featuredImg = Model.Featured.Where(p => !string.IsNullOrWhiteSpace(FirstImg(p))).ToList();
+    var bestImg = Model.BestSeller.Where(p => !string.IsNullOrWhiteSpace(FirstImg(p))).ToList();
+
+    var pool = featuredImg
+        .Concat(bestImg)
+        .Concat(latestImg)
+        .Where(p => !string.IsNullOrWhiteSpace(FirstImg(p)))
+        .GroupBy(p => p.Id)
+        .Select(g => g.First())
+        .ToList();
+
+    var bannerFeatured = pool.Take(4).ToList();
+    var bannerLatest = pool.Skip(4).Take(4).ToList();
+    var bannerDevice = pool.Skip(8).Take(4).ToList();
+
+    var saleupItems = pool.Take(6).ToList();
+    var saleupHero = saleupItems.FirstOrDefault();
+    var saleupThumbs = saleupItems.Take(6).ToList();
+
+    var rnd = new Random();
+    string RandTestImg()
+    {
+        if (pool.Count > 0)
+        {
+            var p = pool[rnd.Next(pool.Count)];
+            return FirstImg(p);
+        }
+        var stock = new[] { "/images/testi-1.jpg", "/images/testi-2.jpg", "/images/testi-3.jpg" };
+        return stock[rnd.Next(stock.Length)];
+    }
+
+    var sliderCats = (Model.CategoryCards ?? new List<ilkimPlastik.WEB.Controllers.HomeController.CategoryCardVm>())
+        .OrderByDescending(x => x.Count)
+        .Take(20)
+        .ToList();
+
+    List<string> CatThumbs(ilkimPlastik.WEB.Controllers.HomeController.CategoryCardVm c)
+    {
+        return (c.Thumbs ?? new List<string?>())
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => Img(x))
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Take(3)
+            .ToList();
+    }
+
+    var copyPool = new (string Head, string Body)[]
+    {
+        ("{0} kategorisinde öne çıkan ürünler", "{0} kategorisinde görselleri karşılaştırın, ihtiyacınıza uygun ürünü hızlıca sepete ekleyin."),
+        ("{0} kategorisinde yeni ürünleri keşfedin", "{0} kategorisinde güncel seçenekleri inceleyin; filtrelerle hızlıca doğru ürüne ulaşın."),
+        ("{0} kategorisinde hızlı seçim yapın", "{0} kategorisinde ürün detaylarında uyumluluk bilgilerini kontrol ederek güvenle ilerleyin."),
+        ("{0} kategorisinde seçilmiş ürün önerileri", "{0} kategorisinde özenle seçilmiş ürünleri tek ekranda görün; görsellerle kolay karar verin."),
+        ("{0} kategorisinde kalite odaklı tercih", "{0} kategorisinde ürün görselleri ve açıklamalarla değerlendirin, doğru ürünü netleştirin."),
+        ("{0} kategorisinde en çok tercih edilenler", "{0} kategorisinde popüler ürünleri inceleyin; benzerleri karşılaştırıp sepete ekleyin."),
+        ("{0} kategorisinde pratik ürün keşfi", "{0} kategorisinde arama + filtre ile ürünü hızlı bulun; görsellerle doğrulayın, satın alın."),
+        ("{0} kategorisinde doğru ürün eşleştirmesi", "{0} kategorisinde cihaz uyumluluğunu kontrol ederek hatasız seçim yapın."),
+        ("{0} kategorisinde net görsel karşılaştırma", "{0} kategorisinde benzer ürünleri görsellere göre kıyaslayın ve en uygun seçeneği belirleyin."),
+        ("{0} kategorisinde güncel çözümler", "{0} kategorisinde yeni eklenenleri kaçırmayın; detaylara girip hızlıca sipariş verin."),
+        ("{0} kategorisinde güvenle ilerleyin", "{0} kategorisinde ürün görselleri üzerinden seçimi hızlandırın; detay sayfasında son kontrolü yapın."),
+        ("{0} kategorisinde kolay filtreleme", "{0} kategorisinde kategori + cihaz filtreleriyle aradığınızı daraltın, doğru ürünü bulun."),
+        ("{0} kategorisinde kısa yoldan doğru ürün", "{0} kategorisinde görsellerden başlayın; ürün detayında bilgileri doğrulayıp satın alın."),
+        ("{0} kategorisinde ihtiyaca göre seçim", "{0} kategorisinde kullanım amacınıza uygun ürünleri inceleyin; hızlı satın alma akışıyla ilerleyin."),
+        ("{0} kategorisinde ürünleri hemen inceleyin", "{0} kategorisinde öne çıkan görseller üzerinden karşılaştırma yapın ve hızlı karar verin."),
+        ("{0} kategorisinde akıllı seçim önerileri", "{0} kategorisinde önerilen ürünleri inceleyin; uyum bilgileriyle doğru tercihi yapın."),
+        ("{0} kategorisinde düzenli ürün görünümü", "{0} kategorisinde görseller net; ürün detaylarında ek bilgileri görüp sepete ekleyin."),
+        ("{0} kategorisinde kolay gezinme", "{0} kategorisinde kategoriden başlayın; arama ve filtrelerle en doğru ürüne ulaşın."),
+        ("{0} kategorisinde hızlı satın alma akışı", "{0} kategorisinde ürünü bulun, detayları kontrol edin ve sepete ekleyerek tamamlayın."),
+        ("{0} kategorisinde seçimi hızlandırın", "{0} kategorisinde görselleri ve uyumluluğu kontrol ederek zaman kaybetmeden satın alın.")
+            };
+
+    var catCopyMap = new Dictionary<int, (string Head, string Body)>();
+    int offset = (sliderCats.Count > 0 ? (sliderCats[0].Id % copyPool.Length) : 0);
+    for (int i = 0; i < sliderCats.Count; i++)
+    {
+        var c = sliderCats[i];
+        var pair = copyPool[(offset + i) % copyPool.Length];
+        catCopyMap[c.Id] = (string.Format(pair.Head, c.Name), string.Format(pair.Body, c.Name));
+    }
+}
+
+<style>
+    .home-note {
+        opacity: .85;
+        max-width: 900px;
+        margin: 10px auto 0;
+        line-height: 1.5;
+    }
+
+    .homeSliderThumbs img, .homeSliderThumb img {
+        position: static !important;
+        right: auto !important;
+        left: auto !important;
+        bottom: auto !important;
+        top: auto !important;
+        transform: none !important;
+        margin: 0 !important;
+        display: block !important;
+    }
+
+    .homeSliderCta {
+        width: 100%;
+        margin-top: 10px;
+        display: block;
+        float: none;
+        padding: 0;
+    }
+
+    .homeSliderThumbs {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 14px;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        float: none;
+    }
+
+    .homeSliderThumb {
+        width: 178px;
+        height: 178px;
+        border-radius: 14px;
+        overflow: hidden;
+        border: 1px solid rgba(0,0,0,.10);
+        background: #f4f4f4;
+        display: block;
+    }
+
+        .homeSliderThumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+    .box-thumbs {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 10px;
+    }
+
+        .box-thumbs img {
+            width: 52px;
+            height: 52px;
+            border-radius: 12px;
+            object-fit: cover;
+            background: #f4f4f4;
+            border: 1px solid #eee;
+            display: block;
+        }
+
+    .cta-soft {
+        font-size: 12px;
+        opacity: .85;
+        margin-top: 8px;
+        line-height: 1.45;
+    }
+
+    .saleup-product-hero {
+        width: 100%;
+        max-width: 485px;
+        height: 220px;
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid #eee;
+        background: #f4f4f4;
+        margin: 10px auto 0;
+    }
+
+        .saleup-product-hero img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+    .saleup-product-thumbs {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-top: 12px;
+    }
+
+        .saleup-product-thumbs a {
+            display: block;
+            width: 78px;
+            height: 78px;
+            border-radius: 14px;
+            overflow: hidden;
+            border: 1px solid #eee;
+            background: #f4f4f4;
+        }
+
+        .saleup-product-thumbs img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+    .no-img {
+        width: 100%;
+        height: 360px;
+        background: #f4f4f4;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #777;
+        font-weight: 700;
+    }
+    /* Saleup: başlık ile büyük görsel çakışmasını engelle */
+    #saleup-section #imageGallery li h3 {
+        position: relative;
+        z-index: 2;
+        margin-bottom: 12px;
+    }
+
+    #saleup-section .saleup-product-hero {
+        display: block;
+        clear: both;
+        margin-top: 12px; /* başlıktan uzaklaştır */
+        position: relative;
+        z-index: 1;
+    }
+
+        /* Eğer tema resimleri absolute konumluyorsa, bunu da sabitle */
+        #saleup-section .saleup-product-hero img {
+            position: static !important;
+            object-fit:contain;
+        }
+</style>
+
+
+<main class="site-main page-spacing">
+
+    <!-- Photo Slider (kategori dinamik) -->
+    <div class="photo-slider container-fluid no-padding">
+        <div id="main-carousel" class="carousel slide carousel-fade" data-ride="carousel">
+
+            <ol class="carousel-indicators">
+                @if (sliderCats.Count > 0)
+                {
+                    for (int i = 0; i < sliderCats.Count; i++)
+                    {
+                        <li data-target="#main-carousel" data-slide-to="@i" class="@(i == 0 ? "active" : "")"></li>
+                    }
+                }
+                else
+                {
+                    <li data-target="#main-carousel" data-slide-to="0" class="active"></li>
+                }
+            </ol>
+
+            <div role="listbox" class="carousel-inner">
+                @if (sliderCats.Count > 0)
+                {
+                    for (int i = 0; i < sliderCats.Count; i++)
+                    {
+                        var c = sliderCats[i];
+                        var thumbs = CatThumbs(c);
+                        var copy = catCopyMap.ContainsKey(c.Id)
+                            ? catCopyMap[c.Id]
+                            : (string.Format(copyPool[0].Head, c.Name), string.Format(copyPool[0].Body, c.Name));
+
+                        <div class="item @(i == 0 ? "active" : (i == 1 ? "slide-1" : (i == 2 ? "slide-2" : "")))">
+                            <div class="carousel-caption">
+                                <h3 data-animation="animated fadeInLeft">@copy.Item1</h3>
+                                <p data-animation="animated fadeInRight">@copy.Item2</p>
+
+                                <div class="homeSliderCta" data-animation="animated fadeInUp">
+                                    <a href="/product?categoryId=@c.Id" title="@c.Name kategorisini gör" class="shop-now">
+                                        @c.Name kategorisini gör
+                                    </a>
+                                </div>
+
+                                @if (thumbs.Count > 0)
+                                {
+                                    <div class="homeSliderThumbs" data-animation="animated fadeInUp">
+                                        @foreach (var t in thumbs)
+                                        {
+                                            <a class="homeSliderThumb" href="/product?categoryId=@c.Id" title="@c.Name kategorisinde ürünler">
+                                                <img src="@t" alt="@c.Name kategorisinde ürün görseli" />
+                                            </a>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="item active">
+                        <div class="carousel-caption">
+                            <h3 data-animation="animated fadeInLeft">Ürünlerde hızlı seçim yapın</h3>
+                            <p data-animation="animated fadeInRight">Görselleri inceleyin, filtrelerle daraltın ve sepete ekleyin.</p>
+                            <div class="homeSliderCta" data-animation="animated fadeInUp">
+                                <a href="/product" title="Ürünleri Gör" class="shop-now">Ürünleri Gör</a>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Ad Banner 1 (dinamik thumbs) -->
+    <div id="ad-banner-1" class="ad-banner-1 container-fluid no-padding">
+        <div class="section-padding"></div>
+        <div class="container">
+
+            <div class="col-md-5 col-sm-5 col-xs-12">
+                <div class="modern-box">
+                    <div class="col-md-7 col-sm-6 col-xs-6">
+                        <img src="/images/ad-banner-4.png" alt="ad-banner" />
+                    </div>
+                    <div class="col-md-5 col-sm-6 col-xs-6">
+                        <h3 class="ad-heading">Seçilmiş Ürünler</h3>
+                        <h5>Vitrin önerileri</h5>
+                        <div class="cta-soft">Görselleri inceleyin, en doğru ürünü seçin ve hemen satın alın.</div>
+
+                        @if (bannerFeatured.Count > 0)
+                        {
+                            <div class="box-thumbs">
+                                @foreach (var p in bannerFeatured)
+                                {
+                                    <a href="/product/details/@p.Id" title="@p.Title">
+                                        <img src="@FirstImg(p)" alt="@p.Title" />
+                                    </a>
+                                }
+                            </div>
+                        }
+                    </div>
+                    <a href="/product" class="shop-now" title="Ürünleri Gör">Ürünleri Gör<i class="fa fa-caret-right" aria-hidden="true"></i></a>
+                </div>
+
+                <div class="modern-box modern-ads">
+                    <div class="col-md-5 col-sm-6 col-xs-6">
+                        <h3 class="ad-heading">Cihaza Göre Filtrele</h3>
+                        <h5>Uyumlu ürünleri hızlıca bulun</h5>
+                        <div class="cta-soft">Cihazınız ile uyumlu ürünlere göz atın, doğru ürünü kaçırmayın.</div>
+
+                        @if (bannerDevice.Count > 0)
+                        {
+                            <div class="box-thumbs">
+                                @foreach (var p in bannerDevice)
+                                {
+                                    <a href="/product/details/@p.Id" title="@p.Title">
+                                        <img src="@FirstImg(p)" alt="@p.Title" />
+                                    </a>
+                                }
+                            </div>
+                        }
+                    </div>
+                    <div class="col-md-7 col-sm-6 col-xs-6">
+                        <img src="/images/ad-banner-5.png" alt="ad-banner" />
+                    </div>
+                    <a href="/product" class="shop-now" title="Uyumlu Ürünleri Bul">Uyumlu Ürünleri Bul<i class="fa fa-caret-right" aria-hidden="true"></i></a>
+                </div>
+            </div>
+
+            <div class="col-md-7 col-sm-7 col-xs-12">
+                <div class="modern-box modern-shop">
+                    <div class="col-md-7 col-sm-6 col-xs-6">
+                        <img src="/images/ad-banner-6.png" alt="ad-banner" />
+                    </div>
+                    <div class="col-md-5 col-sm-6 col-xs-6">
+                        <h3 class="ad-heading">Yeni Eklenenler</h3>
+                        <div class="cta-soft">Yeni ürünleri görsellerle inceleyin ve hızlıca satın almaya geçin.</div>
+
+                        @if (bannerLatest.Count > 0)
+                        {
+                            <div class="box-thumbs">
+                                @foreach (var p in bannerLatest)
+                                {
+                                    <a href="/product/details/@p.Id" title="@p.Title">
+                                        <img src="@FirstImg(p)" alt="@p.Title" />
+                                    </a>
+                                }
+                            </div>
+                        }
+                    </div>
+                    <a href="/product" class="shop-now" title="Yeni Ürünler">Yeni Ürünler<i class="fa fa-caret-right" aria-hidden="true"></i></a>
+                </div>
+
+                <div class="modern-box modern-shop-1">
+                    <div class="col-md-5 col-sm-6 col-xs-6">
+                        <h3 class="ad-heading">Kategoriler</h3>
+                        <h5>İhtiyaca göre seçin</h5>
+                        <div class="cta-soft">Kategorilerden ilerleyin, cihaz filtresiyle uyumlu ürünleri yakalayın.</div>
+                    </div>
+                    <div class="col-md-7 col-sm-6 col-xs-6">
+                        <img src="/images/ad-banner-7.png" alt="ad-banner" />
+                    </div>
+                    <a href="/product" class="shop-now" title="Kategorileri Gör">Kategorileri Gör<i class="fa fa-caret-right" aria-hidden="true"></i></a>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 col-sm-6 col-xs-12">
+                        <div class="discount-box">
+                            <h3>Hızlı Arama</h3>
+                            <p>Ürün adını yazarak anında bulun</p>
+                            <a href="/product" title="Ürün Ara">Ürün Ara</a>
+                            <div class="cta-soft">Arama sonrası kategori + cihaz filtreleriyle sonuçları daraltın.</div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-sm-6 col-xs-12">
+                        <div class="discount-img-box">
+                            <img src="/images/ad-banner-bg.jpg" width="318" height="270" alt="ad-banner-bg" />
+                        </div>
+                        <div class="discount-img-content">
+                            <h3>Uyumlu Ürünler</h3>
+                            <a href="/product" title="Cihaza Göre Bul">Cihaza Göre Bul</a>
+                            <div class="cta-soft">Uyumlu ürünlere göz atın, güvenle satın alın.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+           
+
+        </div>
+    </div>
+
+    <!-- Ürünler (OfferRate indirimli kartlar) -->
+    <div class="latest-product our-products container-fluid no-padding woocommerce">
+        <div class="section-padding"></div>
+        <div class="container">
+            <div class="section-header">
+                <h3>Ürünler</h3>
+            </div>
+
+            <ul id="filters" class="products-categories no-left-padding">
+                <li id="latest"><a class="product-link" href="javascript:void(0)">Yeni Eklenenler</a></li>
+                <li id="featured"><a class="product-link" href="javascript:void(0)">Seçilmiş Ürünler</a></li>
+                <li id="seller"><a class="product-link" href="javascript:void(0)">Çok Tercih Edilenler</a></li>
+            </ul>
+
+            <ul class="products product-carousel">
+
+                @foreach (var p in Model.Latest.Take(8))
+                {
+                    var img = FirstImg(p);
+                    var pct = OfferPct(p);
+                    var (oldP, newP, pctOut) = CalcOffer(p.Price, pct);
+
+                    <li class="product filter-latest filter-all">
+                        <a href="/product/details/@p.Id" title="@p.Title">
+                            <span class="new-product">Yeni</span>
+
+                            @if (pctOut > 0)
+                            {
+                                <span class="onsale">% @pctOut</span>
+                            }
+
+                            <span class="product-img">
+                                @if (!string.IsNullOrWhiteSpace(img))
+                                {
+                                    <img src="@img" width="270" height="360" alt="@p.Title" />
+                                }
+                                else
+                                {
+                                    <div class="no-img">Görsel Yok</div>
+                                }
+                            </span>
+
+                            <h3>@p.Title</h3>
+
+                            <span class="price">
+                                @if (pctOut > 0)
+                                {
+                                    <span class="amount">₺ @Money(newP)</span>
+                                    <del>₺ @Money(oldP)</del>
+                                }
+                                else
+                                {
+                                    <span class="amount">₺ @Money(p.Price)</span>
+                                }
+                            </span>
+                        </a>
+                        <p class="hover-content">
+                            <a title="Detay" href="/product/details/@p.Id" class="button product_type_simple add_to_cart_button">
+                                <i class="fa fa-eye" aria-hidden="true"></i>Detay
+                            </a>
+                        </p>
+                    </li>
+                }
+
+                @foreach (var p in Model.Featured.Take(8))
+                {
+                    var img = FirstImg(p);
+                    var pct = OfferPct(p);
+                    var (oldP, newP, pctOut) = CalcOffer(p.Price, pct);
+
+                    <li class="product filter-featured filter-all">
+                        <a href="/product/details/@p.Id" title="@p.Title">
+                            <span class="new-product">Önerilen</span>
+
+                            @if (pctOut > 0)
+                            {
+                                <span class="onsale">% @pctOut</span>
+                            }
+
+                            <span class="product-img">
+                                @if (!string.IsNullOrWhiteSpace(img))
+                                {
+                                    <img src="@img" width="270" height="360" alt="@p.Title" />
+                                }
+                                else
+                                {
+                                    <div class="no-img">Görsel Yok</div>
+                                }
+                            </span>
+
+                            <h3>@p.Title</h3>
+
+                            <span class="price">
+                                @if (pctOut > 0)
+                                {
+                                    <span class="amount">₺ @Money(newP)</span>
+                                    <del>₺ @Money(oldP)</del>
+                                }
+                                else
+                                {
+                                    <span class="amount">₺ @Money(p.Price)</span>
+                                }
+                            </span>
+                        </a>
+                        <p class="hover-content">
+                            <a title="Detay" href="/product/details/@p.Id" class="button product_type_simple add_to_cart_button">
+                                <i class="fa fa-eye" aria-hidden="true"></i>Detay
+                            </a>
+                        </p>
+                    </li>
+                }
+
+                @foreach (var p in Model.BestSeller.Take(8))
+                {
+                    var img = FirstImg(p);
+                    var pct = OfferPct(p);
+                    var (oldP, newP, pctOut) = CalcOffer(p.Price, pct);
+
+                    <li class="product filter-seller filter-all">
+                        <a href="/product/details/@p.Id" title="@p.Title">
+                            <span class="new-product">Popüler</span>
+
+                            @if (pctOut > 0)
+                            {
+                                <span class="onsale">% @pctOut</span>
+                            }
+
+                            <span class="product-img">
+                                @if (!string.IsNullOrWhiteSpace(img))
+                                {
+                                    <img src="@img" width="270" height="360" alt="@p.Title" />
+                                }
+                                else
+                                {
+                                    <div class="no-img">Görsel Yok</div>
+                                }
+                            </span>
+
+                            <h3>@p.Title</h3>
+
+                            <span class="price">
+                                @if (pctOut > 0)
+                                {
+                                    <span class="amount">₺ @Money(newP)</span>
+                                    <del>₺ @Money(oldP)</del>
+                                }
+                                else
+                                {
+                                    <span class="amount">₺ @Money(p.Price)</span>
+                                }
+                            </span>
+                        </a>
+                        <p class="hover-content">
+                            <a title="Detay" href="/product/details/@p.Id" class="button product_type_simple add_to_cart_button">
+                                <i class="fa fa-eye" aria-hidden="true"></i>Detay
+                            </a>
+                        </p>
+                    </li>
+                }
+
+            </ul>
+        </div>
+        <div class="section-padding"></div>
+    </div>
+
+    <!-- Saleup (görseller) -->
+    <div id="saleup-section" class="saleup-section container-fluid no-padding">
+        <div class="col-md-6 col-sm-12 col-xs-12 saleup-info no-padding">
+            <ul id="imageGallery">
+                <li data-thumb="@(saleupHero != null ? FirstImg(saleupHero) : "/images/thumb-1.jpg")">
+                    <h3>Günün Fırsatı</h3>
+
+                    @if (saleupHero != null)
+                    {
+                        <div class="saleup-product-hero">
+                            <a href="/product/details/@saleupHero.Id" title="@saleupHero.Title">
+                                <img src="@FirstImg(saleupHero)" alt="@saleupHero.Title" />
+                            </a>
+                        </div>
+
+                        <span>@saleupHero.Title</span>
+                        <p>Görselleri inceleyin, sepete ekleyin ve hızlıca satın alın.</p>
+
+                            var pct = OfferPct(saleupHero);
+                            var (oldP, newP, pctOut) = CalcOffer(saleupHero.Price, pct);
+
+                        @if (pctOut > 0)
+                        {
+                            <span class="onsale">% @pctOut</span>
+                        }
+
+                        <h5>₺ @Money(newP)</h5>
+                        @if (pctOut > 0)
+                        {
+                            <del>₺ @Money(oldP)</del>
+                        }
+
+                        @if (saleupThumbs.Count > 0)
+                        {
+                            <div class="saleup-product-thumbs">
+                                @foreach (var p in saleupThumbs)
+                                {
+                                    <a href="/product/details/@p.Id" title="@p.Title">
+                                        <img src="@FirstImg(p)" alt="@p.Title" />
+                                    </a>
+                                }
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <img src="/images/large-thumb.png" alt="large-thumb" width="485" height="181" />
+                        <span>Öne Çıkan Ürün</span>
+                        <p>Kategorilere göre filtreleyin, uyumlu ürünü seçin, satın almaya geçin.</p>
+                    }
+                </li>
+            </ul>
+        </div>
+
+        <div class="col-md-6 col-sm-12 co-xs-12 saleup-img no-padding">
+            <h3>Günün Öne Çıkan Ürünleri</h3>
+            <p>
+                Ürün görselleriyle hızlı karar verin: kategoriyi seçin, uygun ürünü sepete ekleyin ve güvenle satın alın.
+                Cihazınız için uyumlu ürünleri görmek isterseniz cihaz filtresini kullanın.
+            </p>
+            <a href="/product" title="Ürünleri Gör">Ürünleri Gör<i class="fa fa-angle-right" aria-hidden="true"></i></a>
+        </div>
+    </div>
+
+    <!-- Yorumlar -->
+    @* <div class="testimonial-section container-fluid no-padding">
+        <div class="section-padding"></div>
+        <div class="container">
+            <div class="section-header">
+                <h3>Müşteri Yorumları</h3>
+            </div>
+            <div class="testimonials-box">
+
+                <div class="col-md-12">
+                    <div class="testimonial-content">
+                        <p>Kategoriler sayesinde aradığım ürünü çok hızlı buldum. Görseller net, sipariş süreci sorunsuzdu.</p>
+                        <h3>Ayşe K.</h3>
+                        <h5>Mutlu Müşteri</h5>
+                    </div>
+                    
+                </div>
+
+                <div class="col-md-12">
+                    <div class="testimonial-content">
+                        <p>Cihaz filtresi ile uyumlu ürünü anında buldum. Sepete ekleyip hızlıca satın aldım.</p>
+                        <h3>Mehmet T.</h3>
+                        <h5>Mutlu Müşteri</h5>
+                    </div>
+              
+                </div>
+
+                <div class="col-md-12">
+                    <div class="testimonial-content">
+                        <p>Ürün görselleri ve detaylar çok açıklayıcı. Kategori içinden seçmek çok kolay oldu.</p>
+                        <h3>Elif S.</h3>
+                        <h5>Mutlu Müşteri</h5>
+                    </div>
+                
+                </div>
+
+            </div>
+        </div>
+        <div class="section-padding"></div>
+    </div> *@
+
+</main>

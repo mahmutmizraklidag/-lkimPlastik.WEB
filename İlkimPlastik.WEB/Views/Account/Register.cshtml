@@ -1,0 +1,444 @@
+﻿@* =========================================================
+    Account/Register.cshtml (MODERN + NAVBAR İLE ÇAKIŞMA YOK)
+    + Politikalar (SiteSettings PDF) alanı eklendi
+    - Stilller .acc-page scope içinde
+    ========================================================= *@
+@using Microsoft.EntityFrameworkCore
+@using ilkimPlastik.WEB.Entities
+@inject ilkimPlastik.WEB.EfCoreContext Db
+
+@{
+    ViewData["Title"] = "Kayıt Ol";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var err = TempData["ERR"] as string;
+    var ok = TempData["OK"] as string;
+    var returnUrl = ViewBag.ReturnUrl as string ?? "";
+
+    // SiteSettings (PDF linkleri için)
+    var s = await Db.SiteSettings.AsNoTracking().FirstOrDefaultAsync() ?? new SiteSettings();
+
+    string SafeFile(string? f)
+    {
+        if (string.IsNullOrWhiteSpace(f)) return "";
+        f = f.Trim().TrimStart('/');
+        if (f.Contains("..")) return "";
+        return f;
+    }
+
+    string PdfHref(string? fileName)
+    {
+        var f = SafeFile(fileName);
+        if (string.IsNullOrWhiteSpace(f)) return "#";
+        return "/uploads/site/" + f;
+    }
+
+    var kvkkHref = PdfHref(s.KvkkPdfName);
+    var privacyHref = PdfHref(s.PrivacyPolicyPdfName);
+    var conditionsHref = PdfHref(s.ConditionsPdfName);
+    var returnHref = PdfHref(s.ReturnPolicyPdfName);
+    var distanceHref = PdfHref(s.DistanceSalesAgreementPdfName);
+
+    bool HasPolicy(string href) => !string.IsNullOrWhiteSpace(href) && href != "#";
+    string LinkTarget(string href) => HasPolicy(href) ? "_blank" : "_self";
+    string LinkRel(string href) => HasPolicy(href) ? "noopener" : "";
+}
+
+<style>
+    /* SCOPE: SADECE BU SAYFA */
+    .acc-page {
+        --accent: #1daaa3;
+        --accent2: #168d87;
+        --text: #101828;
+        --muted: #667085;
+        --bd: #e6e6e6;
+        --soft: #f6f7f9;
+        --shadow: 0 18px 44px rgba(16,24,40,.12);
+        --r: 16px;
+    }
+
+        .acc-page * {
+            box-sizing: border-box;
+        }
+
+        .acc-page a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 800;
+        }
+
+            .acc-page a:hover {
+                color: var(--accent2);
+                text-decoration: underline;
+            }
+
+        .acc-page .acc-shell {
+            padding: 48px 0 64px;
+        }
+
+    @@media(max-width:768px) {
+        .acc-page .acc-shell {
+            padding: 28px 0 44px;
+        }
+    }
+
+    .acc-page .acc-wrap {
+        max-width: 760px;
+        margin: 0 auto;
+    }
+
+    .acc-page .acc-card {
+        background: #fff;
+        border: 1px solid #eef0f3;
+        border-radius: var(--r);
+        box-shadow: var(--shadow);
+        padding: 22px;
+    }
+
+    .acc-page .acc-title {
+        margin: 0 0 10px;
+        font-size: 18px;
+        font-weight: 900;
+        color: var(--text);
+    }
+
+    .acc-page .acc-subtitle {
+        margin: 0 0 16px;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    .acc-page .msg {
+        border-radius: 14px;
+        padding: 12px 14px;
+        margin-bottom: 12px;
+        font-size: 13px;
+        font-weight: 800;
+    }
+
+    .acc-page .msg-ok {
+        background: #ecfdf5;
+        border: 1px solid #b8f2d4;
+        color: #065f46;
+    }
+
+    .acc-page .msg-er {
+        background: #fff1f2;
+        border: 1px solid #fecdd3;
+        color: #9f1239;
+    }
+
+    .acc-page .sec-title {
+        margin-top: 18px;
+        margin-bottom: 10px;
+        font-weight: 900;
+        font-size: 13px;
+        color: #344054;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+        .acc-page .sec-title:before {
+            content: "";
+            height: 10px;
+            width: 10px;
+            border-radius: 999px;
+            background: var(--accent);
+            display: inline-block;
+        }
+
+    .acc-page .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+
+    .acc-page .grid1 {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    @@media(max-width:760px) {
+        .acc-page .grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .acc-page .field {
+        margin-top: 2px;
+    }
+
+    .acc-page .label {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+        font-weight: 800;
+        margin: 0 0 6px;
+    }
+
+    .acc-page .input,
+    .acc-page .textarea {
+        width: 100%;
+        border: 1px solid #e4e7ec;
+        border-radius: 14px;
+        background: #fff;
+        font-size: 14px;
+        color: var(--text);
+        outline: none;
+        transition: .15s ease;
+    }
+
+    .acc-page .input {
+        height: 46px;
+        padding: 0 12px;
+    }
+
+    .acc-page .textarea {
+        min-height: 96px;
+        padding: 10px 12px;
+        resize: vertical;
+    }
+
+        .acc-page .input:focus,
+        .acc-page .textarea:focus {
+            border-color: rgba(29,170,163,.55);
+            box-shadow: 0 0 0 4px rgba(29,170,163,.12);
+        }
+
+    .acc-page .btn-main {
+        width: 100%;
+        height: 48px;
+        margin-top: 16px;
+        border: 1px solid var(--accent);
+        border-radius: 14px;
+        background: var(--accent);
+        color: #fff;
+        font-weight: 900;
+        font-size: 14px;
+        cursor: pointer;
+        transition: .15s ease;
+    }
+
+        .acc-page .btn-main:hover {
+            background: var(--accent2);
+            border-color: var(--accent2);
+        }
+
+        .acc-page .btn-main:disabled {
+            opacity: .75;
+            cursor: not-allowed;
+        }
+
+    .acc-page .acc-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        margin-top: 14px;
+        font-size: 13px;
+        color: var(--muted);
+        font-weight: 700;
+    }
+
+    @@media(max-width:520px) {
+        .acc-page .acc-row {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+    }
+
+    /* ✅ Politikalar kutusu (minimal) */
+    .acc-page .pol-box {
+        margin-top: 12px;
+        border: 1px solid #e4e7ec;
+        border-radius: 14px;
+        background: linear-gradient(180deg,#fff,#fbfffe);
+        padding: 12px 12px;
+    }
+
+    .acc-page .pol-title {
+        font-size: 12px;
+        font-weight: 950;
+        color: #344054;
+        margin: 0 0 6px;
+    }
+
+    .acc-page .pol-links {
+        font-size: 12px;
+        color: var(--muted);
+        line-height: 1.55;
+        font-weight: 800;
+    }
+
+        .acc-page .pol-links a {
+            font-weight: 950;
+        }
+
+    .acc-page .pol-check {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        margin-top: 10px;
+    }
+
+        .acc-page .pol-check input {
+            margin-top: 3px;
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent);
+        }
+
+        .acc-page .pol-check span {
+            font-size: 12px;
+            color: #344054;
+            font-weight: 850;
+        }
+
+    .acc-page .pol-hint {
+        margin-top: 8px;
+        font-size: 12px;
+        color: var(--muted);
+        font-weight: 700;
+    }
+</style>
+
+<main class="site-main page-spacing acc-page">
+    <div class="container acc-shell">
+        <div class="acc-wrap">
+            <div class="acc-card">
+
+                <h1 class="acc-title">Kayıt Ol</h1>
+                <p class="acc-subtitle">Hesap oluşturup hızlıca alışverişe başlayın.</p>
+
+                @if (!string.IsNullOrWhiteSpace(ok))
+                {<div class="msg msg-ok">@ok</div>}
+                @if (!string.IsNullOrWhiteSpace(err))
+                {<div class="msg msg-er">@err</div>}
+
+                <form id="f" method="post" action="/Account/Register" autocomplete="on">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="returnUrl" value="@returnUrl" />
+
+                    <div class="sec-title">Hesap Bilgileri</div>
+
+                    <div class="grid">
+                        <div class="field">
+                            <label class="label">Ad *</label>
+                            <input class="input" name="name" required />
+                        </div>
+                        <div class="field">
+                            <label class="label">Soyad *</label>
+                            <input class="input" name="surname" required />
+                        </div>
+                    </div>
+
+                    <div class="grid" style="margin-top:12px;">
+                        <div class="field">
+                            <label class="label">E-posta *</label>
+                            <input class="input" name="email" type="email" required />
+                        </div>
+                        <div class="field">
+                            <label class="label">Telefon (opsiyonel)</label>
+                            <input class="input" name="phone" />
+                        </div>
+                    </div>
+
+                    <div class="grid1" style="margin-top:12px;">
+                        <div class="field">
+                            <label class="label">Şifre * (en az 6 karakter)</label>
+                            <input class="input" name="password" type="password" minlength="6" required />
+                        </div>
+                    </div>
+
+                    <div class="sec-title">İlk Adres Bilgileri (Zorunlu)</div>
+
+                    <div class="grid">
+                        <div class="field">
+                            <label class="label">Ad *</label>
+                            <input class="input" name="addressName" required />
+                        </div>
+                        <div class="field">
+                            <label class="label">Soyad *</label>
+                            <input class="input" name="addressSurname" required />
+                        </div>
+                    </div>
+
+                    <div class="grid" style="margin-top:12px;">
+                        <div class="field">
+                            <label class="label">Telefon *</label>
+                            <input class="input" name="addressPhone" required />
+                        </div>
+                        <div class="field">
+                            <label class="label">Posta Kodu</label>
+                            <input class="input" name="postCode" />
+                        </div>
+                    </div>
+
+                    <div class="grid" style="margin-top:12px;">
+                        <div class="field">
+                            <label class="label">İl *</label>
+                            <input class="input" name="city" required />
+                        </div>
+                        <div class="field">
+                            <label class="label">İlçe *</label>
+                            <input class="input" name="district" required />
+                        </div>
+                    </div>
+
+                    <div class="grid1" style="margin-top:12px;">
+                        <div class="field">
+                            <label class="label">Adres *</label>
+                            <textarea class="textarea" name="addressDetails" required></textarea>
+                        </div>
+                    </div>
+
+                    @* ✅ SADECE GEREKLİ: POLİTİKA ONAYI *@
+                    <div class="sec-title">Onay</div>
+                    <div class="pol-box">
+                        <div class="pol-title">Politikalar & Sözleşmeler</div>
+
+                        <div class="pol-links">
+                            <a href="@conditionsHref" target="@LinkTarget(conditionsHref)" rel="@LinkRel(conditionsHref)">Şartlar &amp; Koşullar</a>,
+                            <a href="@privacyHref" target="@LinkTarget(privacyHref)" rel="@LinkRel(privacyHref)">Gizlilik Politikası</a>,
+                            <a href="@kvkkHref" target="@LinkTarget(kvkkHref)" rel="@LinkRel(kvkkHref)">KVKK</a>,
+                            <a href="@distanceHref" target="@LinkTarget(distanceHref)" rel="@LinkRel(distanceHref)">Mesafeli Satış Sözleşmesi</a>,
+                            <a href="@returnHref" target="@LinkTarget(returnHref)" rel="@LinkRel(returnHref)">İade Politikası</a>
+                            metinlerini okudum ve kabul ediyorum.
+                        </div>
+
+                        <label class="pol-check">
+                            <input id="policyOk" type="checkbox" name="policyOk" value="true" required />
+                            <span>Yukarıdaki metinleri okudum, anladım ve kabul ediyorum. *</span>
+                        </label>
+
+                    </div>
+
+                    <button id="b" class="btn-main" type="submit">Hesap Oluştur</button>
+
+                    <div class="acc-row">
+                        <span>Zaten hesabın var mı? <a href="/Account/Login?returnUrl=@returnUrl">Giriş Yap</a></span>
+                        <span><a href="/">Anasayfa</a></span>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+    </div>
+</main>
+
+<script>
+    (function () {
+        var f = document.getElementById('f'), b = document.getElementById('b');
+        if (!f || !b) return;
+
+        // submit kilitle
+        f.addEventListener('submit', function () {
+            if (b.disabled) return;
+            b.disabled = true;
+            b.textContent = 'Kaydediliyor...';
+        });
+    })();
+</script>

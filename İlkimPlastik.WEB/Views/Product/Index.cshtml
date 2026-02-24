@@ -1,0 +1,668 @@
+﻿@* =========================================================
+    Views/Product/Index.cshtml (FINAL - Select tabanlı Kategori/Alt Kategori + Detaylı Filtre + Sıralama + Sayfalama)
+    ✅ Kategori SELECT + Alt Kategori SELECT (daha kullanışlı)
+    ✅ Header ile uyumlu paramlar: categoryId & subCategoryId
+    ✅ Arama + Cihaz + Fiyat Aralığı + Sadece İndirimli
+    ✅ Sıralama: Yeni, Fiyat (Artan/Azalan), İndirim, A-Z
+    ✅ Aktif filtre rozetleri + tek tık temizle
+    ✅ OfferRate badge + eski/yeni fiyat
+    ========================================================= *@
+
+@model ilkimPlastik.WEB.Controllers.ProductController.ProductIndexVm
+@using System.Globalization
+@using System.Linq
+
+@{
+    ViewData["Title"] = "Ürünlerimiz";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var tr = CultureInfo.GetCultureInfo("tr-TR");
+    string Money(decimal v) => string.Format(tr, "{0:N2}", v);
+
+    string Img(string? f)
+    {
+        if (string.IsNullOrWhiteSpace(f)) return "";
+        return "/uploads/products/" + f.TrimStart('/');
+    }
+
+    int OfferPct(int pct)
+    {
+        if (pct < 0) pct = 0;
+        if (pct > 95) pct = 95;
+        return pct;
+    }
+
+    (decimal oldP, decimal newP, int pct) CalcOffer(decimal price, int pct)
+    {
+        var oldP = decimal.Round(price, 2);
+        if (pct <= 0) return (oldP, oldP, 0);
+
+        var rate = pct / 100m;
+        var newP = decimal.Round(price * (1m - rate), 2);
+        if (newP < 0m) newP = 0m;
+
+        return (oldP, newP, pct);
+    }
+
+    string BuildUrl(
+        string? q = null,
+        int? categoryId = null,
+        int? subCategoryId = null,
+        int? deviceId = null,
+        decimal? minPrice = null,
+        decimal? maxPrice = null,
+        bool? offerOnly = null,
+        string? sort = null,
+        int? page = null)
+    {
+        q ??= Model.Query;
+        categoryId ??= Model.CategoryId;
+        subCategoryId ??= Model.SubCategoryId;
+        deviceId ??= Model.DeviceId;
+        minPrice ??= Model.MinPrice;
+        maxPrice ??= Model.MaxPrice;
+        offerOnly ??= Model.OfferOnly;
+        sort ??= Model.Sort;
+        page ??= Model.Page;
+
+        var parts = new System.Collections.Generic.List<string>();
+        if (!string.IsNullOrWhiteSpace(q)) parts.Add("q=" + Uri.EscapeDataString(q.Trim()));
+        if (categoryId.HasValue) parts.Add("categoryId=" + categoryId.Value);
+        if (subCategoryId.HasValue) parts.Add("subCategoryId=" + subCategoryId.Value);
+        if (deviceId.HasValue) parts.Add("deviceId=" + deviceId.Value);
+        if (minPrice.HasValue) parts.Add("minPrice=" + minPrice.Value.ToString(tr));
+        if (maxPrice.HasValue) parts.Add("maxPrice=" + maxPrice.Value.ToString(tr));
+        if (offerOnly == true) parts.Add("offerOnly=true");
+        if (!string.IsNullOrWhiteSpace(sort)) parts.Add("sort=" + Uri.EscapeDataString(sort));
+        if (page.HasValue && page.Value > 1) parts.Add("page=" + page.Value);
+
+        return "/product" + (parts.Count > 0 ? "?" + string.Join("&", parts) : "");
+    }
+
+    string SortText(string? s)
+    {
+        s = (s ?? "new").ToLowerInvariant();
+        if (s == "price_asc") return "Fiyat (Artan)";
+        if (s == "price_desc") return "Fiyat (Azalan)";
+        if (s == "discount_desc") return "İndirim (Yüksek → Düşük)";
+        if (s == "title_asc") return "A-Z";
+        return "En Yeni";
+    }
+
+    // ✅ Seçili kategori alt kategorileri
+    var selectedCat = Model.CategoryId.HasValue
+        ? Model.Categories.FirstOrDefault(x => x.Id == Model.CategoryId.Value)
+        : null;
+
+    var subOptions = selectedCat?.SubCategories ?? new System.Collections.Generic.List<ilkimPlastik.WEB.Controllers.ProductController.SubCategoryRowVm>();
+}
+
+<style>
+    .shopWrap {
+        display: flex;
+        gap: 22px;
+    }
+
+    .sec-pad{
+        padding-top:1px !important
+    }
+    
+    @@media(max-width:991px) {
+        .shopWrap {
+            display: block;
+        }
+    }
+
+    .fltBox {
+        background: #fff;
+        border: 1px solid #eef0f3;
+        border-radius: 14px;
+        padding: 14px;
+        margin-bottom: 14px;
+    }
+
+    .fltTitle {
+        font-weight: 900;
+        font-size: 13px;
+        color: #101828;
+        margin: 0 0 10px;
+    }
+
+    .fltInput {
+        width: 100%;
+        border: 1px solid #e4e7ec;
+        border-radius: 12px;
+        padding: 10px 12px;
+        font-weight: 400;
+        outline: none;
+        background: #fff;
+    }
+
+        .fltInput:focus {
+            border-color: rgba(29,170,163,.55);
+            box-shadow: 0 0 0 4px rgba(29,170,163,.10);
+        }
+
+    .fltRow {
+        display: flex;
+        gap: 10px;
+    }
+
+        .fltRow > * {
+            flex: 1;
+        }
+
+    .fltBtn {
+        width: 100%;
+        border: 0;
+        border-radius: 12px;
+        padding: 11px 12px;
+        font-weight: 900;
+        color: #fff;
+        background: #1daaa3;
+        cursor: pointer;
+        transition: .12s ease;
+    }
+
+        .fltBtn:hover {
+            background: #333;
+        }
+
+    .fltReset {
+        display: block;
+        margin-top: 10px;
+        font-weight: 900;
+        color: #667085;
+        text-decoration: underline;
+    }
+
+    /* Select helpers */
+    .hint {
+        margin-top: 8px;
+        font-size: 12px;
+        color: #667085;
+        font-weight: 800;
+        line-height: 1.35;
+    }
+
+    /* Topbar */
+    .topbar {
+        background: #fff;
+        border: 1px solid #eef0f3;
+        border-radius: 14px;
+        padding: 12px 14px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 14px;
+        flex-wrap: wrap;
+    }
+
+    .topbarLeft {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .topbarTitle {
+        font-weight: 900;
+        color: #101828;
+    }
+
+    .topbarMeta {
+        font-weight: 800;
+        color: #667085;
+        font-size: 12px;
+    }
+
+    .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 10px;
+        border-radius: 999px;
+        background: #f2f4f7;
+        border: 1px solid #eef0f3;
+        font-weight: 900;
+        font-size: 12px;
+        color: #344054;
+    }
+
+        .chip a {
+            color: #b42318;
+            font-weight: 900;
+            text-decoration: none;
+        }
+
+    .sortSelect {
+        border: 1px solid #e4e7ec;
+        border-radius: 12px;
+        padding: 10px 12px;
+        font-weight: 900;
+        color: #101828;
+        background: #fff;
+        min-width: 220px;
+        outline: none;
+    }
+
+        .sortSelect:focus {
+            border-color: rgba(29,170,163,.55);
+            box-shadow: 0 0 0 4px rgba(29,170,163,.10);
+        }
+
+    .products .product .onsale {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        z-index: 2;
+        background: #b42318;
+        color: #fff;
+        font-weight: 900;
+        border-radius: 999px;
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+
+    .products .product .new-product {
+        display: none;
+    }
+
+    .products .product a {
+        position: relative;
+        display: block;
+    }
+
+    .products .product .price .amount {
+        font-weight: 900;
+    }
+
+    .products .product .price del {
+        margin-left: 8px;
+        opacity: .65;
+        font-size: 13px;
+    }
+
+    .no-product-box {
+        background: #fafafa;
+        border: 1px dashed #ccc;
+        padding: 30px;
+        text-align: center;
+        border-radius: 14px;
+    }
+
+    .no-image {
+        height: 360px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f4f4f4;
+        color: #888;
+        font-weight: 700;
+    }
+
+    .pager {
+        margin-top: 18px;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+        .pager a, .pager span {
+            min-width: 38px;
+            height: 38px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            font-weight: 900;
+            border: 1px solid #e4e7ec;
+            background: #fff;
+            color: #101828;
+            text-decoration: none;
+            padding: 0 12px;
+        }
+
+            .pager a:hover {
+                background: #f2f4f7;
+            }
+
+        .pager .isActive {
+            background: #111;
+            color: #fff;
+            border-color: #111;
+        }
+
+        .pager .isDisabled {
+            opacity: .45;
+            pointer-events: none;
+        }
+</style>
+
+<main class="site-main page-spacing">
+    <div class="page-banner shop-banner-1 container-fluid no-padding">
+        <div class="page-banner-content">
+            <h3>Ürünlerimiz</h3>
+        </div>
+    </div>
+
+    <div class="latest-product shop-1 container-fluid no-padding woocommerce">
+        <div class="section-padding sec-pad"></div>
+
+        <div class="container">
+            <div class="shopWrap">
+
+                <!-- ================= SIDEBAR (FİLTRE) ================= -->
+                <aside class="col-md-3 col-sm-3 col-xs-12" style="padding-left:0;">
+                    <form method="get" action="/product" id="fltForm">
+
+                        <!-- ARAMA -->
+                        <div class="fltBox">
+                            <div class="fltTitle">Arama</div>
+                            <input name="q" value="@Model.Query" class="fltInput" placeholder="Ürün, model veya barkod..." />
+                        </div>
+
+                        <!-- KATEGORİ / ALT KATEGORİ (SELECT) -->
+                        <div class="fltBox">
+                            <div class="fltTitle">Kategori</div>
+
+                            <select name="categoryId" id="categorySelect" class="fltInput" onchange="document.getElementById('subCategorySelect').value=''; document.getElementById('fltForm').submit();">
+                                <option value="">Tüm Kategoriler (@Model.GlobalCount)</option>
+                                @foreach (var c in Model.Categories)
+                                {
+                                    <option value="@c.Id" selected="@(Model.CategoryId == c.Id)">
+                                        @c.Name (@c.Count)
+                                    </option>
+                                }
+                            </select>
+
+                          
+
+                            <div style="height:10px"></div>
+
+                            <div class="fltTitle" style="margin-bottom:8px;">Alt Kategori</div>
+
+                            <select name="subCategoryId" id="subCategorySelect" class="fltInput" onchange="document.getElementById('fltForm').submit();" @(Model.CategoryId.HasValue ? "" : "disabled")>
+                                @if (!Model.CategoryId.HasValue)
+                                {
+                                    <option value="">Önce kategori seçin</option>
+                                }
+                                else
+                                {
+                                    <option value="" selected="@(Model.SubCategoryId == null)">Tümü</option>
+                                    @foreach (var s in subOptions)
+                                    {
+                                        <option value="@s.Id" selected="@(Model.SubCategoryId == s.Id)">
+                                            @s.Name (@s.Count)
+                                        </option>
+                                    }
+                                }
+                            </select>
+
+                           
+                        </div>
+
+                        <!-- CİHAZ -->
+                        <div class="fltBox">
+                            <div class="fltTitle">Uyumlu Cihaz</div>
+                            <select name="deviceId" class="fltInput" onchange="document.getElementById('fltForm').submit();">
+                                <option value="">Tüm Cihazlar</option>
+                                @foreach (var d in Model.Devices)
+                                {
+                                    <option value="@d.Id" selected="@(Model.DeviceId == d.Id)">
+                                        @d.Name
+                                    </option>
+                                }
+                            </select>
+                           
+                        </div>
+
+                        <!-- FİYAT + İNDİRİM -->
+                        <div class="fltBox">
+                            <div class="fltTitle">Fiyat / Kampanya</div>
+
+                            <div class="fltRow">
+                                <input type="number" step="0.01" name="minPrice" value="@(Model.MinPrice?.ToString(tr))" placeholder="Min ₺" class="fltInput" />
+                                <input type="number" step="0.01" name="maxPrice" value="@(Model.MaxPrice?.ToString(tr))" placeholder="Max ₺" class="fltInput" />
+                            </div>
+
+                            <label style="display:flex;gap:10px;align-items:center;margin-top:10px;cursor:pointer;">
+                                <input type="checkbox" name="offerOnly" value="true" @(Model.OfferOnly ? "checked" : "") onchange="document.getElementById('fltForm').submit();" />
+                                <span style="font-weight:900;color:#101828;">Sadece indirimli ürünler</span>
+                            </label>
+
+                            <div class="hint">Global aralık: ₺ @Money(Model.GlobalMinPrice) — ₺ @Money(Model.GlobalMaxPrice)</div>
+
+                            <div style="margin-top:10px;">
+                                <button class="fltBtn" type="submit">Filtrele</button>
+                                <a class="fltReset" href="/product">Tüm Filtreleri Temizle</a>
+                            </div>
+                        </div>
+
+                        <!-- SIRALAMA (sidebar) -->
+                       @*  <div class="fltBox">
+                            <div class="fltTitle">Sıralama</div>
+                            <select name="sort" class="fltInput" onchange="document.getElementById('fltForm').submit();">
+                                <option value="new" selected="@(Model.Sort == "new")">En Yeni</option>
+                                <option value="price_asc" selected="@(Model.Sort == "price_asc")">Fiyat (Artan)</option>
+                                <option value="price_desc" selected="@(Model.Sort == "price_desc")">Fiyat (Azalan)</option>
+                                <option value="discount_desc" selected="@(Model.Sort == "discount_desc")">İndirim (Yüksek → Düşük)</option>
+                                <option value="title_asc" selected="@(Model.Sort == "title_asc")">A-Z</option>
+                            </select>
+                        </div> *@
+
+                    </form>
+                </aside>
+                <!-- ================= /SIDEBAR ================= -->
+                <!-- ================= CONTENT ================= -->
+                <section class="col-md-9 col-sm-9 col-xs-12" style="padding-right:0;">
+
+                    <div class="topbar">
+                        <div class="topbarLeft">
+                            <div class="topbarTitle">Liste</div>
+                            <div class="topbarMeta">
+                                Toplam: <b>@Model.Total</b> ürün • Sayfa: <b>@Model.Page</b>/<b>@Model.TotalPages</b> • Sıralama: <b>@SortText(Model.Sort)</b>
+                            </div>
+
+                            <div class="chips">
+                                @if (!string.IsNullOrWhiteSpace(Model.Query))
+                                {
+                                    <span class="chip">
+                                        Arama: “@Model.Query”
+                                        <a href="@BuildUrl(q: "", page: 1)">×</a>
+                                    </span>
+                                }
+                                @if (Model.CategoryId.HasValue)
+                                {
+                                    <span class="chip">
+                                        Kategori: @Model.SelectedCategoryName
+                                        <a href="@BuildUrl(categoryId: null, subCategoryId: null, page: 1)">×</a>
+                                    </span>
+                                }
+                                @if (Model.SubCategoryId.HasValue)
+                                {
+                                    <span class="chip">
+                                        Alt: @Model.SelectedSubCategoryName
+                                        <a href="@BuildUrl(subCategoryId: null, page: 1)">×</a>
+                                    </span>
+                                }
+                                @if (Model.DeviceId.HasValue)
+                                {
+                                    <span class="chip">
+                                        Cihaz: @Model.SelectedDeviceName
+                                        <a href="@BuildUrl(deviceId: null, page: 1)">×</a>
+                                    </span>
+                                }
+                                @if (Model.MinPrice.HasValue || Model.MaxPrice.HasValue)
+                                {
+                                    <span class="chip">
+                                        Fiyat:
+                                        @(Model.MinPrice.HasValue ? "₺ " + Money(Model.MinPrice.Value) : "—")
+                                        —
+                                        @(Model.MaxPrice.HasValue ? "₺ " + Money(Model.MaxPrice.Value) : "—")
+                                        <a href="@BuildUrl(minPrice: null, maxPrice: null, page: 1)">×</a>
+                                    </span>
+                                }
+                                @if (Model.OfferOnly)
+                                {
+                                    <span class="chip">
+                                        İndirimli
+                                        <a href="@BuildUrl(offerOnly: false, page: 1)">×</a>
+                                    </span>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="topbarRight">
+                            <select class="sortSelect" onchange="window.location.href=this.value">
+                                <option value="@BuildUrl(sort:"new", page:1)" selected="@(Model.Sort == "new")">En Yeni</option>
+                                <option value="@BuildUrl(sort:"price_asc", page:1)" selected="@(Model.Sort == "price_asc")">Fiyat (Artan)</option>
+                                <option value="@BuildUrl(sort:"price_desc", page:1)" selected="@(Model.Sort == "price_desc")">Fiyat (Azalan)</option>
+                                <option value="@BuildUrl(sort:"discount_desc", page:1)" selected="@(Model.Sort == "discount_desc")">İndirim (Yüksek → Düşük)</option>
+                                <option value="@BuildUrl(sort:"title_asc", page:1)" selected="@(Model.Sort == "title_asc")">A-Z</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    @if (!Model.Products.Any())
+                    {
+                        <div class="no-product-box">
+                            <h4>Ürün Bulunamadı</h4>
+                            <p>
+                                Seçtiğiniz filtre kombinasyonuna uygun ürün bulunamadı.<br />
+                                Kategori, alt kategori, cihaz veya fiyat aralığını değiştirerek tekrar deneyin.
+                            </p>
+                            <p style="margin-top:14px;">
+                                <a href="/product" class="button" style="display:inline-block;padding:10px 14px;border-radius:12px;background:#111;color:#fff;font-weight:900;">
+                                    Filtreleri Sıfırla
+                                </a>
+                            </p>
+                        </div>
+                    }
+                    else
+                    {
+                        <ul class="products">
+                            @foreach (var p in Model.Products)
+                            {
+                                var pct = OfferPct(p.OfferRate);
+                                var (oldP, newP, pctOut) = CalcOffer(p.Price, pct);
+
+                                <li class="product">
+                                    <a href="/product/details/@p.Id" title="@p.Title">
+
+                                        @if (pctOut > 0)
+                                        {
+                                            <span class="onsale">% @pctOut</span>
+                                        }
+
+                                        <span class="product-img">
+                                            @if (!string.IsNullOrWhiteSpace(p.ImageUrl))
+                                            {
+                                                <img src="@Img(p.ImageUrl)" width="270" height="360" alt="@p.Title" />
+                                            }
+                                            else
+                                            {
+                                                <div class="no-image">Görsel Yok</div>
+                                            }
+                                        </span>
+
+                                        <h3>@p.Title</h3>
+
+                                        <span class="price">
+                                            @if (pctOut > 0)
+                                            {
+                                                <span class="amount">₺ @Money(newP)</span>
+                                                <del>₺ @Money(oldP)</del>
+                                            }
+                                            else
+                                            {
+                                                <span class="amount">₺ @Money(p.Price)</span>
+                                            }
+                                        </span>
+                                    </a>
+
+                                    <p class="hover-content">
+                                        <a href="/product/details/@p.Id" class="button product_type_simple add_to_cart_button">
+                                            <i class="fa fa-eye"></i> Detay
+                                        </a>
+                                    </p>
+                                </li>
+                            }
+                        </ul>
+
+                        <!-- PAGINATION -->
+                        <div class="pager">
+                            @{
+                                var prev = Model.Page - 1;
+                                var next = Model.Page + 1;
+
+                                <a class="@(Model.Page <= 1 ? "isDisabled" : "")" href="@BuildUrl(page: prev)">‹</a>;
+
+                                int win = 2;
+                                int start = Math.Max(1, Model.Page - win);
+                                int end = Math.Min(Model.TotalPages, Model.Page + win);
+
+                                if (start > 1)
+                                {
+                                    <a href="@BuildUrl(page: 1)">1</a>;
+                                    if (start > 2)
+                                    { <span>…</span>;
+                                    }
+                                }
+
+                                for (int i = start; i <= end; i++)
+                                {
+                                    if (i == Model.Page)
+                                    { <span class="isActive">@i</span>;
+                                }
+                                else
+                                { <a href="@BuildUrl(page: i)">@i</a>;
+                            }
+                        }
+
+                        if (end < Model.TotalPages)
+                        {
+                            if (end < Model.TotalPages - 1)
+                            { <span>…</span>;
+                            }
+                            <a href="@BuildUrl(page: Model.TotalPages)">@Model.TotalPages</a>;
+                        }
+
+                        <a class="@(Model.Page >= Model.TotalPages ? "isDisabled" : "")" href="@BuildUrl(page: next)">›</a>;
+                            }
+                        </div>
+                    }
+                </section>
+                <!-- ================= /CONTENT ================= -->
+
+            </div>
+        </div>
+
+        <div class="section-padding"></div>
+    </div>
+</main>
+<script>
+    // Chip tıklama olayını yakala
+    document.querySelectorAll('.chip a').forEach(function (chip) {
+        chip.addEventListener('click', function (event) {
+            event.preventDefault();  // Linkin normal davranışını engelle
+            var newUrl = window.location.href;
+            var paramName = chip.getAttribute('href').split('=')[0].split('?')[1];  // Filtrenin parametre ismini al
+
+            // URL parametrelerini temizle
+            var url = new URL(newUrl);
+            url.searchParams.delete(paramName);
+
+            // URL'yi güncelle ve sayfayı yeniden yükle
+            window.location.href = url.toString();
+        });
+    });
+</script>

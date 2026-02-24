@@ -1,0 +1,354 @@
+﻿@* =========================================================================================
+    ✅ TEK PARÇA FINAL: _Layout.cshtml (SiteSettings ile DİNAMİK + FAVICON + POLİTİKA PDF LİNKLERİ)
+    - Title / Description / Keywords / Author dinamik
+    - Favicon SiteSettings.FaviconFileName üzerinden /uploads/site/
+    - Footer: telefon / email / adres / abouttext dinamik
+    - Sosyal medya linkleri dinamik
+    - Footer'da "Destek" yerine "Politikalar" alanı (PDF linkleri)
+    - "Site Haritası" gibi olmayan linkler kaldırıldı
+    - Politikalar linkleri: dosya varsa /uploads/site/..., yoksa "#"
+    ========================================================================================= *@
+
+@using Microsoft.EntityFrameworkCore
+@using ilkimPlastik.WEB.Entities
+@inject ilkimPlastik.WEB.EfCoreContext Db
+
+@{
+    // ✅ SiteSettings tek kayıt
+    var s = await Db.SiteSettings.AsNoTracking().FirstOrDefaultAsync() ?? new SiteSettings();
+
+    // ===== SEO / Head =====
+    var siteTitle = string.IsNullOrWhiteSpace(s.Title) ? "İlkim Plastik" : s.Title.Trim();
+    var desc = string.IsNullOrWhiteSpace(s.Description) ? "İlkim Plastik - Süpürge ve benzeri ürünlerin yedek parçaları." : s.Description.Trim();
+    var keywords = string.IsNullOrWhiteSpace(s.Keywords) ? "yedek parça,süpürge yedek parça,plastik parça" : s.Keywords.Trim();
+    var author = string.IsNullOrWhiteSpace(s.Author) ? "İlkim Plastik" : s.Author.Trim();
+
+    // ===== Genel =====
+    var phone = string.IsNullOrWhiteSpace(s.Phone) ? "08 523 456 78" : s.Phone.Trim();
+    var email = string.IsNullOrWhiteSpace(s.Email) ? "info@ilkimplastik.com" : s.Email.Trim();
+    var address = string.IsNullOrWhiteSpace(s.AddressText) ? "Adres: Örnek Mah. Örnek Sk. No:1, Türkiye" : s.AddressText.Trim();
+    var working = string.IsNullOrWhiteSpace(s.WorkingHours) ? "Hafta içi 09:00 – 18:00" : s.WorkingHours.Trim();
+
+    // ===== Footer About =====
+    string StripToPlain(string? html)
+    {
+        if (string.IsNullOrWhiteSpace(html)) return "";
+        var t = System.Text.RegularExpressions.Regex.Replace(html, "<.*?>", string.Empty);
+        t = System.Net.WebUtility.HtmlDecode(t);
+        return t.Trim();
+    }
+
+    var aboutPlain = StripToPlain(s.AboutText);
+    var aboutFooter = string.IsNullOrWhiteSpace(aboutPlain)
+        ? "İlkim Plastik; süpürge ve benzeri ürünlerin yedek parçalarında kalite, sürdürülebilirlik ve müşteri memnuniyeti odaklı hizmet verir."
+        : aboutPlain;
+
+    if (aboutFooter.Length > 220)
+        aboutFooter = aboutFooter.Substring(0, 220).TrimEnd() + "...";
+
+    // ===== Sosyal =====
+    string FixUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return "";
+        url = url.Trim();
+        if (url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+            url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            return url;
+        return "https://" + url;
+    }
+
+    var fb = FixUrl(s.FacebookUrl);
+    var tw = FixUrl(s.TwitterUrl);
+    var ig = FixUrl(s.InstagramUrl);
+    var ln = FixUrl(s.LinkedInUrl);
+
+    // ===== Logo / Favicon =====
+    string SafeFile(string? f)
+    {
+        if (string.IsNullOrWhiteSpace(f)) return "";
+        f = f.Trim().TrimStart('/');
+        if (f.Contains("..")) return "";
+        return f;
+    }
+
+    var logoFile = SafeFile(s.LogoFileName);
+    var faviconFile = SafeFile(s.FaviconFileName);
+
+    var logoUrl = !string.IsNullOrWhiteSpace(logoFile) ? ("/uploads/site/" + logoFile) : null;
+
+    // ✅ Favicon: SiteSettings.FaviconFileName -> /uploads/site/ (boşsa fallback)
+    var faviconUrl = !string.IsNullOrWhiteSpace(faviconFile) ? ("/uploads/site/" + faviconFile) : "/images/favicon.ico";
+
+    // Güvenlik: javascript: gibi riskleri engelleyelim (sadece sosyal linkler için)
+    bool IsSafeLink(string u)
+    {
+        if (string.IsNullOrWhiteSpace(u)) return false;
+        return u.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+               u.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
+    }
+
+    // ===== Politikalar PDF Linkleri =====
+    string PdfHref(string? fileName)
+    {
+        var f = SafeFile(fileName);
+        if (string.IsNullOrWhiteSpace(f)) return "#";
+        return "/uploads/site/" + f;
+    }
+
+    var kvkkHref = PdfHref(s.KvkkPdfName);
+    var privacyHref = PdfHref(s.PrivacyPolicyPdfName);
+    var conditionsHref = PdfHref(s.ConditionsPdfName);
+    var returnHref = PdfHref(s.ReturnPolicyPdfName);
+    var distanceHref = PdfHref(s.DistanceSalesAgreementPdfName);
+
+    bool HasPolicy(string href) => !string.IsNullOrWhiteSpace(href) && href != "#";
+
+    string LinkTarget(string href) => HasPolicy(href) ? "_blank" : "_self";
+    string LinkRel(string href) => HasPolicy(href) ? "noopener" : "";
+}
+
+<!DOCTYPE html>
+
+<!--[if lt IE 7 ]> <html class="ie6"> <![endif]-->
+<!--[if IE 7 ]>    <html class="ie7"> <![endif]-->
+<!--[if IE 8 ]>    <html class="ie8"> <![endif]-->
+<!--[if IE 9 ]>    <html class="ie9"> <![endif]-->
+<!--[if (gt IE 9)|!(IE)]><!-->
+<html lang="tr">
+<!--<![endif]-->
+<head>
+    <meta charset="utf-8">
+
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <meta name="description" content="@desc">
+    <meta name="keywords" content="@keywords">
+    <meta name="author" content="@author">
+
+    <title>@siteTitle</title>
+
+    <!-- ✅ Standard Favicon (SiteSettings) -->
+    <link rel="icon" type="image/x-icon" href="@faviconUrl" />
+    <link rel="shortcut icon" type="image/x-icon" href="@faviconUrl" />
+
+    <!-- For iPhone 4 Retina display: -->
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="/images/apple-touch-icon-114x114-precomposed.png">
+    <!-- For iPad: -->
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/images/apple-touch-icon-72x72-precomposed.png">
+    <!-- For iPhone: -->
+    <link rel="apple-touch-icon-precomposed" href="/images/apple-touch-icon-57x57-precomposed.png">
+
+    <!-- OpenGraph -->
+    <meta property="og:title" content="@siteTitle" />
+    <meta property="og:description" content="@desc" />
+    @if (!string.IsNullOrWhiteSpace(logoUrl))
+    {
+        <meta property="og:image" content="@logoUrl" />
+    }
+
+    <!-- Custom - Theme CSS -->
+    <link rel="stylesheet" type="text/css" href="/style.css">
+
+    <!--[if lt IE 9]>
+        <script src="js/html5/respond.min.js"></script>
+    <![endif]-->
+</head>
+
+<body data-offset="200" data-spy="scroll" data-target=".ow-navigation">
+
+    @* Header ViewComponent *@
+    @await Component.InvokeAsync("Header")
+
+    @RenderBody()
+
+    <!-- Footer Main -->
+    <footer class="footer-main container-fluid no-padding">
+        <div class="container">
+            <div class="row">
+                <div class="footer-header">
+                    <a href="/" title="@siteTitle">
+                        @siteTitle.Replace(" ", "")<span>@(siteTitle.Contains("Plastik", StringComparison.OrdinalIgnoreCase) ? "" : "Plastik")</span>
+                    </a>
+                </div>
+
+                <div class="footer-social">
+                    <ul>
+                        @if (IsSafeLink(fb))
+                        {
+                            <li><a href="@fb" target="_blank" rel="noopener" title="Facebook"><i class="fa fa-facebook" aria-hidden="true"></i></a></li>
+                        }
+                        @if (IsSafeLink(tw))
+                        {
+                            <li><a href="@tw" target="_blank" rel="noopener" title="X"><i class="fa fa-twitter" aria-hidden="true"></i></a></li>
+                        }
+                        @if (IsSafeLink(ln))
+                        {
+                            <li><a href="@ln" target="_blank" rel="noopener" title="LinkedIn"><i class="fa fa-linkedin" aria-hidden="true"></i></a></li>
+                        }
+                        @if (IsSafeLink(ig))
+                        {
+                            <li><a href="@ig" target="_blank" rel="noopener" title="Instagram"><i class="fa fa-instagram" aria-hidden="true"></i></a></li>
+                        }
+                    </ul>
+                </div>
+
+                <!-- Widget About -->
+                <aside class="col-md-4 col-sm-6 col-xs-6 ftr-widget about-widget">
+                    <h3>Hakkımızda</h3>
+                    <p>@aboutFooter</p>
+
+                    <p><i aria-hidden="true" class="fa fa-phone"></i>Telefon: <a href="tel:@phone">@phone</a></p>
+                    <p><i aria-hidden="true" class="fa fa-envelope-o"></i><a title="@email" href="mailto:@email">@email</a></p>
+                    <p><i aria-hidden="true" class="fa fa-map-marker"></i>@address</p>
+                    <p><i aria-hidden="true" class="fa fa-clock-o"></i>@working</p>
+                </aside>
+
+                <!-- Widget Links -->
+                <aside class="col-md-2 col-sm-6 col-xs-6 ftr-widget link-widget">
+                    <h3>Faydalı Linkler</h3>
+                    <ul>
+                        <li><a href="/about" title="Hakkımızda">Hakkımızda</a></li>
+                        <li><a href="/product" title="Ürünlerimiz">Ürünlerimiz</a></li>
+                        <li><a href="/contact" title="İletişim">İletişim</a></li>
+                    </ul>
+                </aside>
+
+                <!-- Widget POLİTİKALAR (Destek yerine) -->
+                <aside class="col-md-3 col-sm-6 col-xs-6 ftr-widget contact-widget">
+                    <h3>Politikalar</h3>
+                    <ul>
+                        <li>
+                            <a href="@kvkkHref" target="@LinkTarget(kvkkHref)" rel="@LinkRel(kvkkHref)" title="KVKK">
+                                KVKK
+                            </a>
+                        </li>
+                        <li>
+                            <a href="@privacyHref" target="@LinkTarget(privacyHref)" rel="@LinkRel(privacyHref)" title="Gizlilik Politikası">
+                                Gizlilik Politikası
+                            </a>
+                        </li>
+                        <li>
+                            <a href="@conditionsHref" target="@LinkTarget(conditionsHref)" rel="@LinkRel(conditionsHref)" title="Şartlar & Koşullar">
+                                Şartlar &amp; Koşullar
+                            </a>
+                        </li>
+                        <li>
+                            <a href="@returnHref" target="@LinkTarget(returnHref)" rel="@LinkRel(returnHref)" title="İade Politikası">
+                                İade Politikası
+                            </a>
+                        </li>
+                        <li>
+                            <a href="@distanceHref" target="@LinkTarget(distanceHref)" rel="@LinkRel(distanceHref)" title="Mesafeli Satış Sözleşmesi">
+                                Mesafeli Satış Sözleşmesi
+                            </a>
+                        </li>
+                    </ul>
+                </aside>
+
+                <!-- Widget Sosyal Medya -->
+                <aside class="col-md-3 col-sm-6 col-xs-6 ftr-widget social-widget">
+                    <h3>Sosyal Medya</h3>
+
+                    <ul class="footer-social-links">
+                        @if (IsSafeLink(fb))
+                        {
+                            <li>
+                                <a href="@fb" target="_blank" rel="noopener" title="Facebook">
+                                    <i class="fa fa-facebook"></i> Facebook
+                                </a>
+                            </li>
+                        }
+
+                        @if (IsSafeLink(ig))
+                        {
+                            <li>
+                                <a href="@ig" target="_blank" rel="noopener" title="Instagram">
+                                    <i class="fa fa-instagram"></i> Instagram
+                                </a>
+                            </li>
+                        }
+
+                        @if (IsSafeLink(tw))
+                        {
+                            <li>
+                                <a href="@tw" target="_blank" rel="noopener" title="X / Twitter">
+                                    <i class="fa fa-twitter"></i> X (Twitter)
+                                </a>
+                            </li>
+                        }
+
+                        @if (IsSafeLink(ln))
+                        {
+                            <li>
+                                <a href="@ln" target="_blank" rel="noopener" title="LinkedIn">
+                                    <i class="fa fa-linkedin"></i> LinkedIn
+                                </a>
+                            </li>
+                        }
+
+                        @if (!IsSafeLink(fb) && !IsSafeLink(ig) && !IsSafeLink(tw) && !IsSafeLink(ln))
+                        {
+                            <li style="color:#999;font-size:13px;">
+                                Sosyal medya hesabı eklenmemiştir.
+                            </li>
+                        }
+                    </ul>
+                </aside>
+
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bottom Footer -->
+    <div class="bottom-footer container-fluid no-padding">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-copyright">
+                    <p>&copy; @DateTime.Now.Year Tüm Hakları Saklıdır</p>
+                </div>
+                <div class="footer-breadcrumb pull-right">
+                    <ol class="breadcrumb">
+                        <li title="Anasayfa" class="active">Anasayfa</li>
+
+                        <li>
+                            <a title="Şartlar & Koşullar"
+                               href="@conditionsHref"
+                               target="@LinkTarget(conditionsHref)"
+                               rel="@LinkRel(conditionsHref)">
+                                Şartlar
+                            </a>
+                        </li>
+
+                        <li>
+                            <a title="Gizlilik Politikası"
+                               href="@privacyHref"
+                               target="@LinkTarget(privacyHref)"
+                               rel="@LinkRel(privacyHref)">
+                                Gizlilik
+                            </a>
+                        </li>
+
+                        <li><a title="İletişim" href="/contact">İletişim</a></li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JQuery v1.11.3 -->
+    <script src="/js/jquery.min.js"></script>
+
+    <!-- Library - Js -->
+    <script src="/libraries/lib.js"></script>
+    <script src="/libraries/jquery.countdown.min.js"></script>
+    <script src="/libraries/lightslider-master/lightslider.js"></script>
+    <script src="/libraries/slick/slick.min.js"></script>
+
+    <!-- Library - Google Map API -->
+    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp"></script>
+
+    <!-- Library - Theme JS -->
+    <script src="/js/functions.js"></script>
+</body>
+</html>

@@ -1,0 +1,150 @@
+﻿@model string
+@{
+    // AboutText boşsa fallback
+    var aboutText = (Model ?? "").Trim();
+
+    if (string.IsNullOrWhiteSpace(aboutText))
+    {
+        aboutText =@"";
+    }
+
+    // Metni paragraflara böl (boş satırları ayraç kabul eder)
+    var paragraphs = aboutText
+        .Split(new[] { "\r\n\r\n", "\n\n" }, StringSplitOptions.RemoveEmptyEntries)
+        .Select(x => x.Trim())
+        .Where(x => !string.IsNullOrWhiteSpace(x))
+        .ToList();
+
+    // Highlight: son paragrafı vurgulu kutuya alalım (istersen değiştirebilirsin)
+    string? highlight = null;
+    if (paragraphs.Count >= 3)
+    {
+        highlight = paragraphs.Last();
+        paragraphs.RemoveAt(paragraphs.Count - 1);
+    }
+}
+
+<section class="about-section">
+    <style>
+        :root {
+            --accent: #1daaa3;
+            --dark: #0f172a;
+            --text: #334155;
+            --light-bg: #f8fafc;
+            --soft-bg: #f1f5f9;
+        }
+
+        .about-section {
+            width: 100%;
+            padding: 80px 20px;
+            background: var(--light-bg);
+            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+            color: var(--dark);
+        }
+
+        .about-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 60px;
+        }
+
+        .about-content {
+            flex: 1;
+        }
+
+            .about-content h2 {
+                font-size: 38px;
+                font-weight: 700;
+                margin-bottom: 20px;
+                padding-left: 16px;
+                border-left: 4px solid var(--accent);
+                color: var(--accent);
+            }
+
+            .about-content p {
+                font-size: 16px;
+                line-height: 1.8;
+                color: var(--text);
+                margin-bottom: 16px;
+            }
+
+            .about-content .highlight {
+                margin-top: 24px;
+                padding: 18px 20px;
+                border-left: 4px solid var(--accent);
+                background: var(--soft-bg);
+                border-radius: 10px;
+                font-size: 15px;
+                color: #1e293b;
+            }
+
+        .about-image {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .image-box {
+            width: 100%;
+            max-width: 460px;
+            height: 320px;
+            border-radius: 22px;
+            background: linear-gradient(135deg, rgba(29,170,163,0.25), rgba(29,170,163,0.05)), url("https://images.unsplash.com/photo-1519389950473-47ba0277781c") center / cover no-repeat;
+            box-shadow: 0 20px 45px rgba(15, 23, 42, 0.15);
+            position: relative;
+            overflow: hidden;
+        }
+
+            .image-box::after {
+                content: "";
+                position: absolute;
+                inset: 0;
+                background: linear-gradient( to top, rgba(248,250,252,0.9), rgba(248,250,252,0.2) );
+            }
+
+        @@media (max-width: 900px) {
+            .about-container {
+                flex-direction: column-reverse;
+                gap: 40px;
+            }
+
+            .about-content h2 {
+                font-size: 30px;
+            }
+
+            .image-box {
+                height: 260px;
+            }
+        }
+    </style>
+
+    <div class="about-container">
+        <div class="about-content">
+            <h2>Hakkımızda</h2>
+
+            @foreach (var p in paragraphs)
+            {
+                <p>@p</p>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(highlight))
+            {
+                <div class="highlight">@highlight</div>
+            }
+            else
+            {
+                // highlight yoksa yine de düzen bozulmasın
+                <div class="highlight">
+                    @("Kaliteli hizmet, doğru planlama ve sürdürülebilir çözüm anlayışıyla yanınızdayız.")
+                </div>
+            }
+        </div>
+
+        <div class="about-image">
+            <div class="image-box"></div>
+        </div>
+    </div>
+</section>

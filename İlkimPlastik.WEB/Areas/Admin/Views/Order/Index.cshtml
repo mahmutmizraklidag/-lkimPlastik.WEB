@@ -1,0 +1,319 @@
+﻿@model ilkimPlastik.WEB.Areas.Admin.Controllers.OrderController.OrderIndexVm
+@using ilkimPlastik.WEB.Entities
+@{
+    Layout = "~/Areas/Admin/Views/Shared/_Layout.cshtml";
+
+    var ok = TempData["OK"] as string;
+    var err = TempData["ERR"] as string;
+    var detail = ViewBag.Detail as Order;
+
+    var adminName = Context.Session.GetString("ADMIN_NAME") ?? "Admin";
+
+    string BadgeClass(string s) => s switch
+    {
+        "Paid" => "paid",
+        "Shipped" => "ship",
+        "Cancelled" => "cancel",
+        _ => "pend"
+    };
+
+    string trStatus(string s) => s switch
+    {
+        "Paid" => "Ödendi",
+        "Shipped" => "Kargoda",
+        "Cancelled" => "İptal",
+        _ => "Beklemede"
+    };
+
+    var byStatus = Model.ByStatus ?? new List<ilkimPlastik.WEB.Areas.Admin.Controllers.OrderController.OrderStatusVm>();
+    var maxCount = byStatus.Count > 0 ? byStatus.Max(x => x.Count) : 1;
+    if (maxCount <= 0) maxCount = 1;
+
+    string fmtMoney(decimal v) => string.Format(System.Globalization.CultureInfo.GetCultureInfo("tr-TR"), "{0:N2}", v);
+}
+
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Admin • Siparişler</title>
+    <style>
+    :root{
+        --bg:#f6f7fb;--card:#fff;--text:#0f172a;--muted:#6b7280;--bd:#e5e7eb;--bd2:#d7dbe6;
+        --pri:#5D12D2;--pri2:#7b3ff0;--danger:#e11d48;--good:#16a34a;--warn:#f59e0b;
+        --shadow2:0 8px 20px rgba(15,23,42,.08);--r:18px;
+    }
+    *{box-sizing:border-box}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:0;background:var(--bg);color:var(--text)}
+    a{color:var(--pri);text-decoration:none}
+    .top{
+        position:sticky;top:0;z-index:40;display:flex;justify-content:space-between;align-items:center;
+        padding:14px 18px;background:rgba(255,255,255,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--bd);
+    }
+    .left{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .brand{font-weight:950}
+    .pill{font-size:12px;padding:7px 10px;border:1px solid var(--bd);border-radius:999px;background:#fff;color:var(--muted)}
+    .wrap{max-width:1400px;margin:0 auto;padding:18px;display:grid;grid-template-columns:1.2fr .8fr;gap:14px}
+    .card{background:var(--card);border:1px solid var(--bd);border-radius:var(--r);box-shadow:var(--shadow2);overflow:hidden}
+    .head{padding:12px 14px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center;background:linear-gradient(180deg,#fff,#fbfbff)}
+    .head b{font-weight:950}
+    .body{padding:14px}
+    .msg{padding:10px 12px;border-radius:14px;margin:0 0 10px 0;font-size:13px;border:1px solid var(--bd);background:#fff}
+    .msg.ok{border-color:#b8f2d4;background:#ecfdf5;color:#065f46}
+    .msg.er{border-color:#fecdd3;background:#fff1f2;color:#9f1239}
+    .btn{border:1px solid var(--bd);background:#fff;padding:9px 11px;border-radius:14px;cursor:pointer;font-weight:750;font-size:13px}
+    .btn.pri{background:linear-gradient(180deg,var(--pri2),var(--pri));border-color:transparent;color:#fff;box-shadow:0 14px 20px rgba(93,18,210,.16)}
+    .btn.danger{border-color:#ffd0d8;color:var(--danger);background:#fff}
+    input,select{width:100%;padding:11px 12px;border-radius:14px;border:1px solid var(--bd2);outline:none;background:#fff;color:var(--text);font-size:14px}
+    input:focus,select:focus{border-color:rgba(93,18,210,.45);box-shadow:0 0 0 4px rgba(93,18,210,.12)}
+    .grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+    .miniCard{border:1px solid var(--bd);border-radius:16px;background:#fff;padding:12px;box-shadow:0 8px 16px rgba(15,23,42,.06)}
+    .k{font-size:12px;color:var(--muted)}
+    .v{font-size:20px;font-weight:950;margin-top:4px}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px 0;border-bottom:1px solid var(--bd);text-align:left;font-size:13px;vertical-align:top}
+    th{font-size:12px;color:var(--muted);font-weight:850}
+    tr:last-child td{border-bottom:0}
+    .rowbtn{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+    .muted{color:var(--muted);font-size:12px}
+    .badge{display:inline-flex;gap:6px;align-items:center;font-size:12px;border-radius:999px;padding:6px 10px;border:1px solid var(--bd);background:#fff;color:var(--muted)}
+    .dot{width:8px;height:8px;border-radius:999px;background:var(--muted)}
+    .dot.paid{background:var(--good)}
+    .dot.ship{background:#2563eb}
+    .dot.cancel{background:var(--danger)}
+    .dot.pend{background:var(--warn)}
+    .bar{height:10px;border-radius:999px;background:#eef2ff;border:1px solid #e6e8f5;overflow:hidden}
+    .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--pri),var(--pri2));border-radius:999px}
+    .detailKV{display:grid;grid-template-columns:120px 1fr;gap:8px;font-size:13px}
+    .detailKV div{padding:6px 0;border-bottom:1px solid var(--bd)}
+    .detailKV b{color:var(--muted);font-size:12px}
+    @@media(max-width:1100px){.wrap{grid-template-columns:1fr}.grid4{grid-template-columns:repeat(2,1fr)}}
+    </style>
+</head>
+<body>
+
+    @*<div class="top">
+        <div class="left">
+            <div class="brand">Siparişler</div>
+            <span class="pill">@adminName</span>
+            <a class="pill" href="/Admin/Home">Dashboard</a>
+        </div>
+        <div class="left" style="justify-content:flex-end">
+            <a class="pill" href="/Admin/Product">Ürünler</a>
+            <a class="pill" href="/Admin/Category">Kategoriler</a>
+            <a class="pill" href="/Admin/Device">Cihazlar</a>
+            <a class="pill" href="/Admin/Auth/Logout">Çıkış</a>
+        </div>
+    </div>*@
+
+    <div class="wrap">
+
+        <!-- SOL -->
+        <div class="card">
+            <div class="head">
+                <b>Liste</b>
+                <a class="btn" href="/Admin/Order">Sıfırla</a>
+            </div>
+            <div class="body">
+
+                @if (!string.IsNullOrWhiteSpace(ok))
+                {<div class="msg ok">@ok</div>}
+                @if (!string.IsNullOrWhiteSpace(err))
+                {<div class="msg er">@err</div>}
+
+                <div class="grid4" style="margin-bottom:12px">
+                    <div class="miniCard">
+                        <div class="k">Toplam Sipariş</div>
+                        <div class="v">@Model.TotalOrders</div>
+                    </div>
+                    <div class="miniCard">
+                        <div class="k">Toplam Ciro</div>
+                        <div class="v">₺ @fmtMoney(Model.TotalRevenue)</div>
+                    </div>
+                    <div class="miniCard">
+                        <div class="k">Son 7 Gün</div>
+                        <div class="v">@Model.Last7Count</div>
+                    </div>
+                    <div class="miniCard">
+                        <div class="k">Son 7 Gün Ciro</div>
+                        <div class="v">₺ @fmtMoney(Model.Last7Revenue)</div>
+                    </div>
+                </div>
+
+                <form method="get" action="/Admin/Order" style="display:grid;grid-template-columns:1fr 200px 120px;gap:10px;align-items:end;margin-bottom:12px">
+                    <div>
+                        <div class="k" style="margin:0 0 6px 2px">Arama</div>
+                        <input name="q" value="@Model.Query" placeholder="ID, müşteri, telefon, şehir…" />
+                    </div>
+                    <div>
+                        <div class="k" style="margin:0 0 6px 2px">Durum</div>
+                        <select name="status">
+                            <option value="" selected="@string.IsNullOrWhiteSpace(Model.Status)">Tümü</option>
+                            <option value="Pending" selected="@(Model.Status=="Pending")">Beklemede</option>
+                            <option value="Paid" selected="@(Model.Status=="Paid")">Ödendi</option>
+                            <option value="Shipped" selected="@(Model.Status=="Shipped")">Kargoda</option>
+                            <option value="Cancelled" selected="@(Model.Status=="Cancelled")">İptal</option>
+                        </select>
+                    </div>
+                    <button class="btn pri" type="submit">Filtrele</button>
+                </form>
+
+                <div class="card" style="box-shadow:none;border-radius:16px;margin-bottom:12px">
+                    <div class="head"><b>Durum Dağılımı</b><span class="pill">Özet</span></div>
+                    <div class="body">
+                        @if (byStatus.Count == 0)
+                        {
+                            <div class="muted">Durum verisi yok.</div>
+                        }
+                        else
+                        {
+                            foreach (var s in byStatus.OrderByDescending(x => x.Count))
+                            {
+                                var w = ((decimal)s.Count / (decimal)maxCount) * 100m;
+                                <div style="display:grid;grid-template-columns:150px 1fr 70px;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--bd)">
+                                    <div style="min-width:0">
+                                        <span class="badge"><span class="dot @BadgeClass(s.Status)"></span>@trStatus(s.Status)</span>
+                                    </div>
+                                    <div class="bar"><i style="width:@w%"></i></div>
+                                    <div style="text-align:right;font-weight:900">@s.Count</div>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:80px">ID</th>
+                            <th>Tarih</th>
+                            <th>Müşteri</th>
+                            <th>Şehir</th>
+                            <th>Toplam</th>
+                            <th>Durum</th>
+                            <th style="width:240px;text-align:right">İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var x in Model.List)
+                        {
+                            <tr>
+                                <td style="font-weight:900">#@x.Id</td>
+                                <td class="muted">@x.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                                <td>
+                                    <div style="font-weight:850">@x.Name @x.Surname</div>
+                                    <div class="muted">@x.Phone</div>
+                                </td>
+                                <td class="muted">@x.City / @x.District</td>
+                                <td style="font-weight:900">₺ @fmtMoney(x.TotalPrice)</td>
+                                <td>
+                                    <span class="badge"><span class="dot @BadgeClass(x.Status)"></span>@trStatus(x.Status)</span>
+                                </td>
+                                <td style="text-align:right">
+                                    <div class="rowbtn">
+                                        <a class="btn" href="/Admin/Order?viewId=@x.Id&q=@Model.Query&status=@Model.Status">Detay</a>
+                                        <form method="post" action="/Admin/Order/Delete" onsubmit="return confirm('Sipariş silinsin mi?');">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@x.Id" />
+                                            <button class="btn danger" type="submit">Sil</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                        @if (Model.List.Count == 0)
+                        {
+                            <tr><td colspan="7" class="muted">Kayıt yok.</td></tr>
+                        }
+                    </tbody>
+                </table>
+
+            </div>
+        </div>
+
+        <!-- SAĞ -->
+        <div class="card">
+            <div class="head">
+                <b>Sipariş Detayı</b>
+                @if (detail != null)
+                {
+                    <div style="display:flex;gap:10px;align-items:center">
+                        <span class="pill">#@detail.Id</span>
+                        <a class="btn pri" href="/Admin/Order/Pdf/@detail.Id">PDF İndir</a>
+                    </div>
+                }
+            </div>
+            <div class="body">
+                @if (detail == null)
+                {
+                    <div class="muted">Soldan bir sipariş seç.</div>
+                }
+                else
+                {
+                    <div class="detailKV">
+                        <b>Durum</b><div><span class="badge"><span class="dot @BadgeClass(detail.Status)"></span>@trStatus(detail.Status)</span></div>
+                        <b>Tarih</b><div>@detail.CreatedAt.ToString("yyyy-MM-dd HH:mm")</div>
+                        <b>Müşteri</b><div>@detail.Name @detail.Surname</div>
+                        <b>Telefon</b><div>@detail.Phone</div>
+                        <b>Adres</b><div class="muted">@detail.City / @detail.District<br />@detail.Details<br />@detail.PostCode</div>
+                        <b>Toplam</b><div style="font-weight:950">₺ @fmtMoney(detail.TotalPrice)</div>
+                    </div>
+
+                    <div style="height:12px"></div>
+
+                    <form method="post" action="/Admin/Order/UpdateStatus">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@detail.Id" />
+                        <div class="k" style="margin:0 0 6px 2px">Durum Güncelle</div>
+                        <select name="status">
+                            <option value="Pending" selected="@(detail.Status=="Pending")">Beklemede</option>
+                            <option value="Paid" selected="@(detail.Status=="Paid")">Ödendi</option>
+                            <option value="Shipped" selected="@(detail.Status=="Shipped")">Kargoda</option>
+                            <option value="Cancelled" selected="@(detail.Status=="Cancelled")">İptal</option>
+                        </select>
+
+                        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:10px">
+                            <button class="btn pri" type="submit">Kaydet</button>
+                            <a class="btn" href="/Admin/Order?q=@Model.Query&status=@Model.Status">Kapat</a>
+                        </div>
+                    </form>
+
+                    <div style="height:14px"></div>
+
+                    <div style="font-weight:950;margin-bottom:8px">Sipariş Ürünleri</div>
+                    @if (detail.OrderProducts != null && detail.OrderProducts.Any())
+                    {
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Ürün</th>
+                                    <th>Adet</th>
+                                    <th>Fiyat</th>
+                                    <th>Kategori</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var p in detail.OrderProducts)
+                                {
+                                    <tr>
+                                        <td style="font-weight:850">@p.Title<br /><span class="muted">#@p.ProductId</span></td>
+                                        <td>@p.Count</td>
+                                        <td>₺ @fmtMoney(p.Price)</td>
+                                        <td class="muted">@p.CategoryName</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                    else
+                    {
+                        <div class="muted">Bu siparişte ürün yok.</div>
+                    }
+                }
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>

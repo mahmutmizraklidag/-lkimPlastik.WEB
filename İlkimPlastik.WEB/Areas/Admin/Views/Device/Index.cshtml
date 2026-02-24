@@ -1,0 +1,536 @@
+﻿@model ilkimPlastik.WEB.Areas.Admin.Controllers.DeviceController.DeviceIndexVm
+@{
+    Layout = "~/Areas/Admin/Views/Shared/_Layout.cshtml";
+
+    var ok = TempData["OK"] as string;
+    var err = TempData["ERR"] as string;
+
+    var edit = ViewBag.Edit as ilkimPlastik.WEB.Entities.ProductDevice;
+    var isEdit = edit != null;
+
+    var adminName = Context.Session.GetString("ADMIN_NAME") ?? "Admin";
+}
+
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Admin • Cihazlar</title>
+    <style>
+        :root {
+            --bg: #f6f7fb;
+            --card: #ffffff;
+            --text: #0f172a;
+            --muted: #6b7280;
+            --bd: #e5e7eb;
+            --bd2: #d7dbe6;
+            --pri: #5D12D2;
+            --pri2: #7b3ff0;
+            --danger: #e11d48;
+            --good: #16a34a;
+            --warn: #f59e0b;
+            --shadow: 0 18px 40px rgba(15,23,42,.10);
+            --shadow2: 0 8px 20px rgba(15,23,42,.08);
+            --r: 18px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial;
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        a {
+            color: var(--pri);
+            text-decoration: none;
+        }
+
+        .top {
+            position: sticky;
+            top: 0;
+            z-index: 40;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 18px;
+            background: rgba(255,255,255,.86);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--bd);
+        }
+
+        .left {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .brand {
+            font-weight: 950;
+        }
+
+        .pill {
+            font-size: 12px;
+            padding: 7px 10px;
+            border: 1px solid var(--bd);
+            border-radius: 999px;
+            background: #fff;
+            color: var(--muted)
+        }
+
+        .wrap {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 18px;
+            display: grid;
+            grid-template-columns: 440px 1fr;
+            gap: 14px;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--bd);
+            border-radius: var(--r);
+            box-shadow: var(--shadow2);
+            overflow: hidden;
+        }
+
+        .head {
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--bd);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(180deg,#fff,#fbfbff);
+        }
+
+            .head b {
+                font-weight: 950;
+            }
+
+        .body {
+            padding: 14px;
+        }
+
+        .msg {
+            padding: 10px 12px;
+            border-radius: 14px;
+            margin: 0 0 10px 0;
+            font-size: 13px;
+            border: 1px solid var(--bd);
+            background: #fff;
+        }
+
+            .msg.ok {
+                border-color: #b8f2d4;
+                background: #ecfdf5;
+                color: #065f46
+            }
+
+            .msg.er {
+                border-color: #fecdd3;
+                background: #fff1f2;
+                color: #9f1239
+            }
+
+        .k {
+            font-size: 12px;
+            color: var(--muted)
+        }
+
+        .v {
+            font-size: 20px;
+            font-weight: 950;
+            margin-top: 4px
+        }
+
+        .btn {
+            border: 1px solid var(--bd);
+            background: #fff;
+            padding: 9px 11px;
+            border-radius: 14px;
+            cursor: pointer;
+            font-weight: 750;
+            font-size: 13px;
+        }
+
+            .btn.pri {
+                background: linear-gradient(180deg,var(--pri2),var(--pri));
+                border-color: transparent;
+                color: #fff;
+                box-shadow: 0 14px 20px rgba(93,18,210,.16);
+            }
+
+            .btn.danger {
+                border-color: #ffd0d8;
+                color: var(--danger);
+                background: #fff
+            }
+
+        input, select {
+            width: 100%;
+            padding: 11px 12px;
+            border-radius: 14px;
+            border: 1px solid var(--bd2);
+            outline: none;
+            background: #fff;
+            color: var(--text);
+            font-size: 14px;
+            transition: border-color .15s ease, box-shadow .15s ease;
+        }
+
+            input:focus, select:focus {
+                border-color: rgba(93,18,210,.45);
+                box-shadow: 0 0 0 4px rgba(93,18,210,.12);
+            }
+
+        label {
+            display: block;
+            font-size: 12px;
+            color: var(--muted);
+            margin: 10px 0 6px
+        }
+
+        /* list */
+        .search {
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--bd);
+            background: #fff
+        }
+
+        .list {
+            padding: 12px 14px
+        }
+
+        .row {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            align-items: center;
+            padding: 10px 10px;
+            border: 1px solid var(--bd);
+            border-radius: 16px;
+            background: #fff;
+            margin-bottom: 10px;
+            transition: transform .06s ease;
+        }
+
+            .row:hover {
+                transform: translateY(-1px)
+            }
+
+            .row.sel {
+                border-color: rgba(93,18,210,.35);
+                box-shadow: 0 0 0 4px rgba(93,18,210,.10)
+            }
+
+            .row .t {
+                min-width: 0
+            }
+
+                .row .t .name {
+                    font-weight: 900;
+                    font-size: 13px;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    max-width: 250px
+                }
+
+                .row .t .meta {
+                    font-size: 12px;
+                    color: var(--muted);
+                    margin-top: 2px
+                }
+
+            .row .a {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+                justify-content: flex-end
+            }
+
+        .badge {
+            font-size: 12px;
+            padding: 6px 10px;
+            border: 1px solid var(--bd);
+            border-radius: 999px;
+            background: #fff;
+            color: var(--muted);
+            display: inline-flex;
+            gap: 6px;
+            align-items: center
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 999px;
+            background: var(--muted)
+        }
+
+            .dot.good {
+                background: var(--good)
+            }
+
+            .dot.warn {
+                background: var(--warn)
+            }
+
+            .dot.bad {
+                background: var(--danger)
+            }
+
+        /* detail */
+        .grid4 {
+            display: grid;
+            grid-template-columns: repeat(4,minmax(0,1fr));
+            gap: 12px
+        }
+
+        .miniCard {
+            border: 1px solid var(--bd);
+            border-radius: 16px;
+            background: #fff;
+            padding: 12px;
+            box-shadow: 0 8px 16px rgba(15,23,42,.06);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse
+        }
+
+        th, td {
+            padding: 10px 0;
+            border-bottom: 1px solid var(--bd);
+            text-align: left;
+            font-size: 13px;
+            vertical-align: top
+        }
+
+        th {
+            font-size: 12px;
+            color: var(--muted);
+            font-weight: 850
+        }
+
+        tr:last-child td {
+            border-bottom: 0
+        }
+
+        .muted {
+            color: var(--muted);
+            font-size: 12px
+        }
+
+        @@media(max-width:1100px) {
+            .wrap {
+                grid-template-columns: 1fr
+            }
+
+            .grid4 {
+                grid-template-columns: repeat(2,1fr)
+            }
+        }
+    </style>
+</head>
+<body>
+
+    @*<div class="top">
+        <div class="left">
+            <div class="brand">Cihaz Yönetimi</div>
+            <span class="pill">@adminName</span>
+            <a class="pill" href="/Admin/Home">Dashboard</a>
+        </div>
+        <div class="left" style="justify-content:flex-end">
+            <a class="pill" href="/Admin/Product">Ürünler</a>
+            <a class="pill" href="/Admin/Category">Kategoriler</a>
+            <a class="pill" href="/Admin/Order">Siparişler</a>
+            <a class="pill" href="/Admin/Auth/Logout">Çıkış</a>
+        </div>
+    </div>*@
+
+    <div class="wrap">
+
+        <!-- SOL: CİHAZ LİSTESİ + FORM -->
+        <div class="card">
+            <div class="head">
+                <b>Cihazlar</b>
+                <a class="btn" href="/Admin/Device">Yeni</a>
+            </div>
+
+            <div class="body">
+                @if (!string.IsNullOrWhiteSpace(ok)) { <div class="msg ok">@ok</div> }
+                @if (!string.IsNullOrWhiteSpace(err)) { <div class="msg er">@err</div> }
+
+                <div class="grid4" style="grid-template-columns:repeat(3,1fr);margin-bottom:12px">
+                    <div class="miniCard">
+                        <div class="k">Toplam Cihaz</div>
+                        <div class="v">@Model.TotalDevices</div>
+                    </div>
+                    <div class="miniCard">
+                        <div class="k">Ürüne Bağlı Cihaz</div>
+                        <div class="v">@Model.Devices.Count(x => x.ProductCount > 0)</div>
+                    </div>
+                    <div class="miniCard">
+                        <div class="k">Boş Cihaz</div>
+                        <div class="v">@Model.DevicesWithNoProduct</div>
+                    </div>
+                </div>
+
+                <div class="card" style="box-shadow:none;border-radius:16px;margin-bottom:12px">
+                    <div class="head">
+                        <b>@(isEdit ? "Cihaz Güncelle" : "Yeni Cihaz")</b>
+                        @if (isEdit) { <a class="btn" href="/Admin/Device">Kapat</a> }
+                    </div>
+                    <div class="body">
+                        <form method="post" action="/Admin/Device/Upsert">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="Id" value="@(edit?.Id ?? 0)" />
+
+                            <label>Cihaz Adı</label>
+                            <input name="Name" value="@(edit?.Name ?? " ")" placeholder="Örn: Arçelik Elektrikli Süpürge" />
+
+                            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
+                                <button class="btn pri" type="submit">Kaydet</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="search">
+                    <input id="devSearch" placeholder="Cihaz ara…" />
+                </div>
+
+                <div class="list" id="devList">
+                    @foreach (var d in Model.Devices)
+                    {
+                    var selected = (Model.SelectedId.HasValue && Model.SelectedId.Value == d.Id);
+                    <div class="row @(selected ? " sel" : "" )" data-name="@d.Name.ToLower()">
+                        <div class="t">
+                            <div class="name">@d.Name</div>
+                            <div class="meta">Bağlı ürün: <b>@d.ProductCount</b></div>
+                        </div>
+                        <div class="a">
+                            <a class="btn" href="/Admin/Device?viewId=@d.Id">Detay</a>
+                            <a class="btn" href="/Admin/Device?editId=@d.Id&viewId=@d.Id">Düzenle</a>
+                            <form method="post" action="/Admin/Device/Delete" onsubmit="return confirm('Silinsin mi?');">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@d.Id" />
+                                <button class="btn danger" type="submit">Sil</button>
+                            </form>
+                        </div>
+                    </div>
+                    }
+                    @if (Model.Devices.Count == 0)
+                    {
+                    <div class="muted">Henüz cihaz yok.</div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- SAĞ: CİHAZ DETAY / ANALİZ -->
+        <div class="card">
+            <div class="head">
+                <b>Cihaz Analizi</b>
+                @if (Model.Detail != null)
+                {
+                <span class="badge"><span class="dot @(Model.Detail.ProductCount == 0 ? " warn" : "good" )"></span>@Model.Detail.Name</span>
+                }
+            </div>
+            <div class="body">
+                @if (Model.Detail == null)
+                {
+                <div class="muted">Soldan bir cihaz seçerek bağlı ürünleri ve analizleri görüntüleyebilirsin.</div>
+                }
+                else
+                {
+                var det = Model.Detail;
+
+                <div class="grid4" style="margin-bottom:12px">
+                    <div class="miniCard">
+                        <div class="k">Bağlı Ürün</div>
+                        <div class="v">@det.ProductCount</div>
+                    </div>
+                    <div class="miniCard">
+                        <div class="k">Toplam Stok</div>
+                        <div class="v">@det.TotalStock</div>
+                    </div>
+                    <div class="miniCard">
+                        <div class="k">Boyut Satırı</div>
+                        <div class="v">@det.TotalSizeRows</div>
+                    </div>
+                    <div class="miniCard">
+                        <div class="k">Görselsiz Ürün</div>
+                        <div class="v">@det.NoImageProducts</div>
+                    </div>
+                </div>
+
+                <div class="mini" style="margin-bottom:10px">
+                    Ortalama fiyat: <b>₺ @string.Format(System.Globalization.CultureInfo.GetCultureInfo("tr-TR"), "{0:N2}", det.AvgPrice)</b>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Ürün</th>
+                            <th>Kategori</th>
+                            <th>Model</th>
+                            <th>Stok</th>
+                            <th style="text-align:right">İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in det.Products)
+                        {
+                        <tr>
+                            <td style="font-weight:850">@p.Title<br /><span class="muted">@p.Barcode</span></td>
+                            <td class="muted">@p.Category @(string.IsNullOrWhiteSpace(p.SubCategory) ? "" : "• " + p.SubCategory)</td>
+                            <td class="muted">@p.ModelCode</td>
+                            <td>
+                                <span class="badge">
+                                    <span class="dot @(p.TotalStock<=0 ? " bad" : (p.TotalStock<=5 ? "warn" : "good"))"></span>
+                                    @p.TotalStock
+                                </span>
+                                <div class="muted">Boyut: @p.SizeRowCount</div>
+                            </td>
+                            <td style="text-align:right">
+                                <a class="btn" href="/Admin/Product?editId=@p.Id">Ürüne Git</a>
+                            </td>
+                        </tr>
+                        }
+                        @if (det.Products.Count == 0)
+                        {
+                        <tr><td colspan="5" class="muted">Bu cihaza bağlı ürün yok.</td></tr>
+                        }
+                    </tbody>
+                </table>
+                }
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Sol liste arama
+        const s = document.getElementById('devSearch');
+        const list = document.getElementById('devList');
+        s?.addEventListener('input', () => {
+            const q = (s.value || '').trim().toLowerCase();
+            list.querySelectorAll('.row').forEach(r => {
+                const name = r.getAttribute('data-name') || '';
+                r.style.display = name.includes(q) ? '' : 'none';
+            });
+        });
+    </script>
+
+</body>
+</html>

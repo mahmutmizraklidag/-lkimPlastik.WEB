@@ -1,0 +1,407 @@
+﻿@* Areas/Admin/Views/Shared/_Layout.cshtml (FAVICON: SiteSettings'ten dinamik) *@
+@using Microsoft.EntityFrameworkCore
+@using ilkimPlastik.WEB.Entities
+@inject ilkimPlastik.WEB.EfCoreContext Db
+
+@{
+    // ✅ Tek kayıt SiteSettings (yoksa null kalabilir, fallback ile devam)
+    var st = await Db.SiteSettings.AsNoTracking().FirstOrDefaultAsync();
+
+    // Favicon URL (DB varsa /uploads/site/..., yoksa default)
+    string FaviconUrl()
+    {
+        var f = st?.FaviconFileName;
+        if (string.IsNullOrWhiteSpace(f)) return "/images/favicon.ico";
+        f = f.Trim().TrimStart('/');
+        // güvenlik: path traversal engeli
+        if (f.Contains("..")) return "/images/favicon.ico";
+        return "/uploads/site/" + f;
+    }
+
+    var adminName = Context.Session.GetString("ADMIN_NAME") ?? "Admin";
+    var path = (Context.Request.Path.Value ?? "").ToLowerInvariant();
+    bool isActive(string pfx) => path.StartsWith(pfx.ToLowerInvariant());
+}
+
+<!doctype html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"]</title>
+
+    @* ✅ FAVICON: SiteSettings -> FaviconFileName *@
+    <link rel="icon" href="@FaviconUrl()" />
+    <link rel="shortcut icon" href="@FaviconUrl()" />
+
+    @* iOS / PWA (istersen sonradan DB'ye eklenebilir) *@
+    <meta name="theme-color" content="#5D12D2" />
+
+    <style>
+        :root {
+            --bg: #f6f7fb;
+            --card: #ffffff;
+            --text: #0f172a;
+            --muted: #6b7280;
+            --bd: #e5e7eb;
+            --bd2: #d7dbe6;
+            --pri: #5D12D2;
+            --pri2: #7b3ff0;
+            --shadow: 0 18px 40px rgba(15,23,42,.10);
+            --shadow2: 0 8px 20px rgba(15,23,42,.08);
+            --r: 18px;
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        body {
+            font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial;
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none
+        }
+
+        /* Topbar */
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: rgba(255,255,255,.86);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--bd);
+        }
+
+        .top-left {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            min-width: 0
+        }
+
+        .brand {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            min-width: 0
+        }
+
+        /* ✅ favicon ile küçük logo gibi gösterelim */
+        .logoDot {
+            width: 34px;
+            height: 34px;
+            border-radius: 12px;
+            background: #fff;
+            border: 1px solid var(--bd);
+            box-shadow: 0 14px 20px rgba(15,23,42,.08);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            flex: 0 0 auto;
+        }
+
+            .logoDot img {
+                width: 18px;
+                height: 18px;
+                object-fit: contain;
+                display: block;
+            }
+
+        .brandTxt {
+            min-width: 0
+        }
+
+            .brandTxt b {
+                display: block;
+                font-weight: 950;
+                line-height: 1
+            }
+
+            .brandTxt span {
+                display: block;
+                font-size: 12px;
+                color: var(--muted);
+                margin-top: 3px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis
+            }
+
+        .top-right {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: flex-end
+        }
+
+        .pill {
+            font-size: 12px;
+            padding: 7px 10px;
+            border: 1px solid var(--bd);
+            border-radius: 999px;
+            background: #fff;
+            color: var(--muted);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn {
+            border: 1px solid var(--bd);
+            background: #fff;
+            padding: 9px 11px;
+            border-radius: 14px;
+            cursor: pointer;
+            font-weight: 750;
+            font-size: 13px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+            .btn.pri {
+                background: linear-gradient(180deg,var(--pri2),var(--pri));
+                border-color: transparent;
+                color: #fff;
+                box-shadow: 0 14px 20px rgba(93,18,210,.16);
+            }
+
+        /* Layout */
+        .shell {
+            display: grid;
+            grid-template-columns: 260px 1fr;
+            min-height: calc(100vh - 58px);
+        }
+
+        /* Sidebar */
+        .side {
+            position: sticky;
+            top: 58px;
+            height: calc(100vh - 58px);
+            padding: 14px;
+            border-right: 1px solid var(--bd);
+            background: linear-gradient(180deg,#ffffff,#fbfbff);
+        }
+
+        .sideCard {
+            background: var(--card);
+            border: 1px solid var(--bd);
+            border-radius: var(--r);
+            box-shadow: var(--shadow2);
+            overflow: hidden;
+        }
+
+        .sideHead {
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--bd);
+            font-weight: 950;
+            background: linear-gradient(180deg,#fff,#fbfbff);
+        }
+
+        .nav {
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+            .nav a {
+                padding: 10px 12px;
+                border-radius: 14px;
+                border: 1px solid transparent;
+                color: var(--text);
+                font-weight: 750;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+                .nav a:hover {
+                    background: #f3f4f6;
+                    border-color: var(--bd);
+                }
+
+                .nav a.active {
+                    background: rgba(93,18,210,.10);
+                    border-color: rgba(93,18,210,.25);
+                    color: #2a1164;
+                }
+
+            .nav small {
+                font-size: 12px;
+                color: var(--muted);
+                font-weight: 650;
+            }
+
+        /* Main */
+        .main {
+            padding: 16px;
+        }
+
+        /* Mobile drawer */
+        .burger {
+            display: none
+        }
+
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15,23,42,.35);
+            display: none;
+            z-index: 80;
+        }
+
+        .drawer {
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 290px;
+            background: #fff;
+            border-right: 1px solid var(--bd);
+            transform: translateX(-102%);
+            transition: transform .18s ease;
+            z-index: 90;
+            padding: 14px;
+        }
+
+            .drawer.open {
+                transform: translateX(0)
+            }
+
+        .overlay.open {
+            display: block
+        }
+
+        @@media(max-width:1100px) {
+            .shell {
+                grid-template-columns: 1fr
+            }
+
+            .side {
+                display: none
+            }
+
+            .burger {
+                display: inline-flex
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- TOPBAR -->
+    <header class="topbar">
+        <div class="top-left">
+            <button class="btn burger" type="button" onclick="openDrawer()">☰</button>
+
+            <a class="brand" href="/Admin/Home">
+                <span class="logoDot" aria-hidden="true">
+                    <img src="@FaviconUrl()" alt="Logo" onerror="this.style.display='none'" />
+                </span>
+                <span class="brandTxt">
+                    <b>İlkim Plastik</b>
+                    <span>Admin Panel</span>
+                </span>
+            </a>
+        </div>
+
+        <div class="top-right">
+            <span class="pill">👤 @adminName</span>
+            <a class="btn" href="/Admin/Home">Dashboard</a>
+            <a class="btn" href="/Admin/Auth/Logout">Çıkış</a>
+        </div>
+    </header>
+
+    <!-- MOBILE DRAWER -->
+    <div id="overlay" class="overlay" onclick="closeDrawer()"></div>
+    <aside id="drawer" class="drawer" aria-label="Mobil Menü">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <div style="font-weight:950;display:flex;align-items:center;gap:10px">
+                <span class="logoDot" style="width:30px;height:30px;border-radius:12px;">
+                    <img src="@FaviconUrl()" alt="Logo" style="width:16px;height:16px" onerror="this.style.display='none'" />
+                </span>
+                Menü
+            </div>
+            <button class="btn" type="button" onclick="closeDrawer()">Kapat</button>
+        </div>
+
+        <div class="sideCard">
+            <div class="sideHead">Yönetim</div>
+            <nav class="nav">
+                <a class="@(isActive("/admin/home") ? "active" : "")" href="/Admin/Home">Dashboard <small>→</small></a>
+                <a class="@(isActive("/admin/product") ? "active" : "")" href="/Admin/Product">Ürünler <small>→</small></a>
+                <a class="@(isActive("/admin/category") ? "active" : "")" href="/Admin/Category">Kategoriler <small>→</small></a>
+                <a class="@(isActive("/admin/order") ? "active" : "")" href="/Admin/Order">Siparişler <small>→</small></a>
+                <a class="@(isActive("/admin/device") ? "active" : "")" href="/Admin/Device">Cihazlar <small>→</small></a>
+                <a class="@(isActive("/admin/user") ? "active" : "")" href="/Admin/User">Kullanıcılar <small>→</small></a>
+                <a class="@(isActive("/admin/sitesettings") ? "active" : "")" href="/Admin/SiteSettings">Site Ayarları <small>→</small></a>
+                <a class="@(isActive("/admin/contactmessage") ? "active" : "")" href="/Admin/contactmessage">Gelen Mesajlar <small>→</small></a>
+            </nav>
+        </div>
+    </aside>
+
+    <!-- DESKTOP SHELL -->
+    <div class="shell">
+        <!-- SIDEBAR -->
+        <aside class="side" aria-label="Yan Menü">
+            <div class="sideCard">
+                <div class="sideHead" style="display:flex;align-items:center;gap:10px">
+                    <span class="logoDot" style="width:30px;height:30px;border-radius:12px;">
+                        <img src="@FaviconUrl()" alt="Logo" style="width:16px;height:16px" onerror="this.style.display='none'" />
+                    </span>
+                    Yönetim
+                </div>
+
+                <nav class="nav">
+                    <a class="@(isActive("/admin/home") ? "active" : "")" href="/Admin/Home">Dashboard <small>→</small></a>
+                    <a class="@(isActive("/admin/product") ? "active" : "")" href="/Admin/Product">Ürünler <small>→</small></a>
+                    <a class="@(isActive("/admin/category") ? "active" : "")" href="/Admin/Category">Kategoriler <small>→</small></a>
+                    <a class="@(isActive("/admin/order") ? "active" : "")" href="/Admin/Order">Siparişler <small>→</small></a>
+                    <a class="@(isActive("/admin/device") ? "active" : "")" href="/Admin/Device">Cihazlar <small>→</small></a>
+                    <a class="@(isActive("/admin/user") ? "active" : "")" href="/Admin/User">Kullanıcılar <small>→</small></a>
+                    <a class="@(isActive("/admin/sitesettings") ? "active" : "")" href="/Admin/SiteSettings">Site Ayarları <small>→</small></a>
+                    <a class="@(isActive("/admin/contactmessage") ? "active" : "")" href="/Admin/contactmessage">Gelen Mesajlar  <small>→</small></a>
+                </nav>
+            </div>
+
+            <div style="margin-top:12px" class="sideCard">
+                <div class="sideHead">Kısayollar</div>
+                <div class="nav">
+                    <a href="/Admin/Product" class="btn pri" style="justify-content:center">+ Yeni Ürün</a>
+                    <a href="/Admin/Category" class="btn" style="justify-content:center">+ Yeni Kategori</a>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="main" role="main">
+            @RenderBody()
+        </main>
+    </div>
+
+    <script>
+        function openDrawer() {
+            document.getElementById('drawer').classList.add('open');
+            document.getElementById('overlay').classList.add('open');
+        }
+        function closeDrawer() {
+            document.getElementById('drawer').classList.remove('open');
+            document.getElementById('overlay').classList.remove('open');
+        }
+    </script>
+
+</body>
+</html>

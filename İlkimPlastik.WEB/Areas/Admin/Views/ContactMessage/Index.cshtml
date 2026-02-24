@@ -1,0 +1,574 @@
+﻿@model ilkimPlastik.WEB.Areas.Admin.Controllers.ContactMessageController.ContactMessagesIndexVm
+
+@{
+    ViewData["Title"] = "İletişim Mesajları";
+    var basePath = "/admin/contactmessage";
+
+    int totalPages = (int)Math.Ceiling((double)Model.Total / (Model.PageSize <= 0 ? 20 : Model.PageSize));
+    if (totalPages < 1) totalPages = 1;
+
+    string currentQ = Model.Q ?? "";
+    string currentStatus = string.IsNullOrWhiteSpace(Model.Status) ? "all" : Model.Status;
+
+    string BuildUrl(int page, int pageSize)
+    {
+        var q = Uri.EscapeDataString(currentQ ?? "");
+        var s = Uri.EscapeDataString(currentStatus ?? "all");
+        return $"{basePath}?q={q}&status={s}&page={page}&pageSize={pageSize}";
+    }
+
+    string CurrentUrl()
+    {
+        var q = Uri.EscapeDataString(currentQ ?? "");
+        var s = Uri.EscapeDataString(currentStatus ?? "all");
+        return $"{basePath}?q={q}&status={s}&page={Model.Page}&pageSize={Model.PageSize}";
+    }
+
+    string DurumEtiketi(string s)
+    {
+        s = (s ?? "all").ToLowerInvariant();
+        return s switch
+        {
+            "unread" => "Okunmamış",
+            "read" => "Okunmuş",
+            _ => "Tümü"
+        };
+    }
+}
+
+<style>
+    :root {
+        --bg: #f6f7fb;
+        --card: #ffffff;
+        --line: #e7e9f2;
+        --text: #111827;
+        --muted: #6b7280;
+        --muted2: #9ca3af;
+        --accent: #4f46e5;
+        --accentSoft: rgba(79,70,229,.10);
+        --ok: #16a34a;
+        --okSoft: rgba(22,163,74,.10);
+        --warn: #d97706;
+        --warnSoft: rgba(217,119,6,.12);
+        --danger: #dc2626;
+        --dangerSoft: rgba(220,38,38,.10);
+        --shadow: 0 10px 25px rgba(17,24,39,.08);
+        --shadow2: 0 30px 70px rgba(17,24,39,.18);
+        --radius: 16px;
+        --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    }
+
+    .cm-page { font-family: var(--font); color: var(--text); padding: 18px; background: var(--bg); min-height: 100%; }
+    .cm-shell { max-width: 1280px; margin: 0 auto; }
+
+    .cm-top { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; margin-bottom:12px; }
+    .cm-title { display:flex; flex-direction:column; gap:6px; }
+    .cm-title h1 { margin:0; font-size:20px; font-weight:900; letter-spacing:.2px; }
+    .cm-crumb { font-size:12px; color:var(--muted); }
+    .cm-crumb span { color:var(--muted2); }
+
+    .cm-meta { display:flex; align-items:center; gap:10px; color:var(--muted); font-size:12px; background:var(--card); border:1px solid var(--line); padding:8px 10px; border-radius:999px; box-shadow:var(--shadow); white-space:nowrap; }
+    .cm-dot { width:7px; height:7px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 4px var(--accentSoft); }
+
+    .cm-alert { border-radius: var(--radius); border:1px solid var(--line); background:var(--card); padding:12px 14px; margin-bottom:12px; box-shadow:var(--shadow); }
+    .cm-alert.ok { border-color: rgba(22,163,74,.30); }
+    .cm-alert.err { border-color: rgba(220,38,38,.30); }
+    .cm-alert .t { font-weight:900; margin-bottom:4px; font-size:13px; }
+    .cm-alert .p { color:var(--muted); font-size:13px; }
+
+    .cm-grid { display:grid; grid-template-columns: 1.2fr .9fr .9fr; gap:12px; margin-bottom:12px; }
+    .cm-card { background:var(--card); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; position:relative; }
+    .cm-card::before { content:""; position:absolute; inset:0; background: radial-gradient(800px 220px at 20% 0%, rgba(79,70,229,.10), transparent 60%), radial-gradient(600px 220px at 100% 0%, rgba(16,185,129,.08), transparent 55%); pointer-events:none; }
+    .cm-card-inner { position:relative; padding:16px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .cm-kpi-label { color:var(--muted); font-size:12px; margin-bottom:6px; }
+    .cm-kpi-value { font-size:26px; font-weight:900; letter-spacing:.3px; line-height:1.1; }
+    .cm-kpi-sub { margin-top:6px; font-size:12px; color:var(--muted2); }
+    .cm-icon { width:44px; height:44px; border-radius:14px; display:grid; place-items:center; border:1px solid var(--line); background:#fafbff; }
+    .cm-icon svg { width:20px; height:20px; color:#374151; }
+
+    .cm-panel { background:var(--card); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; margin-bottom:12px; }
+    .cm-panel-h { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--line); background:#fbfbfe; }
+    .cm-panel-h .t { display:flex; align-items:center; gap:10px; font-weight:900; font-size:13px; letter-spacing:.2px; }
+    .cm-pill { font-size:12px; color:var(--muted); padding:6px 10px; border:1px solid var(--line); border-radius:999px; background:#fff; white-space:nowrap; }
+    .cm-panel-b { padding:14px 16px; }
+
+    .cm-form { display:grid; grid-template-columns: 1.4fr .6fr .5fr .5fr; gap:10px; align-items:end; }
+    .cm-field label { display:block; font-size:12px; color:var(--muted); margin-bottom:6px; }
+    .cm-input, .cm-select { width:100%; height:40px; padding:0 12px; border-radius:12px; border:1px solid var(--line); background:#fff; color:var(--text); outline:none; }
+    .cm-input:focus, .cm-select:focus { border-color: rgba(79,70,229,.45); box-shadow:0 0 0 4px rgba(79,70,229,.10); }
+    .cm-input::placeholder { color:#9ca3af; }
+    .cm-select { cursor:pointer; }
+
+    .cm-actions { display:flex; gap:10px; justify-content:flex-end; align-items:center; }
+    .cm-btn { height:40px; padding:0 14px; border-radius:12px; border:1px solid var(--line); background:#fff; color:var(--text); cursor:pointer; font-weight:900; font-size:13px; transition:.15s ease; display:inline-flex; align-items:center; gap:8px; text-decoration:none; white-space:nowrap; }
+    .cm-btn:hover { transform: translateY(-1px); box-shadow:0 8px 18px rgba(17,24,39,.08); }
+    .cm-btn.primary { border-color: rgba(79,70,229,.35); background: var(--accentSoft); color:#1f2a7a; }
+
+    .cm-table-wrap { background:var(--card); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; }
+    .cm-table-h { padding:14px 16px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; gap:12px; background:#fbfbfe; }
+    .cm-table-h .left { display:flex; align-items:center; gap:10px; font-weight:900; font-size:13px; }
+    .cm-mini { color:var(--muted); font-size:12px; }
+
+    .cm-table { width:100%; border-collapse:separate; border-spacing:0; }
+    .cm-table thead th { text-align:left; font-size:12px; color:var(--muted); font-weight:900; padding:12px 14px; border-bottom:1px solid var(--line); background:#fff; white-space:nowrap; }
+    .cm-table tbody td { padding:14px 14px; border-bottom:1px solid var(--line); vertical-align:middle; font-size:13px; background:#fff; }
+
+    .cm-row { position:relative; transition:.12s ease; }
+    .cm-row:hover td { background:#fbfcff; }
+    .cm-row::before { content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:transparent; }
+    .cm-row.unread td { background: rgba(217,119,6,.06); }
+    .cm-row.unread:hover td { background: rgba(217,119,6,.08); }
+    .cm-row.unread::before { background: var(--warn); }
+
+    .cm-badge { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; border:1px solid var(--line); background:#fff; font-size:12px; font-weight:900; color:var(--text); white-space:nowrap; }
+    .cm-badge .dot { width:7px; height:7px; border-radius:50%; }
+    .cm-badge.unread { border-color: rgba(217,119,6,.25); background: var(--warnSoft); }
+    .cm-badge.unread .dot { background: var(--warn); box-shadow:0 0 0 4px rgba(217,119,6,.12); }
+    .cm-badge.read { border-color: rgba(22,163,74,.22); background: var(--okSoft); }
+    .cm-badge.read .dot { background: var(--ok); box-shadow:0 0 0 4px rgba(22,163,74,.10); }
+
+    .cm-person { display:flex; flex-direction:column; gap:4px; }
+    .cm-person .ad { font-weight:900; letter-spacing:.2px; }
+    .cm-person .mail { color:var(--muted); font-size:12px; }
+
+    .cm-konu { font-weight:900; letter-spacing:.2px; }
+    .cm-onizleme { color:var(--muted); font-size:12px; margin-top:6px; max-width:560px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+    .cm-tarih { color:var(--muted); font-size:12px; white-space:nowrap; }
+
+    .cm-act { display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap; }
+    .cm-btn-sm { height:32px; padding:0 10px; border-radius:10px; font-size:12px; font-weight:900; border:1px solid var(--line); background:#fff; color:var(--text); cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:6px; transition:.15s ease; white-space:nowrap; }
+    .cm-btn-sm:hover { transform: translateY(-1px); box-shadow:0 8px 18px rgba(17,24,39,.08); }
+    .cm-btn-sm.ok { border-color: rgba(22,163,74,.25); background: var(--okSoft); color:#0f5132; }
+    .cm-btn-sm.warn { border-color: rgba(217,119,6,.25); background: var(--warnSoft); color:#7c3f00; }
+    .cm-btn-sm.danger { border-color: rgba(220,38,38,.25); background: var(--dangerSoft); color:#7f1d1d; }
+    .cm-btn-sm.info { border-color: rgba(79,70,229,.25); background: var(--accentSoft); color:#1f2a7a; }
+
+    .cm-table-f { padding:12px 16px; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; background:#fbfbfe; }
+    .cm-pages { display:flex; gap:6px; flex-wrap:wrap; align-items:center; justify-content:flex-end; }
+    .cm-pagebtn { min-width:34px; height:34px; padding:0 10px; border-radius:10px; border:1px solid var(--line); background:#fff; color:var(--text); font-size:12px; font-weight:900; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; transition:.15s ease; }
+    .cm-pagebtn:hover { transform: translateY(-1px); box-shadow:0 8px 18px rgba(17,24,39,.08); }
+    .cm-pagebtn.active { border-color: rgba(79,70,229,.35); background: var(--accentSoft); color:#1f2a7a; }
+    .cm-pagebtn.disabled { opacity:.50; pointer-events:none; }
+    .cm-ellipsis { color:var(--muted); padding:0 6px; font-weight:900; }
+
+    /* Modal */
+    .cm-modal { position:fixed; inset:0; display:none; align-items:center; justify-content:center; padding:18px; z-index:9999; }
+    .cm-modal.open { display:flex; }
+    .cm-backdrop { position:absolute; inset:0; background: rgba(17,24,39,.45); backdrop-filter: blur(3px); }
+    .cm-dialog { position:relative; width:min(900px, 96vw); border-radius:18px; background:#fff; border:1px solid var(--line); box-shadow: var(--shadow2); overflow:hidden; }
+    .cm-dialog-h { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:14px 16px; background:#fbfbfe; border-bottom:1px solid var(--line); }
+    .cm-dialog-title { display:flex; flex-direction:column; gap:6px; min-width:0; }
+    .cm-dialog-title .h { font-weight:950; font-size:14px; line-height:1.25; word-break:break-word; }
+    .cm-dialog-title .sub { color:var(--muted); font-size:12px; display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+    .cm-chip { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; border:1px solid var(--line); background:#fff; font-weight:900; font-size:12px; color:var(--text); white-space:nowrap; }
+    .cm-close { border:1px solid var(--line); background:#fff; color:var(--text); width:38px; height:38px; border-radius:12px; cursor:pointer; display:grid; place-items:center; transition:.15s ease; flex:0 0 auto; }
+    .cm-close:hover { transform: translateY(-1px); box-shadow:0 8px 18px rgba(17,24,39,.08); }
+    .cm-close svg { width:18px; height:18px; }
+
+    .cm-dialog-b { padding:16px; }
+    .cm-msgbox { border:1px solid var(--line); background:#fff; border-radius:14px; padding:14px; line-height:1.6; color:#111827; white-space:pre-wrap; word-break:break-word; max-height:55vh; overflow:auto; }
+    .cm-dialog-f { padding:12px 16px; border-top:1px solid var(--line); background:#fbfbfe; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+    .cm-dialog-f .left { color:var(--muted); font-size:12px; }
+    .cm-dialog-f .right { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; align-items:center; }
+
+    @@media (max-width: 980px){
+        .cm-grid { grid-template-columns: 1fr; }
+        .cm-form { grid-template-columns: 1fr 1fr; }
+        .cm-onizleme { max-width: 360px; }
+    }
+    @@media (max-width: 560px){
+        .cm-form { grid-template-columns: 1fr; }
+        .cm-actions { justify-content:stretch; }
+        .cm-btn { width:100%; justify-content:center; }
+        .cm-onizleme { max-width: 240px; }
+        .cm-dialog { width:96vw; }
+    }
+</style>
+
+<div class="cm-page">
+    <div class="cm-shell">
+
+        <div class="cm-top">
+            <div class="cm-title">
+                <h1>@ViewData["Title"]</h1>
+                <div class="cm-crumb">
+                    Yönetim Paneli <span>›</span> İletişim <span>›</span> Mesajlar
+                </div>
+            </div>
+
+            <div class="cm-meta">
+                <span class="cm-dot"></span>
+                <span>Filtre: <strong>@DurumEtiketi(currentStatus)</strong></span>
+                <span>•</span>
+                <span>Sayfa: <strong>@Model.Page</strong>/<strong>@totalPages</strong></span>
+            </div>
+        </div>
+
+        @if (TempData["OK"] != null)
+        {
+            <div class="cm-alert ok">
+                <div class="t">İşlem başarılı</div>
+                <div class="p">@TempData["OK"]</div>
+            </div>
+        }
+        @if (TempData["ERR"] != null)
+        {
+            <div class="cm-alert err">
+                <div class="t">Hata</div>
+                <div class="p">@TempData["ERR"]</div>
+            </div>
+        }
+
+        <div class="cm-grid">
+            <div class="cm-card">
+                <div class="cm-card-inner">
+                    <div>
+                        <div class="cm-kpi-label">Okunmamış mesaj</div>
+                        <div class="cm-kpi-value">@Model.UnreadCount</div>
+                        <div class="cm-kpi-sub">Öncelikli dönüş gerektiren kayıtlar.</div>
+                    </div>
+                    <div class="cm-icon" title="Okunmamış">
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path d="M4 6.5a2.5 2.5 0 0 1 2.5-2.5h11A2.5 2.5 0 0 1 20 6.5v11A2.5 2.5 0 0 1 17.5 20h-11A2.5 2.5 0 0 1 4 17.5v-11Z" stroke="currentColor" stroke-width="1.6" />
+                            <path d="M7 8h10M7 12h7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cm-card">
+                <div class="cm-card-inner">
+                    <div>
+                        <div class="cm-kpi-label">Bugün gelen</div>
+                        <div class="cm-kpi-value">@Model.TodayCount</div>
+                        <div class="cm-kpi-sub">Günlük talep yoğunluğu.</div>
+                    </div>
+                    <div class="cm-icon" title="Bugün gelen">
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path d="M7 3v3M17 3v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                            <path d="M4.5 8.5h15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                            <path d="M6 6h12a2.5 2.5 0 0 1 2.5 2.5v11A2.5 2.5 0 0 1 18 22H6a2.5 2.5 0 0 1-2.5-2.5v-11A2.5 2.5 0 0 1 6 6Z" stroke="currentColor" stroke-width="1.6" />
+                            <path d="M8 12h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cm-card">
+                <div class="cm-card-inner">
+                    <div>
+                        <div class="cm-kpi-label">Toplam kayıt</div>
+                        <div class="cm-kpi-value">@Model.Total</div>
+                        <div class="cm-kpi-sub">Arama ve filtre ile hızlı erişim.</div>
+                    </div>
+                    <div class="cm-icon" title="Toplam kayıt">
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path d="M6 4h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.6" />
+                            <path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="cm-panel">
+            <div class="cm-panel-h">
+                <div class="t">
+                    <span style="width:10px;height:10px;border-radius:3px;background:rgba(79,70,229,.85);display:inline-block;"></span>
+                    Filtre ve Arama
+                </div>
+                <div class="cm-pill">Seçili durum: <strong>@DurumEtiketi(currentStatus)</strong></div>
+            </div>
+
+            <div class="cm-panel-b">
+                <form method="get" action="@basePath" class="cm-form">
+                    <div class="cm-field" style="grid-column: span 2;">
+                        <label>Arama</label>
+                        <input class="cm-input" type="text" name="q" value="@currentQ" placeholder="Ad, e-posta, konu veya mesaj içinde ara" />
+                    </div>
+
+                    <div class="cm-field">
+                        <label>Durum</label>
+                        <select class="cm-select" name="status">
+                            <option value="all" selected="@(currentStatus == "all")">Tümü</option>
+                            <option value="unread" selected="@(currentStatus == "unread")">Okunmamış</option>
+                            <option value="read" selected="@(currentStatus == "read")">Okunmuş</option>
+                        </select>
+                    </div>
+
+                    <div class="cm-field">
+                        <label>Sayfa boyutu</label>
+                        <select class="cm-select" name="pageSize">
+                            @{
+                                int[] sizes = new[] { 10, 20, 50, 100 };
+                                foreach (var s in sizes)
+                                {
+                                    <option value="@s" selected="@(Model.PageSize == s)">@s</option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <div class="cm-actions" style="grid-column: span 4;">
+                        <input type="hidden" name="page" value="1" />
+                        <button type="submit" class="cm-btn primary">Uygula</button>
+                        <a class="cm-btn" href="@($"{basePath}?status=all&page=1&pageSize={Model.PageSize}")">Sıfırla</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="cm-table-wrap">
+            <div class="cm-table-h">
+                <div class="left">
+                    Mesaj Listesi <span class="cm-mini">(@Model.Total kayıt)</span>
+                </div>
+                <div class="cm-mini">Okunmamış mesajlar satırda vurgulanır.</div>
+            </div>
+
+            <div style="overflow:auto;">
+                <table class="cm-table">
+                    <thead>
+                        <tr>
+                            <th style="width:120px;">Durum</th>
+                            <th style="width:260px;">Gönderen</th>
+                            <th>Konu ve Mesaj</th>
+                            <th style="width:170px;">Tarih</th>
+                            <th style="width:360px; text-align:right;">İşlemler</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @if (Model.Items == null || Model.Items.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="5" style="padding: 18px; color: var(--muted);">Kayıt bulunamadı.</td>
+                            </tr>
+                        }
+                        else
+                        {
+                            foreach (var item in Model.Items)
+                            {
+                                var isUnread = !item.IsRead;
+                                <tr class="cm-row @(isUnread ? "unread" : "")">
+                                    <td>
+                                        @if (isUnread)
+                                        {
+                                            <span class="cm-badge unread"><span class="dot"></span> Okunmamış</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="cm-badge read"><span class="dot"></span> Okunmuş</span>
+                                        }
+                                    </td>
+
+                                    <td>
+                                        <div class="cm-person">
+                                            <div class="ad">@item.Name</div>
+                                            <div class="mail">@item.Email</div>
+                                        </div>
+                                    </td>
+
+                                    <td>
+                                        <div class="cm-konu">@item.Subject</div>
+                                        <div class="cm-onizleme">@item.Message</div>
+                                    </td>
+
+                                    <td class="cm-tarih">@item.CreatedAt.ToString("dd.MM.yyyy HH:mm")</td>
+
+                                    <td>
+                                        <div class="cm-act">
+                                            <button type="button"
+                                                    class="cm-btn-sm info js-open"
+                                                    data-ad="@item.Name"
+                                                    data-mail="@item.Email"
+                                                    data-konu="@item.Subject"
+                                                    data-mesaj="@item.Message"
+                                                    data-tarih="@item.CreatedAt.ToString("dd.MM.yyyy HH:mm")"
+                                                    data-durum="@(isUnread ? "unread" : "read")">
+                                                Mesajı Görüntüle
+                                            </button>
+
+                                            @if (isUnread)
+                                            {
+                                                <form method="post" action="@($"{basePath}/mark-read")">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="id" value="@item.Id" />
+                                                    <input type="hidden" name="returnUrl" value="@CurrentUrl()" />
+                                                    <button type="submit" class="cm-btn-sm ok">Okundu yap</button>
+                                                </form>
+                                            }
+                                            else
+                                            {
+                                                <form method="post" action="@($"{basePath}/mark-unread")">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="id" value="@item.Id" />
+                                                    <input type="hidden" name="returnUrl" value="@CurrentUrl()" />
+                                                    <button type="submit" class="cm-btn-sm warn">Okunmadı yap</button>
+                                                </form>
+                                            }
+
+                                            <form method="post" action="@($"{basePath}/delete")" onsubmit="return confirm('Bu mesaj silinsin mi?');">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@item.Id" />
+                                                <input type="hidden" name="returnUrl" value="@CurrentUrl()" />
+                                                <button type="submit" class="cm-btn-sm danger">Sil</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="cm-table-f">
+                <div class="cm-mini">Sayfa <strong>@Model.Page</strong> / <strong>@totalPages</strong></div>
+
+                <div class="cm-pages">
+                    <a class="cm-pagebtn @(Model.Page <= 1 ? "disabled" : "")" href="@(Model.Page <= 1 ? "#" : BuildUrl(Model.Page - 1, Model.PageSize))">‹</a>
+
+                    @{
+                        int start = Math.Max(1, Model.Page - 2);
+                        int end = Math.Min(totalPages, Model.Page + 2);
+
+                        if (start > 1)
+                        {
+                            <a class="cm-pagebtn" href="@BuildUrl(1, Model.PageSize)">1</a>;
+                            if (start > 2)
+                            { <span class="cm-ellipsis">…</span>;
+                            }
+                        }
+
+                        for (int p = start; p <= end; p++)
+                        {
+                            <a class="cm-pagebtn @(p == Model.Page ? "active" : "")" href="@BuildUrl(p, Model.PageSize)">@p</a>
+                        }
+
+                        if (end < totalPages)
+                        {
+                            if (end < totalPages - 1)
+                            { <span class="cm-ellipsis">…</span>;
+                            }
+                            <a class="cm-pagebtn" href="@BuildUrl(totalPages, Model.PageSize)">@totalPages</a>
+                        }
+                    }
+
+                    <a class="cm-pagebtn @(Model.Page >= totalPages ? "disabled" : "")" href="@(Model.Page >= totalPages ? "#" : BuildUrl(Model.Page + 1, Model.PageSize))">›</a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div id="cmModal" class="cm-modal" aria-hidden="true">
+    <div class="cm-backdrop" data-close="1"></div>
+
+    <div class="cm-dialog" role="dialog" aria-modal="true" aria-labelledby="cmModalTitle">
+        <div class="cm-dialog-h">
+            <div class="cm-dialog-title">
+                <div id="cmModalTitle" class="h">Mesaj Detayı</div>
+                <div class="sub">
+                    <span class="cm-chip" id="cmChipDurum">Durum</span>
+                    <span class="cm-chip" id="cmChipTarih">Tarih</span>
+                    <span class="cm-chip" id="cmChipMail">E-posta</span>
+                </div>
+            </div>
+
+            <button type="button" class="cm-close" aria-label="Kapat" data-close="1">
+                <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                </svg>
+            </button>
+        </div>
+
+        <div class="cm-dialog-b">
+            <div style="margin-bottom:10px;">
+                <div style="font-weight:950; font-size:13px; margin-bottom:4px;">Gönderen</div>
+                <div id="cmDetayAd" style="font-weight:900;"></div>
+            </div>
+
+            <div style="margin-bottom:12px;">
+                <div style="font-weight:950; font-size:13px; margin-bottom:4px;">Konu</div>
+                <div id="cmDetayKonu"></div>
+            </div>
+
+            <div style="font-weight:950; font-size:13px; margin-bottom:6px;">Mesaj</div>
+            <div id="cmDetayMesaj" class="cm-msgbox"></div>
+        </div>
+
+        <div class="cm-dialog-f">
+            <div class="left">Bu ekranda sadece görüntüleme yapılır.</div>
+            <div class="right">
+                <button type="button" class="cm-btn-sm info" data-close="1">Kapat</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const modal = document.getElementById('cmModal');
+        const title = document.getElementById('cmModalTitle');
+        const chipDurum = document.getElementById('cmChipDurum');
+        const chipTarih = document.getElementById('cmChipTarih');
+        const chipMail = document.getElementById('cmChipMail');
+        const ad = document.getElementById('cmDetayAd');
+        const konu = document.getElementById('cmDetayKonu');
+        const mesaj = document.getElementById('cmDetayMesaj');
+
+        function openModal(data) {
+            title.textContent = (data.konu && data.konu.trim()) ? data.konu : 'Mesaj Detayı';
+
+            const durumText = data.durum === 'unread' ? 'Okunmamış' : 'Okunmuş';
+            chipDurum.textContent = durumText;
+            chipDurum.style.background = data.durum === 'unread' ? 'rgba(217,119,6,.12)' : 'rgba(22,163,74,.10)';
+            chipDurum.style.borderColor = data.durum === 'unread' ? 'rgba(217,119,6,.25)' : 'rgba(22,163,74,.22)';
+
+            chipTarih.textContent = data.tarih || '—';
+            chipMail.textContent = data.mail || '—';
+
+            ad.textContent = data.ad || '—';
+            konu.textContent = data.konu || '—';
+            mesaj.textContent = data.mesaj || '—';
+
+            modal.classList.add('open');
+            modal.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            modal.classList.remove('open');
+            modal.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = '';
+        }
+
+        document.addEventListener('click', function (e) {
+            const btn = e.target.closest('.js-open');
+            if (btn) {
+                e.preventDefault();
+                openModal({
+                    ad: btn.getAttribute('data-ad'),
+                    mail: btn.getAttribute('data-mail'),
+                    konu: btn.getAttribute('data-konu'),
+                    mesaj: btn.getAttribute('data-mesaj'),
+                    tarih: btn.getAttribute('data-tarih'),
+                    durum: btn.getAttribute('data-durum')
+                });
+                return;
+            }
+
+            if (e.target && e.target.getAttribute && e.target.getAttribute('data-close') === '1') {
+                closeModal();
+                return;
+            }
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && modal.classList.contains('open')) closeModal();
+        });
+    })();
+</script>

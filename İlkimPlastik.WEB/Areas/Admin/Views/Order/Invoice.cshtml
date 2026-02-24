@@ -1,0 +1,256 @@
+﻿@model ilkimPlastik.WEB.Entities.Order
+@using System.Globalization
+@{
+    Layout = null;
+    var tr = CultureInfo.GetCultureInfo("tr-TR");
+
+    string Money(decimal v) => string.Format(tr, "{0:N2}", v);
+    string StatusTr(string s) => s switch
+    {
+        "Paid" => "Ödendi",
+        "Shipped" => "Kargoda",
+        "Cancelled" => "İptal",
+        _ => "Beklemede"
+    };
+}
+
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Sipariş #@Model.Id</title>
+    <style>
+        * {
+            box-sizing: border-box
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            color: #0f172a;
+            margin: 0;
+            padding: 0
+        }
+
+        .page {
+            width: 100%;
+            padding: 18px
+        }
+
+        .top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            padding: 14px 14px 12px;
+            background: #fafafa;
+        }
+
+        .brand {
+            font-size: 16px;
+            font-weight: 800
+        }
+
+        .muted {
+            color: #6b7280;
+            font-size: 12px
+        }
+
+        .pill {
+            display: inline-block;
+            padding: 6px 10px;
+            border-radius: 999px;
+            border: 1px solid #e5e7eb;
+            background: #fff;
+            font-size: 12px;
+            color: #374151
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 12px
+        }
+
+        .box {
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            padding: 12px;
+            background: #fff;
+        }
+
+        .h {
+            font-weight: 800;
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 8px
+        }
+
+        .kv {
+            display: grid;
+            grid-template-columns: 120px 1fr;
+            gap: 8px;
+            font-size: 12.5px
+        }
+
+            .kv b {
+                color: #6b7280;
+                font-weight: 700
+            }
+
+            .kv div {
+                padding: 4px 0;
+                border-bottom: 1px solid #f1f5f9
+            }
+
+                .kv div:last-child {
+                    border-bottom: 0
+                }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px
+        }
+
+        th, td {
+            border-bottom: 1px solid #e5e7eb;
+            padding: 10px 6px;
+            text-align: left;
+            font-size: 12.5px;
+            vertical-align: top
+        }
+
+        th {
+            color: #6b7280;
+            font-weight: 800;
+            font-size: 12px
+        }
+
+        .right {
+            text-align: right
+        }
+
+        .total {
+            margin-top: 12px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .totalBox {
+            min-width: 260px;
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            background: #fff;
+            padding: 12px;
+        }
+
+        .totalRow {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12.5px;
+            padding: 6px 0
+        }
+
+            .totalRow b {
+                font-weight: 900
+            }
+
+        .foot {
+            margin-top: 14px;
+            font-size: 11px;
+            color: #6b7280
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+
+        <div class="top">
+            <div>
+                <div class="brand">İlkim Plastik</div>
+                <div class="muted">Sipariş çıktısı (PDF)</div>
+            </div>
+            <div style="text-align:right">
+                <div class="pill">Sipariş #@Model.Id</div>
+                <div style="height:6px"></div>
+                <div class="muted">Tarih: @Model.CreatedAt.ToString("yyyy-MM-dd HH:mm")</div>
+                <div class="muted">Durum: @StatusTr(Model.Status)</div>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="box">
+                <div class="h">Müşteri Bilgileri</div>
+                <div class="kv">
+                    <b>Ad Soyad</b><div>@Model.Name @Model.Surname</div>
+                    <b>Telefon</b><div>@Model.Phone</div>
+                    <b>E-posta</b><div>@(Model.User?.Email ?? "-")</div>
+                </div>
+            </div>
+
+            <div class="box">
+                <div class="h">Teslimat Adresi</div>
+                <div class="kv">
+                    <b>Şehir/İlçe</b><div>@Model.City / @Model.District</div>
+                    <b>Adres</b><div>@(string.IsNullOrWhiteSpace(Model.Details) ? "-" : Model.Details)</div>
+                    <b>Posta Kodu</b><div>@(string.IsNullOrWhiteSpace(Model.PostCode) ? "-" : Model.PostCode)</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="box" style="margin-top:12px">
+            <div class="h">Sipariş Ürünleri</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Ürün</th>
+                        <th>Kategori</th>
+                        <th class="right">Birim Fiyat</th>
+                        <th class="right">Adet</th>
+                        <th class="right">Tutar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.OrderProducts != null && Model.OrderProducts.Any())
+                    {
+                        foreach (var p in Model.OrderProducts)
+                        {
+                            <tr>
+                                <td>
+                                    <b>@p.Title</b><br />
+                                    <span class="muted">Ürün ID: @p.ProductId</span>
+                                </td>
+                                <td>@p.CategoryName</td>
+                                <td class="right">₺ @Money(p.Price)</td>
+                                <td class="right">@p.Count</td>
+                                <td class="right">₺ @Money(p.Price * p.Count)</td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr><td colspan="5" class="muted">Bu siparişte ürün yok.</td></tr>
+                    }
+                </tbody>
+            </table>
+
+            <div class="total">
+                <div class="totalBox">
+                    <div class="totalRow"><span>Ara Toplam</span><span>₺ @Money(Model.TotalPrice)</span></div>
+                    <div class="totalRow"><b>Genel Toplam</b><b>₺ @Money(Model.TotalPrice)</b></div>
+                </div>
+            </div>
+
+            <div class="foot">
+                Bu belge sistem tarafından otomatik oluşturulmuştur.
+            </div>
+            <div class="foot">
+                Hukuki Uyarı: Bu belge, siparişin içeriğini ve tutarını göstermek amacıyla hazırlanmıştır. Resmi bir fatura veya ödeme belgesi olarak kullanılamaz.
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>

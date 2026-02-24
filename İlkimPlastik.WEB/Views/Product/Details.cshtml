@@ -1,0 +1,701 @@
+﻿@model ilkimPlastik.WEB.Entities.Product
+@using ilkimPlastik.WEB.Entities
+@using System.Globalization
+@using System.Linq
+
+@{
+    ViewData["Title"] = Model.Title;
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var tr = CultureInfo.GetCultureInfo("tr-TR");
+    string Money(decimal v) => string.Format(tr, "{0:N2}", v);
+
+    string Img(string? f)
+    {
+        if (string.IsNullOrWhiteSpace(f)) return "";
+        return "/uploads/products/" + f.TrimStart('/');
+    }
+
+    // ====== Görseller ======
+    var images = Model.ImageItems?.ToList() ?? new();
+    var mainImg = images.FirstOrDefault()?.Filename;
+
+    // ====== Alternatifler / Latest ======
+    var alternatives = ViewBag.Alternatives as List<Product> ?? new();
+    var latest = ViewBag.Latest as List<Product> ?? new();
+
+    // Sepete ekle sonrası geri dönmek için
+    var returnUrl = Context.Request.Path + Context.Request.QueryString;
+
+    // ====== İndirim (OfferRate: yüzde int) ======
+    int OfferPct(Product p)
+    {
+        var pct = p.OfferRate;
+        if (pct < 0) pct = 0;
+        if (pct > 95) pct = 95;
+        return pct;
+    }
+
+    (decimal oldP, decimal newP, int pct) CalcOffer(decimal price, int pct)
+    {
+        var oldP = decimal.Round(price, 2);
+        if (pct <= 0) return (oldP, oldP, 0);
+
+        var rate = pct / 100m;
+        var newP = decimal.Round(price * (1m - rate), 2);
+        if (newP < 0m) newP = 0m;
+
+        return (oldP, newP, pct);
+    }
+
+    var pctSelf = OfferPct(Model);
+    var (oldPrice, newPrice, pctOut) = CalcOffer(Model.Price, pctSelf);
+
+    // ====== Bedenler: ilk stoklu olan varsayılan seçili ======
+    var sizesAll = (Model.ProductSizes ?? new List<ProductSize>())
+        .OrderBy(x => x.Name)
+        .ToList();
+
+    var firstAvailableSize = sizesAll.FirstOrDefault(x => x.StockCount > 0);
+    var defaultSizeId = firstAvailableSize?.Id ?? 0;
+    var defaultStock = firstAvailableSize?.StockCount ?? 0;
+}
+
+<style>
+    .no-image {
+        width: 100%;
+        height: 360px;
+        background: #f4f4f4;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #777;
+        font-size: 14px;
+        font-weight: 700;
+        border-radius: 14px;
+    }
+
+    .thumb-img {
+        width: 70px;
+        height: 70px;
+        object-fit: cover;
+        cursor: pointer;
+        border-radius: 10px;
+        border: 1px solid #eee;
+        margin-right: 6px;
+        margin-bottom: 6px;
+    }
+
+    /* ========= Badge genel: sayfanın köşesine kaçmasın ========= */
+    .product-img,
+    .detail-media,
+    .detail-media .main-media,
+    .products .product .product-img {
+        position: relative !important;
+    }
+
+    .onsale {
+        position: absolute !important;
+        top: 12px !important;
+        left: 12px !important;
+        z-index: 30 !important;
+        display: inline-block !important;
+        padding: 4px 10px !important;
+        border-radius: 999px !important;
+        font-weight: 700 !important;
+        font-size: 12px !important;
+        background: #1daaa3 !important;
+        color: #fff !important;
+        line-height: 1.2 !important;
+        white-space: nowrap !important;
+    }
+
+    /* ========= Alternatif kart: badge sağ üstte ========= */
+    .alt-card {
+        border: 1px solid #e5e5e5;
+        padding: 10px;
+        margin-top: 10px;
+        border-radius: 12px;
+        position: relative; /* badge referansı */
+    }
+
+        .alt-card:hover {
+            background: #fafafa;
+        }
+
+        .alt-card .onsale {
+            top: 10px !important;
+            right: 10px !important;
+            left: auto !important;
+            z-index: 40 !important;
+        }
+
+    .price-wrap {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        margin-top: 6px;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+    }
+
+        .price-wrap .amount {
+            font-weight: 800;
+            font-size: 20px;
+        }
+
+        .price-wrap del {
+            opacity: .65;
+            font-size: 14px;
+        }
+
+    .size-box {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 10px;
+    }
+
+    .size-item {
+        padding: 7px 12px;
+        border: 1px solid #ccc;
+        border-radius: 10px;
+        font-size: 13px;
+        cursor: pointer;
+        user-select: none;
+        background: #fff;
+    }
+
+        .size-item.disabled {
+            opacity: .35;
+            cursor: not-allowed;
+            text-decoration: line-through;
+            background: #fafafa;
+        }
+
+        .size-item.active {
+            border-color: #111;
+            font-weight: 700;
+            background: #f7f7f7;
+        }
+
+    .qty-input {
+        width: 110px;
+    }
+
+    .add-cart-btn {
+        width: 100%;
+        background: #1daaa3;
+        color: #fff;
+        padding: 12px;
+        border: 0;
+        border-radius: 8px;
+        font-size: 15px;
+        font-weight: 700;
+        margin-top: 12px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        justify-content: center;
+    }
+
+        .add-cart-btn:hover {
+            background: #fff;
+            color: #1daaa3;
+            border: 1px solid #1daaa3;
+        }
+
+        .add-cart-btn[disabled] {
+            opacity: .65;
+            cursor: not-allowed;
+        }
+
+    .notice {
+        padding: 10px 12px;
+        font-size: 13px;
+        border-radius: 10px;
+        margin-top: 10px;
+        line-height: 1.45;
+        border: 1px solid transparent;
+    }
+
+        .notice.info {
+            background: #f7f7f7;
+            border-color: #e9e9e9;
+            color: #444;
+        }
+
+        .notice.warn {
+            background: #fff7e6;
+            border-color: #ffe0b2;
+            color: #7a4b00;
+        }
+
+        .notice.error {
+            background: #ffecec;
+            border-color: #ffbdbd;
+            color: #b30000;
+            display: none;
+        }
+
+    .alt-img {
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+        border-radius: 12px;
+        border: 1px solid #eee;
+        display: block;
+    }
+
+    /* Latest ürün fiyat görünümü */
+    .products .product .price .amount {
+        font-weight: 800;
+    }
+
+    .products .product .price del {
+        margin-left: 8px;
+        opacity: .65;
+        font-size: 13px;
+    }
+</style>
+
+<main class="site-main page-spacing">
+
+    <div class="page-banner product-detail container-fluid no-padding">
+        <div class="page-banner-content">
+            <h3>@Model.Title</h3>
+        </div>
+    </div>
+
+    <div class="Product-detail container-fluid no-padding woocommerce">
+        <div class="section-padding"></div>
+
+        <div class="container">
+            <div class="row">
+
+                <!-- SOL GÖRSEL -->
+                <div class="col-md-6">
+                    <div class="detail-media">
+                        <div class="main-media">
+                            @if (pctOut > 0)
+                            {
+                                <span class="onsale">% @pctOut İndirim</span>
+                            }
+
+                            @if (!string.IsNullOrWhiteSpace(mainImg))
+                            {
+                                <img id="mainImg" src="@Img(mainImg)" width="100%" alt="@Model.Title" />
+                            }
+                            else
+                            {
+                                <div class="no-image">Görsel Yok</div>
+                            }
+                        </div>
+                    </div>
+
+                    @if (images.Any())
+                    {
+                        <div style="margin-top:10px">
+                            @foreach (var i in images)
+                            {
+                                <img src="@Img(i.Filename)" class="thumb-img" data-src="@Img(i.Filename)" alt="@Model.Title" />
+                            }
+                        </div>
+                    }
+                </div>
+
+                <!-- SAĞ BİLGİ -->
+                <div class="col-md-6">
+                    <div class="summary entry-summary">
+
+                        <h1>@Model.Title</h1>
+
+                        <div class="price-wrap">
+                            @if (pctOut > 0)
+                            {
+                                <span class="amount">₺ @Money(newPrice)</span>
+                                <del>₺ @Money(oldPrice)</del>
+                            }
+                            else
+                            {
+                                <span class="amount">₺ @Money(Model.Price)</span>
+                            }
+                        </div>
+
+                       
+
+                        <form id="addToCartForm" method="post" action="/cart/add" onsubmit="return validateCart()">
+                            @Html.AntiForgeryToken()
+
+                            <input type="hidden" name="productId" value="@Model.Id" />
+                            <input type="hidden" name="sizeId" id="sizeId" value="@(defaultSizeId > 0 ? defaultSizeId.ToString() : "")" />
+                            <input type="hidden" name="returnUrl" value="@returnUrl" />
+                            <input type="hidden" id="selectedStock" value="@(defaultSizeId > 0 ? defaultStock.ToString() : "0")" />
+
+                            @if (sizesAll.Any())
+                            {
+                                <h4>Beden / Ölçü</h4>
+
+                                <div class="size-box" id="sizeBox">
+                                    @foreach (var s in sizesAll)
+                                    {
+                                        var isDisabled = s.StockCount <= 0;
+                                        var isActive = (!isDisabled && defaultSizeId > 0 && s.Id == defaultSizeId);
+
+                                        <div class="size-item @(isDisabled ? "disabled" : "") @(isActive ? "active" : "")"
+                                             data-id="@s.Id"
+                                             data-stock="@s.StockCount"
+                                             title="Stok: @s.StockCount">
+                                            @s.Name
+                                        </div>
+                                    }
+                                </div>
+
+                                @if (defaultSizeId == 0)
+                                {
+                                    <div class="notice warn" id="sizeHint">
+                                        Bu üründe stoklu beden bulunamadı. Sepete ekleme devre dışı.
+                                    </div>
+                                }
+                              
+                            }
+                            else
+                            {
+                                <div class="notice warn">
+                                    Bu ürün için beden/ölçü seçeneği bulunmuyor. Sepete ekleme devre dışı.
+                                </div>
+                            }
+
+                            <div style="margin-top:12px">
+                                <label><strong>Adet</strong></label>
+                                <input type="number" name="quantity" id="qty" class="form-control qty-input" value="1" min="1" />
+                                <div class="notice info" id="qtyHint" style="display:none"></div>
+                            </div>
+
+                            <div id="cartError" class="notice error"></div>
+
+                            <button type="submit"
+                                    id="addCartBtn"
+                                    class="add-cart-btn"
+                                    @((!sizesAll.Any() || defaultSizeId == 0) ? "disabled" : "")>
+                                <span id="btnText"><i class="fa fa-shopping-cart"></i> Sepete Ekle</span>
+                                <span id="btnSpinner" style="display:none"><i class="fa fa-spinner fa-spin"></i></span>
+                            </button>
+                        </form>
+
+                        <!-- ALTERNATİFLER -->
+                        @if (alternatives.Any())
+                        {
+                            <h4 style="margin-top:22px">Alternatifler</h4>
+
+                            @foreach (var alt in alternatives)
+                            {
+                                var img = alt.ImageItems.FirstOrDefault()?.Filename;
+
+                                var pctAlt = OfferPct(alt);
+                                var (oldAlt, newAlt, pctAltOut) = CalcOffer(alt.Price, pctAlt);
+
+                                <a href="/product/details/@alt.Id" style="color:inherit">
+                                    <div class="alt-card">
+
+                                        @if (pctAltOut > 0)
+                                        {
+                                            <span class="onsale">% @pctAltOut İndirim</span>
+                                        }
+
+                                        <div style="display:flex;gap:10px">
+                                            @if (!string.IsNullOrWhiteSpace(img))
+                                            {
+                                                <img src="@Img(img)" class="alt-img" alt="@alt.Title" />
+                                            }
+                                            else
+                                            {
+                                                <div class="no-image" style="width:80px;height:80px;border-radius:12px">Görsel Yok</div>
+                                            }
+
+                                            <div style="flex:1">
+                                                <strong>@alt.Title</strong>
+
+                                                <div style="margin-top:6px">
+                                                    @if (pctAltOut > 0)
+                                                    {
+                                                        <span style="font-weight:800">₺ @Money(newAlt)</span>
+                                                        <del style="margin-left:8px;opacity:.65">₺ @Money(oldAlt)</del>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span style="font-weight:800">₺ @Money(alt.Price)</span>
+                                                    }
+                                                </div>
+
+                                                @if (alt.ProductSizes != null && alt.ProductSizes.Any())
+                                                {
+                                                    <div class="size-box" style="margin-top:8px">
+                                                        @foreach (var s in alt.ProductSizes.OrderBy(x => x.Name))
+                                                        {
+                                                            <div class="size-item" style="cursor:default">@s.Name</div>
+                                                        }
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                </a>
+                            }
+                        }
+
+                    </div>
+                </div>
+
+                <!-- ALT DETAY -->
+                <div class="col-md-12">
+                    <div class="product-details-tab">
+                        <ul class="nav nav-tabs">
+                            <li class="active"><a href="#desc" data-toggle="tab">Açıklama</a></li>
+                            <li><a href="#features" data-toggle="tab">Özellikler</a></li>
+                            <li><a href="#devices" data-toggle="tab">Uyumlu Cihazlar</a></li>
+                            <li><a href="#sizes" data-toggle="tab">Beden & Stok</a></li>
+                        </ul>
+
+                        <div class="tab-content">
+                            <div id="desc" class="tab-pane active">
+                                <p>@(string.IsNullOrWhiteSpace(Model.Description) ? "Bu ürün için açıklama yakında eklenecektir." : Model.Description)</p>
+                            </div>
+
+                            <div id="features" class="tab-pane">
+                                @if (Model.ProductFeatures != null && Model.ProductFeatures.Any())
+                                {
+                                    <ul>
+                                        @foreach (var f in Model.ProductFeatures)
+                                        {
+                                            <li><strong>@f.Name</strong> @f.Description</li>
+                                        }
+                                    </ul>
+                                }
+                                else
+                                {
+                                    <p>Bu ürün için özellik bilgisi bulunmuyor.</p>
+                                }
+                            </div>
+
+                            <div id="devices" class="tab-pane">
+                                @if (Model.ProductDevices != null && Model.ProductDevices.Any())
+                                {
+                                    <ul>
+                                        @foreach (var d in Model.ProductDevices)
+                                        {
+                                            <li>@d.Name</li>
+                                        }
+                                    </ul>
+                                }
+                                else
+                                {
+                                    <p>Uyumlu cihaz bilgisi bulunmuyor.</p>
+                                }
+                            </div>
+
+                            <div id="sizes" class="tab-pane">
+                                @if (sizesAll.Any())
+                                {
+                                    <table class="table">
+                                        <tr><th>Beden</th><th>Stok</th></tr>
+                                        @foreach (var s in sizesAll)
+                                        {
+                                            <tr>
+                                                <td>@s.Name</td>
+                                                <td>@s.StockCount</td>
+                                            </tr>
+                                        }
+                                    </table>
+                                }
+                                else
+                                {
+                                    <p>Beden/stok bilgisi bulunmuyor.</p>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ALT ÜRÜNLER -->
+        @if (latest.Any())
+        {
+            <div class="latest-product container-fluid no-padding woocommerce">
+                <div class="container">
+                    <div class="section-header">
+                        <h3>Son Eklenen Ürünler</h3>
+                    </div>
+
+                    <ul class="products">
+                        @foreach (var p in latest)
+                        {
+                            var img = p.ImageItems.FirstOrDefault()?.Filename;
+
+                            var pctL = OfferPct(p);
+                            var (oldL, newL, pctLout) = CalcOffer(p.Price, pctL);
+
+                            <li class="product">
+                                <a href="/product/details/@p.Id" title="@p.Title">
+                                        @if (pctLout > 0)
+                                        {
+                                            <span class="onsale">% @pctLout İndirim</span>
+                                        }
+                                    <span class="product-img">
+
+                                        @if (!string.IsNullOrWhiteSpace(img))
+                                        {
+                                            <img src="@Img(img)" width="270" height="360" alt="@p.Title" />
+                                        }
+                                        else
+                                        {
+                                            <div class="no-image" style="height:360px;border-radius:14px">Görsel Yok</div>
+                                        }
+                                    </span>
+
+                                    <h3>@p.Title</h3>
+
+                                    <span class="price">
+                                        @if (pctLout > 0)
+                                        {
+                                            <span class="amount">₺ @Money(newL)</span>
+                                            <del>₺ @Money(oldL)</del>
+                                        }
+                                        else
+                                        {
+                                            <span class="amount">₺ @Money(p.Price)</span>
+                                        }
+                                    </span>
+                                </a>
+                            </li>
+                        }
+                    </ul>
+
+                </div>
+            </div>
+        }
+
+</main>
+
+<script>
+    (function () {
+        // Thumbnail -> ana görsel
+        document.querySelectorAll('.thumb-img').forEach(i => {
+            i.addEventListener('click', () => {
+                const src = i.dataset.src;
+                const main = document.getElementById('mainImg');
+                if (main && src) main.src = src;
+            });
+        });
+
+        const sizeIdInput = document.getElementById('sizeId');
+        const stockInput = document.getElementById('selectedStock');
+        const qtyInput = document.getElementById('qty');
+        const qtyHint = document.getElementById('qtyHint');
+        const errBox = document.getElementById('cartError');
+        const btn = document.getElementById('addCartBtn');
+
+        function showError(msg) {
+            if (!errBox) return;
+            errBox.textContent = msg;
+            errBox.style.display = 'block';
+        }
+        function clearError() {
+            if (!errBox) return;
+            errBox.textContent = '';
+            errBox.style.display = 'none';
+        }
+
+        function clampQtyToStock() {
+            const stock = parseInt((stockInput?.value || '0'), 10);
+            let qty = parseInt((qtyInput?.value || '1'), 10);
+            if (isNaN(qty) || qty < 1) qty = 1;
+
+            if (stock > 0 && qty > stock) qty = stock;
+            if (qtyInput) qtyInput.value = qty;
+
+            if (stock > 0) {
+                if (qtyHint) {
+                    qtyHint.style.display = 'block';
+                    qtyHint.textContent = 'Seçilen beden için maksimum adet: ' + stock;
+                }
+                if (qtyInput) qtyInput.max = stock;
+            } else {
+                if (qtyHint) {
+                    qtyHint.style.display = 'none';
+                    qtyHint.textContent = '';
+                }
+                if (qtyInput) qtyInput.removeAttribute('max');
+            }
+        }
+
+        function setSelectedSize(el) {
+            const id = el.dataset.id || '';
+            const stock = el.dataset.stock || '0';
+
+            document.querySelectorAll('.size-item').forEach(x => x.classList.remove('active'));
+            el.classList.add('active');
+
+            if (sizeIdInput) sizeIdInput.value = id;
+            if (stockInput) stockInput.value = stock;
+
+            clearError();
+            clampQtyToStock();
+
+            const st = parseInt(stock, 10);
+            if (btn) {
+                btn.disabled = (!id || isNaN(st) || st <= 0);
+            }
+        }
+
+        // Click ile beden seçimi
+        document.querySelectorAll('.size-item:not(.disabled)').forEach(el => {
+            el.addEventListener('click', () => setSelectedSize(el));
+        });
+
+        // Sayfa açılışında stok sınırını uygula
+        clampQtyToStock();
+
+        qtyInput?.addEventListener('input', () => {
+            clearError();
+            clampQtyToStock();
+        });
+
+        // Submit sırasında buton kilitle + spinner
+        window.validateCart = function () {
+            clearError();
+
+            const sizeId = (sizeIdInput?.value || '').trim();
+            const stock = parseInt((stockInput?.value || '0'), 10);
+            const qty = parseInt((qtyInput?.value || '0'), 10);
+
+            if (!sizeId) {
+                showError('Sepete eklemek için lütfen beden/ölçü seçin.');
+                return false;
+            }
+            if (!qty || qty < 1) {
+                showError('Lütfen 1 veya daha büyük bir adet girin.');
+                return false;
+            }
+            if (isNaN(stock) || stock <= 0) {
+                showError('Seçtiğiniz beden için stok bulunmuyor.');
+                return false;
+            }
+            if (qty > stock) {
+                showError('Seçtiğiniz beden için en fazla ' + stock + ' adet ekleyebilirsiniz.');
+                if (qtyInput) qtyInput.value = stock;
+                return false;
+            }
+
+            const sp = document.getElementById('btnSpinner');
+            const tx = document.getElementById('btnText');
+            if (btn) btn.disabled = true;
+            if (sp) sp.style.display = 'inline-block';
+            if (tx) tx.style.opacity = '0.9';
+
+            return true;
+        };
+    })();
+</script>

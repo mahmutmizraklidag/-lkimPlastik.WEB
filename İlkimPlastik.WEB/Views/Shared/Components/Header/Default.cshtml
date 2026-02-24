@@ -1,0 +1,1899 @@
+﻿@model ilkimPlastik.WEB.ViewComponents.HeaderViewComponent.HeaderVm
+@using System.Globalization
+@using System.Security.Claims
+@using System.Linq
+
+@{
+    var tr = CultureInfo.GetCultureInfo("tr-TR");
+    string Money(decimal v) => string.Format(tr, "{0:N2}", v);
+
+    string Img(string? f)
+    {
+        if (string.IsNullOrWhiteSpace(f)) return "/images/cart-1.png";
+        return "/uploads/products/" + f.TrimStart('/');
+    }
+
+    // ✅ SiteSettings null-safe
+    var st = Model?.Settings;
+    var phone = !string.IsNullOrWhiteSpace(st?.Phone) ? st.Phone : "(+90) 000 000 00 00";
+    var email = !string.IsNullOrWhiteSpace(st?.Email) ? st.Email : "info@site.com";
+    var logo = !string.IsNullOrWhiteSpace(st?.LogoFileName) ? ("/uploads/site/" + st.LogoFileName.TrimStart('/')) : "/images/logo-1.png";
+    var siteTitle = !string.IsNullOrWhiteSpace(st?.Title) ? st.Title : "İlkim Plastik";
+    var workingHours = !string.IsNullOrWhiteSpace(st?.WorkingHours) ? st.WorkingHours : "";
+
+    var fb = st?.FacebookUrl;
+    var tw = st?.TwitterUrl;
+    var ig = st?.InstagramUrl;
+    var ln = st?.LinkedInUrl;
+
+    var isAuth = User?.Identity?.IsAuthenticated == true;
+    var userName = isAuth ? (User.Identity?.Name ?? "Hesabım") : "";
+    var userEmail = isAuth ? (User.FindFirstValue(ClaimTypes.Email) ?? "") : "";
+    var initials = "";
+    if (isAuth && !string.IsNullOrWhiteSpace(userName))
+    {
+        var parts = userName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        initials = string.Join("", parts.Take(2).Select(x => x.Substring(0, 1).ToUpperInvariant()));
+    }
+
+    var catCount = (Model?.Categories != null) ? Model.Categories.Count : 0;
+}
+
+<style>
+    :root {
+        --ikm-accent: #1daaa3;
+        --ikm-accent2: #168d87;
+        --ikm-text: #101828;
+        --ikm-muted: #667085;
+        --ikm-soft: #f6f7f9;
+        --ikm-soft2: #eef2f6;
+        --ikm-bd: #eef0f3;
+        --ikm-shadow: 0 18px 48px rgba(16,24,40,.14);
+        --ikm-shadow2: 0 10px 24px rgba(16,24,40,.10);
+        --ikm-r: 18px;
+        --ikm-r2: 14px;
+        --ikm-mobileNavH: 64px;
+        --ikm-z-overlay: 9990;
+        --ikm-z-pop: 9995;
+        --ikm-z-mobile: 10000;
+        --ikm-cat-bg: #ffffff;
+        --ikm-cat-text: #101828;
+        --ikm-cat-muted: #475467;
+        --ikm-cat-border: #eef0f3;
+        --ikm-cat-hover: #f7fffe;
+        --ikm-cat-sub-hover: #f2f4f7;
+    }
+
+    .ikmHdr * {
+        box-sizing: border-box;
+    }
+
+    .ikmHdr a {
+        text-decoration: none;
+    }
+
+    .ikmHdr img {
+        max-width: 100%;
+        height: auto;
+    }
+
+    .ikmHdr-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(16,24,40,.38);
+        z-index: var(--ikm-z-overlay);
+        opacity: 0;
+        pointer-events: none;
+        transition: .12s ease;
+    }
+
+        .ikmHdr-overlay.isOpen {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+    .ikmHdr-btnAccent {
+        background: var(--ikm-accent) !important;
+        color: #fff !important;
+        border: 1px solid var(--ikm-accent) !important;
+        border-radius: 14px !important;
+        font-weight: 600;
+        padding: 10px 12px !important;
+        line-height: 1 !important;
+        box-shadow: none !important;
+        transition: .12s ease;
+        cursor: pointer;
+        user-select: none;
+    }
+
+        .ikmHdr-btnAccent:hover, .ikmHdr-btnAccent:focus {
+            background: var(--ikm-accent2) !important;
+            border-color: var(--ikm-accent2) !important;
+            outline: none !important;
+        }
+
+    .ikmHdr-top {
+        background: #fff;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .ikmHdr-topRow {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .ikmHdr-contact {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        margin: 0;
+        padding: 10px 0;
+        list-style: none;
+        flex-wrap: wrap;
+    }
+
+        .ikmHdr-contact li a {
+            color: var(--ikm-muted);
+            font-size: 12px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            font-weight: 800;
+        }
+
+            .ikmHdr-contact li a i {
+                color: var(--ikm-accent);
+            }
+
+            .ikmHdr-contact li a span {
+                font-weight: 600;
+                color: #344054;
+            }
+
+    .ikmHdr-topRight {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 0;
+    }
+
+    .ikmHdr-mid {
+        background: #fff;
+        padding: 14px 0;
+    }
+
+    .ikmHdr-logo a {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--ikm-text);
+        font-weight: 600;
+        font-size: 18px;
+        white-space: nowrap;
+    }
+
+        .ikmHdr-logo a img {
+            height: 70px;
+            width: auto;
+            object-fit: contain;
+        }
+
+        .ikmHdr-logo a span {
+            color: var(--ikm-accent);
+        }
+
+    .ikmHdr-searchHost {
+        position: relative;
+    }
+
+    .ikmHdr-searchShell {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px;
+        background: linear-gradient(180deg,var(--ikm-soft),#fff);
+        border: 1px solid var(--ikm-bd);
+        border-radius: 18px;
+        transition: .15s ease;
+    }
+
+        .ikmHdr-searchShell:focus-within {
+            background: #fff;
+            border-color: rgba(29,170,163,.55);
+            box-shadow: 0 0 0 5px rgba(29,170,163,.12);
+        }
+
+    .ikmHdr-searchIcon {
+        width: 40px;
+        height: 40px;
+        border-radius: 14px;
+        background: var(--ikm-soft2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #344054;
+        flex: 0 0 auto;
+    }
+
+    .ikmHdr-searchInput {
+        height: 40px !important;
+        border: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        padding: 0 6px !important;
+        font-size: 14px;
+        color: var(--ikm-text);
+        font-weight: 800;
+        flex: 1;
+        min-width: 0;
+        outline: none !important;
+    }
+
+        .ikmHdr-searchInput::placeholder {
+            color: #98A2B3;
+            font-weight: 700;
+        }
+
+    .ikmHdr-searchClear {
+        width: 40px;
+        height: 40px;
+        border-radius: 14px;
+        border: 1px solid transparent;
+        background: transparent;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        color: #667085;
+        cursor: pointer;
+        flex: 0 0 auto;
+        transition: .12s ease;
+    }
+
+        .ikmHdr-searchClear:hover {
+            background: #f2f4f7;
+            color: #344054;
+        }
+
+    .ikmHdr-searchBtn {
+        height: 40px !important;
+        width: 54px !important;
+        border: 0 !important;
+        background: var(--ikm-accent) !important;
+        color: #fff !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: 14px !important;
+        transition: .12s ease;
+        flex: 0 0 auto;
+        cursor: pointer;
+    }
+
+        .ikmHdr-searchBtn:hover {
+            background: var(--ikm-accent2) !important;
+        }
+
+    .ikmHdr-suggestPanel {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: calc(100% + 10px);
+        background: #fff;
+        border: 1px solid var(--ikm-bd);
+        border-radius: 18px;
+        box-shadow: var(--ikm-shadow2);
+        z-index: var(--ikm-z-pop);
+        display: none;
+        overflow: hidden;
+        max-height: 380px;
+        overflow: auto;
+    }
+
+        .ikmHdr-suggestPanel.isOpen {
+            display: block;
+        }
+
+    .ikmHdr-suggestItem {
+        display: flex;
+        gap: 12px;
+        padding: 12px 12px;
+        border-bottom: 1px solid #f2f4f7;
+        color: var(--ikm-text);
+        align-items: center;
+    }
+
+        .ikmHdr-suggestItem:hover {
+            background: #fafafa;
+        }
+
+        .ikmHdr-suggestItem:last-child {
+            border-bottom: 0;
+        }
+
+        .ikmHdr-suggestItem img {
+            width: 46px;
+            height: 46px;
+            border-radius: 14px;
+            object-fit: cover;
+            background: #f3f3f3;
+            flex: 0 0 auto;
+        }
+
+    .ikmHdr-suggestTitle {
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1.25;
+    }
+
+    .ikmHdr-suggestPrice {
+        font-size: 12px;
+        color: #475467;
+        margin-top: 4px;
+        font-weight: 800;
+    }
+
+    .ikmHdr-suggestEmpty {
+        padding: 12px;
+        color: var(--ikm-muted);
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    .ikmHdr-suggestLoading {
+        padding: 12px;
+        color: #344054;
+        font-size: 13px;
+        font-weight: 800;
+    }
+
+    .ikmHdr-pop {
+        position: absolute;
+        right: 0;
+        top: calc(100% + 10px);
+        min-width: 390px;
+        max-width: 92vw;
+        background: #fff;
+        border: 1px solid var(--ikm-bd);
+        border-radius: 18px;
+        box-shadow: var(--ikm-shadow);
+        overflow: hidden;
+        z-index: var(--ikm-z-pop);
+        display: none;
+    }
+
+        .ikmHdr-pop.isOpen {
+            display: block;
+        }
+
+    .ikmHdr-popHead {
+        padding: 12px 14px;
+        border-bottom: 1px solid #f2f4f7;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #fff;
+    }
+
+        .ikmHdr-popHead b {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--ikm-text);
+        }
+
+        .ikmHdr-popHead span {
+            font-size: 12px;
+            color: var(--ikm-muted);
+            font-weight: 800;
+        }
+
+    .ikmHdr-popBody {
+        max-height: 340px;
+        overflow: auto;
+        background: #fff;
+    }
+
+    .ikmHdr-popFoot {
+        border-top: 1px solid #f2f4f7;
+        padding: 12px 14px;
+        background: #fff;
+    }
+
+    .ikmHdr-cartRow {
+        display: flex;
+        gap: 12px;
+        padding: 12px 14px;
+        border-bottom: 1px solid #f2f4f7;
+        align-items: center;
+    }
+
+        .ikmHdr-cartRow:last-child {
+            border-bottom: 0;
+        }
+
+        .ikmHdr-cartRow img {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            object-fit: cover;
+            background: #f3f3f3;
+            flex: 0 0 auto;
+        }
+
+    .ikmHdr-cartMeta {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .ikmHdr-cartTitle {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--ikm-text);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.2;
+    }
+
+    .ikmHdr-cartSub {
+        font-size: 12px;
+        color: var(--ikm-muted);
+        margin-top: 4px;
+        font-weight: 800;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .ikmHdr-cartPrice {
+        font-size: 12px;
+        margin-top: 6px;
+        font-weight: 600;
+        color: #101828;
+    }
+
+    .ikmHdr-cartActions {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 8px;
+        flex: 0 0 auto;
+    }
+
+    .ikmHdr-qtyCtrl {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+    }
+
+    .ikmHdr-qtyBtn {
+        width: 32px;
+        height: 32px;
+        border-radius: 12px;
+        border: 1px solid #e4e7ec;
+        background: #fff;
+        cursor: pointer;
+        font-weight: 600;
+        color: #344054;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+        transition: .12s ease;
+        user-select: none;
+    }
+
+        .ikmHdr-qtyBtn:hover {
+            background: #fafafa;
+        }
+
+    .ikmHdr-qtyVal {
+        min-width: 18px;
+        text-align: center;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--ikm-text);
+    }
+
+    .ikmHdr-removeBtn {
+        border: 0;
+        background: transparent;
+        color: #b42318;
+        font-size: 12px;
+        font-weight: 600;
+        text-decoration: underline;
+        cursor: pointer;
+        padding: 0;
+    }
+
+    .ikmHdr-cartTotal {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 13px;
+        font-weight: 600;
+        color: #344054;
+        margin-bottom: 10px;
+    }
+
+        .ikmHdr-cartTotal b {
+            font-weight: 600;
+            color: var(--ikm-text);
+        }
+
+    .ikmHdr-cartLinks {
+        display: flex;
+        gap: 10px;
+    }
+
+        .ikmHdr-cartLinks a {
+            flex: 1;
+            text-align: center;
+            padding: 11px 10px;
+            border-radius: 14px;
+            font-weight: 600;
+            font-size: 13px;
+            background: var(--ikm-accent);
+            color: #fff;
+            border: 1px solid var(--ikm-accent);
+            transition: .12s ease;
+        }
+
+            .ikmHdr-cartLinks a:hover {
+                background: var(--ikm-accent2);
+                border-color: var(--ikm-accent2);
+            }
+
+    .ikmHdr-refreshBtn {
+        display: none;
+        margin-top: 10px;
+        width: 100%;
+        text-align: center;
+        padding: 11px 10px;
+        border-radius: 14px;
+        font-weight: 600;
+        font-size: 13px;
+        background: #fff;
+        color: var(--ikm-accent2);
+        border: 1px solid rgba(29,170,163,.35);
+        cursor: pointer;
+        transition: .12s ease;
+    }
+
+        .ikmHdr-refreshBtn:hover {
+            background: #f7fffe;
+            border-color: rgba(29,170,163,.55);
+        }
+
+        .ikmHdr-refreshBtn.isOpen {
+            display: block;
+        }
+
+    .ikmHdr-accHead {
+        padding: 12px 14px;
+        border-bottom: 1px solid #f2f4f7;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+
+    .ikmHdr-avatar {
+        width: 44px;
+        height: 44px;
+        border-radius: 999px;
+        background: #f2f4f7;
+        border: 1px solid #eef0f3;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        color: var(--ikm-text);
+        flex: 0 0 auto;
+    }
+
+    .ikmHdr-accName {
+        font-weight: 600;
+        font-size: 13px;
+        color: var(--ikm-text);
+    }
+
+    .ikmHdr-accEmail {
+        font-size: 12px;
+        color: var(--ikm-muted);
+        font-weight: 800;
+        margin-top: 3px;
+        max-width: 210px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .ikmHdr-accBody {
+        padding: 8px 14px;
+    }
+
+    .ikmHdr-accLink {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid #f2f4f7;
+        color: var(--ikm-text);
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+        .ikmHdr-accLink:last-child {
+            border-bottom: 0;
+        }
+
+        .ikmHdr-accLink:hover {
+            color: var(--ikm-accent);
+        }
+
+    .ikmHdr-accFoot {
+        padding: 12px 14px;
+        border-top: 1px solid #f2f4f7;
+        display: flex;
+        gap: 10px;
+    }
+
+        .ikmHdr-accFoot a {
+            flex: 1;
+            text-align: center;
+            padding: 11px 10px;
+            border-radius: 14px;
+            font-weight: 600;
+            font-size: 13px;
+            background: var(--ikm-accent);
+            color: #fff;
+            border: 1px solid var(--ikm-accent);
+            transition: .12s ease;
+        }
+
+            .ikmHdr-accFoot a:hover {
+                background: var(--ikm-accent2);
+                border-color: var(--ikm-accent2);
+            }
+
+    .ikmHdr-menu {
+        background: #0b0f14;
+        border-top: 1px solid rgba(255,255,255,.06);
+    }
+
+        .ikmHdr-menu .navbar {
+            margin: 0;
+            border: 0;
+            background: transparent;
+        }
+
+        .ikmHdr-menu .menubar > li {
+            position: relative;
+        }
+
+            .ikmHdr-menu .menubar > li > a {
+                color: rgba(255,255,255,.86) !important;
+                font-weight: 600;
+                padding: 16px 14px !important;
+                letter-spacing: .2px;
+                border-radius: 12px;
+                transition: .12s ease;
+                cursor: pointer;
+            }
+
+                .ikmHdr-menu .menubar > li > a:hover {
+                    color: #fff !important;
+                    background: rgba(255,255,255,.06) !important;
+                }
+
+    .navbar-toggle .icon-bar {
+        background: #fff;
+    }
+
+    /* =====================================================
+       ✅ KATEGORİ MENÜSÜ: POPUP DEĞİL, BUTONUN ALTINDA "DROPDOWN"
+       - sabit position yok
+       - overlay gerektirmez (istersen yine de kapatmak için kullanıyoruz)
+       ===================================================== */
+    .ikmHdr-catHost {
+        position: relative;
+    }
+
+    .ikmHdr-catBtn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        user-select: none;
+    }
+
+    .ikmHdr-catDrop, .ikmHdr-catDrop * {
+        color: var(--ikm-cat-text) !important;
+        text-shadow: none !important;
+    }
+
+    .ikmHdr-catDrop {
+        position: absolute;
+        left: 0;
+        top: calc(100% + 10px);
+        width: 720px;
+        max-width: 92vw;
+        background: var(--ikm-cat-bg) !important;
+        border: 1px solid var(--ikm-cat-border) !important;
+        border-radius: 18px;
+        box-shadow: var(--ikm-shadow);
+        z-index: var(--ikm-z-pop);
+        display: none;
+        overflow: hidden;
+        /* ufak açılma animasyonu */
+        transform: translateY(8px);
+        opacity: 0;
+        transition: .12s ease;
+    }
+
+        .ikmHdr-catDrop.isOpen {
+            display: block;
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+    .ikmHdr-catHead {
+        padding: 12px 14px;
+        border-bottom: 1px solid #f2f4f7;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #fff;
+    }
+
+        .ikmHdr-catHead b {
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .ikmHdr-catHead span {
+            color: var(--ikm-cat-muted) !important;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+    .ikmHdr-catBody {
+        display: grid;
+        grid-template-columns: 1.05fr .95fr;
+        gap: 0;
+        background: #fff;
+        min-height: 360px;
+    }
+
+    .ikmHdr-catLeft {
+        border-right: 1px solid #f2f4f7;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+
+    .ikmHdr-catSearch {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        padding: 10px 12px;
+        border: 1px solid #e4e7ec;
+        border-radius: 14px;
+        background: #fff;
+    }
+
+        .ikmHdr-catSearch i {
+            color: #98A2B3;
+        }
+
+        .ikmHdr-catSearch input {
+            border: 0;
+            outline: none;
+            width: 100%;
+            font-weight: 600;
+            font-size: 13px;
+            color: #101828;
+            background: transparent;
+        }
+
+            .ikmHdr-catSearch input::placeholder {
+                color: #98A2B3;
+                font-weight: 800;
+            }
+
+    .ikmHdr-catList {
+        margin-top: 10px;
+        overflow: auto;
+        max-height: 420px;
+        padding-right: 4px;
+    }
+
+    .ikmHdr-catItem {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 10px 10px;
+        border-radius: 14px;
+        border: 1px solid transparent;
+        cursor: pointer;
+        user-select: none;
+    }
+
+        .ikmHdr-catItem:hover {
+            background: var(--ikm-cat-hover) !important;
+            border-color: rgba(29,170,163,.20) !important;
+        }
+
+        .ikmHdr-catItem.isActive {
+            background: rgba(29,170,163,.10) !important;
+            border-color: rgba(29,170,163,.30) !important;
+        }
+
+        .ikmHdr-catItem .t {
+            font-weight: 600;
+            font-size: 13px;
+            color: #101828 !important;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
+            flex: 1;
+        }
+
+    .ikmHdr-pill {
+        font-weight: 600;
+        font-size: 11px;
+        color: #667085 !important;
+        background: #f2f4f7;
+        border: 1px solid #eef0f3;
+        border-radius: 999px;
+        padding: 2px 8px;
+        flex: 0 0 auto;
+    }
+
+    .ikmHdr-catAllLink {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 10px 10px;
+        border-radius: 14px;
+        background: #0b0f14;
+        color: #fff !important;
+        font-weight: 600;
+        border: 1px solid rgba(255,255,255,.08);
+        margin-top: 10px;
+    }
+
+        .ikmHdr-catAllLink .ikmHdr-pill {
+            background: rgba(255,255,255,.10);
+            border-color: rgba(255,255,255,.12);
+            color: #fff !important;
+        }
+
+    .ikmHdr-catRight {
+        padding: 12px;
+        min-width: 0;
+    }
+
+    .ikmHdr-catRightTop {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 10px 10px;
+        border: 1px solid #eef0f3;
+        border-radius: 14px;
+        background: #f6f7f9;
+    }
+
+        .ikmHdr-catRightTop b {
+            font-size: 13px;
+            font-weight: 600;
+            color: #101828 !important;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
+        }
+
+        .ikmHdr-catRightTop a {
+            font-weight: 600;
+            font-size: 12px;
+            color: var(--ikm-accent2) !important;
+            text-decoration: underline;
+            flex: 0 0 auto;
+        }
+
+    .ikmHdr-subList2 {
+        margin-top: 10px;
+        list-style: none;
+        padding: 0;
+        max-height: 420px;
+        overflow: auto;
+    }
+
+        .ikmHdr-subList2 li a {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 10px 10px;
+            border-radius: 14px;
+            border: 1px solid transparent;
+            background: #fff;
+            color: var(--ikm-cat-muted) !important;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+            .ikmHdr-subList2 li a:hover {
+                background: var(--ikm-cat-sub-hover) !important;
+                border-color: #e4e7ec !important;
+                color: var(--ikm-accent2) !important;
+            }
+
+            .ikmHdr-subList2 li a .t {
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                min-width: 0;
+                flex: 1;
+                color: inherit !important;
+            }
+
+    @@media (max-width: 767px) {
+        .ikmHdr-catDrop {
+            position: static;
+            width: 100%;
+            max-width: 100%;
+            margin-top: 10px;
+            transform: none;
+            opacity: 1;
+            display: none;
+        }
+
+            .ikmHdr-catDrop.isOpen {
+                display: block;
+            }
+
+        .ikmHdr-catBody {
+            grid-template-columns: 1fr;
+            min-height: unset;
+        }
+
+        .ikmHdr-catLeft {
+            border-right: 0;
+            border-bottom: 1px solid #f2f4f7;
+        }
+
+        .ikmHdr-catList {
+            max-height: 34vh;
+        }
+
+        .ikmHdr-subList2 {
+            max-height: 34vh;
+        }
+    }
+
+    /* MOBILE NAV */
+    .ikmHdr-mobileNav {
+        display: none;
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: var(--ikm-mobileNavH);
+        background: #fff;
+        border-top: 1px solid #eef0f3;
+        box-shadow: 0 -10px 24px rgba(16,24,40,.10);
+        z-index: var(--ikm-z-mobile);
+    }
+
+    .ikmHdr-mobileNavInner {
+        height: 100%;
+        max-width: 980px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+        padding: 6px 10px;
+    }
+
+    .ikmHdr-mobileNav a {
+        flex: 1;
+        text-align: center;
+        color: #344054;
+        font-weight: 600;
+        font-size: 11px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        align-items: center;
+        justify-content: center;
+        padding: 6px 0;
+        user-select: none;
+        cursor: pointer;
+    }
+
+        .ikmHdr-mobileNav a i {
+            font-size: 18px;
+            color: #344054;
+        }
+
+        .ikmHdr-mobileNav a.isActive i, .ikmHdr-mobileNav a.isActive {
+            color: var(--ikm-accent2);
+        }
+
+    .ikmHdr-mobileCart {
+        position: relative;
+    }
+
+    .ikmHdr-mobileBadge {
+        position: absolute;
+        top: 6px;
+        right: 26%;
+        min-width: 18px;
+        height: 18px;
+        padding: 0 5px;
+        border-radius: 999px;
+        background: var(--ikm-accent);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        font-weight: 600;
+        border: 1px solid rgba(255,255,255,.8);
+    }
+
+    @@media (max-width: 767px) {
+        .ikmHdr-mobileNav {
+            display: block;
+        }
+
+        body {
+            padding-bottom: var(--ikm-mobileNavH);
+        }
+
+        .ikmHdr-pop {
+            position: fixed;
+            left: 10px;
+            right: 10px;
+            top: auto;
+            bottom: calc(var(--ikm-mobileNavH) + 10px);
+            min-width: unset;
+            width: auto;
+            max-width: unset;
+        }
+
+        .ikmHdr-popBody {
+            max-height: 45vh;
+        }
+    }
+
+    /* ✅ MOBILE "FLYING INPUT" SHEET */
+    .ikmHdr-searchModal {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: calc(var(--ikm-mobileNavH) + 10px);
+        z-index: calc(var(--ikm-z-pop) + 10);
+        display: none;
+        pointer-events: none;
+        padding: 0 10px;
+    }
+
+        .ikmHdr-searchModal.isOpen {
+            display: block;
+            pointer-events: auto;
+        }
+
+    .ikmHdr-searchSheet {
+        background: #fff;
+        border: 1px solid var(--ikm-bd);
+        border-radius: 18px;
+        box-shadow: 0 14px 34px rgba(16,24,40,.18);
+        overflow: hidden;
+        transform: translateY(16px);
+        opacity: 0;
+        transition: .14s ease;
+    }
+
+    .ikmHdr-searchModal.isOpen .ikmHdr-searchSheet {
+        transform: translateY(0);
+        opacity: 1;
+    }
+
+    .ikmHdr-searchSheetTop {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px;
+        border-bottom: 1px solid #f2f4f7;
+    }
+
+    .ikmHdr-searchClose {
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        border: 1px solid #eef0f3;
+        background: #fff;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        color: #344054;
+        flex: 0 0 auto;
+    }
+
+    .ikmHdr-searchHint {
+        font-size: 12px;
+        color: var(--ikm-muted);
+        font-weight: 800;
+        margin: 8px 12px 10px;
+    }
+
+    .ikmHdr-searchModalBody {
+        max-height: 42vh;
+        overflow: auto;
+        padding: 10px;
+        background: #fff;
+    }
+
+    .ikmHdr-modalSuggest {
+        border: 1px solid var(--ikm-bd);
+        border-radius: 18px;
+        overflow: hidden;
+    }
+</style>
+
+<div id="ikmHdrOverlay" class="ikmHdr-overlay" aria-hidden="true"></div>
+
+<header class="ikmHdr container-fluid no-padding">
+    <div id="slidepanel">
+
+        <!-- TOP -->
+        <div class="ikmHdr-top container-fluid no-padding">
+            <div class="container">
+                <div class="row ikmHdr-topRow">
+                    <div class="col-md-8 col-sm-8 col-xs-12">
+                        <ul class="ikmHdr-contact">
+                            <li>
+                                <a href="tel:@phone">
+                                    <i class="fa fa-phone"></i><span>Telefon :</span> @phone
+                                </a>
+                            </li>
+                            <li>
+                                <a href="mailto:@email">
+                                    <i class="fa fa-envelope-o"></i><span>E-posta :</span> @email
+                                </a>
+                            </li>
+                            @if (!string.IsNullOrWhiteSpace(workingHours))
+                            {
+                                <li>
+                                    <a href="javascript:void(0)">
+                                        <i class="fa fa-clock-o"></i><span>Saat :</span> @workingHours
+                                    </a>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+
+                    <div class="col-md-4 col-sm-4 col-xs-12">
+                        <div class="ikmHdr-topRight">
+                            @if (!string.IsNullOrWhiteSpace(fb))
+                            {<a class="btn ikmHdr-btnAccent" style="padding:10px 10px!important" href="@fb" target="_blank" rel="noopener"><i class="fa fa-facebook"></i></a>}
+                            @if (!string.IsNullOrWhiteSpace(tw))
+                            {<a class="btn ikmHdr-btnAccent" style="padding:10px 10px!important" href="@tw" target="_blank" rel="noopener"><i class="fa fa-twitter"></i></a>}
+                            @if (!string.IsNullOrWhiteSpace(ig))
+                            {<a class="btn ikmHdr-btnAccent" style="padding:10px 10px!important" href="@ig" target="_blank" rel="noopener"><i class="fa fa-instagram"></i></a>}
+                            @if (!string.IsNullOrWhiteSpace(ln))
+                            {<a class="btn ikmHdr-btnAccent" style="padding:10px 10px!important" href="@ln" target="_blank" rel="noopener"><i class="fa fa-linkedin"></i></a>}
+
+                            <button id="ikmHdrAccBtn" type="button" class="btn ikmHdr-btnAccent" aria-haspopup="true" aria-expanded="false">
+                                @(isAuth ? "Hesabım" : "Giriş / Kayıt") <span class="caret"></span>
+                            </button>
+
+                            <div id="ikmHdrAccPop" class="ikmHdr-pop" role="dialog" aria-label="Hesap Menüsü">
+                                @if (isAuth)
+                                {
+                                    <div class="ikmHdr-accHead">
+                                        <div class="ikmHdr-avatar">@(!string.IsNullOrWhiteSpace(initials) ? initials : "U")</div>
+                                        <div>
+                                            <div class="ikmHdr-accName">@userName</div>
+                                            <div class="ikmHdr-accEmail">@userEmail</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="ikmHdr-accBody">
+                                        <a class="ikmHdr-accLink" href="/account/profile">Profilim <span>›</span></a>
+                                        <a class="ikmHdr-accLink" href="/account/profile">Adreslerim <span>›</span></a>
+                                        <a class="ikmHdr-accLink" href="/myorders">Siparişlerim <span>›</span></a>
+                                        <a class="ikmHdr-accLink" href="/account/logout" style="color:#b42318">Çıkış Yap <span>›</span></a>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="ikmHdr-accHead">
+                                        <div class="ikmHdr-avatar"><i class="fa fa-user"></i></div>
+                                        <div>
+                                            <div class="ikmHdr-accName">Misafir Kullanıcı</div>
+                                            <div class="ikmHdr-accEmail">Giriş yaparak devam edin</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="ikmHdr-accFoot">
+                                        <a href="/account/login">Giriş Yap</a>
+                                        <a href="/account/register">Kayıt Ol</a>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MID -->
+        <div class="ikmHdr-mid container-fluid no-padding">
+            <div class="container">
+                <div class="row" style="display:flex;align-items:center;flex-wrap:wrap;gap:10px 0;">
+
+                    <div class="col-md-4 col-sm-4 col-xs-6">
+                        <div class="ikmHdr-logo">
+                            <a href="/">
+                                <img src="@logo" alt="@siteTitle" />
+                                @siteTitle
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="col-md-5 col-sm-6 col-xs-6 ikmHdr-searchHost">
+                        <form method="get" action="/Product/Search" autocomplete="off">
+                            <div class="ikmHdr-searchShell" role="search">
+                                <div class="ikmHdr-searchIcon" aria-hidden="true"><i class="fa fa-search"></i></div>
+                                <input id="ikmHdrQ" type="text" name="q" class="form-control ikmHdr-searchInput" placeholder="Ürün ara (ör. barkod / model / başlık)..." />
+                                <button type="button" id="ikmHdrClear" class="ikmHdr-searchClear" aria-label="Temizle"><i class="fa fa-times"></i></button>
+                                <button type="submit" class="btn ikmHdr-searchBtn" aria-label="Ara"><i class="fa fa-arrow-right"></i></button>
+                            </div>
+                        </form>
+
+                        <div id="ikmHdrSuggest" class="ikmHdr-suggestPanel" aria-live="polite"></div>
+                    </div>
+
+                    <div class="col-md-3 col-sm-2 col-xs-12" style="margin-top:10px;">
+                        @Html.AntiForgeryToken()
+
+                        <button id="ikmHdrCartBtn" type="button" class="btn ikmHdr-btnAccent" aria-haspopup="true" aria-expanded="false"
+                                style="width:100%;display:flex;align-items:center;gap:10px;justify-content:flex-start;border-radius:16px!important;">
+                            <span style="position:relative;width:38px;height:38px;border-radius:14px;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;flex:0 0 auto;">
+                                <i class="fa fa-shopping-cart" style="font-size:16px;color:#fff;"></i>
+                                <span id="ikmHdrCartCount"
+                                      style="position:absolute;right:-6px;top:-6px;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#fff;color:var(--ikm-accent);border:1px solid rgba(255,255,255,.75);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;line-height:1;">
+                                    @Model.CartCount
+                                </span>
+                            </span>
+
+                            <span style="min-width:0;display:flex;flex-direction:column;gap:2px;flex:1;">
+                                <span style="font-size:12px;font-weight:600;color:#fff;opacity:.92;line-height:1.1;">Sepet</span>
+                                <span id="ikmHdrCartSum" style="font-size:12px;font-weight:600;color:#fff;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                                    ₺ @Money(Model.CartTotal)
+                                </span>
+                            </span>
+
+                            <span style="margin-left:auto;display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:12px;background:rgba(255,255,255,.14);flex:0 0 auto;">
+                                <i class="fa fa-chevron-down" style="color:#fff;font-size:12px;"></i>
+                            </span>
+                        </button>
+
+                        <div id="ikmHdrCartPop" class="ikmHdr-pop" role="dialog" aria-label="Sepet">
+                            <div class="ikmHdr-popHead">
+                                <b>Sepetiniz</b>
+                                <span id="ikmHdrCartMiniCount">@Model.CartCount ürün</span>
+                            </div>
+
+                            <div class="ikmHdr-popBody" id="ikmHdrCartBody">
+                                @if (Model.CartItems.Count == 0)
+                                {
+                                    <div class="ikmHdr-suggestEmpty">Sepetiniz boş.</div>
+                                }
+                                else
+                                {
+                                    foreach (var it in Model.CartItems)
+                                    {
+                                        <div class="ikmHdr-cartRow" data-pid="@it.ProductId" data-sid="@it.SizeId">
+                                            <a href="/product/details/@it.ProductId" style="display:flex;align-items:center;gap:12px;color:inherit;">
+                                                <img src="@Img(it.ImageFile)" alt="@it.Title" />
+                                            </a>
+
+                                            <div class="ikmHdr-cartMeta">
+                                                <div class="ikmHdr-cartTitle">@it.Title</div>
+                                                <div class="ikmHdr-cartSub">Beden: @it.SizeName</div>
+                                                <div class="ikmHdr-cartPrice">₺ @Money(it.UnitPrice)</div>
+                                            </div>
+
+                                            <div class="ikmHdr-cartActions">
+                                                <div class="ikmHdr-qtyCtrl">
+                                                    <button type="button" class="ikmHdr-qtyBtn js-ikmMinus" aria-label="Azalt">-</button>
+                                                    <div class="ikmHdr-qtyVal js-ikmQty">@it.Quantity</div>
+                                                    <button type="button" class="ikmHdr-qtyBtn js-ikmPlus" aria-label="Arttır">+</button>
+                                                </div>
+                                                <button type="button" class="ikmHdr-removeBtn js-ikmRemove">Kaldır</button>
+                                            </div>
+                                        </div>
+                                    }
+                                }
+                            </div>
+
+                            <div class="ikmHdr-popFoot">
+                                <div class="ikmHdr-cartTotal">
+                                    <span>Toplam</span>
+                                    <b id="ikmHdrCartTotalBottom">₺ @Money(Model.CartTotal)</b>
+                                </div>
+                                <div class="ikmHdr-cartLinks">
+                                    <a href="/cart">Sepete Git</a>
+                                    <a href="/checkout">Ödeme</a>
+                                </div>
+
+                                <button type="button" id="ikmHdrCartRefreshBtn" class="ikmHdr-refreshBtn">Sepeti Güncelle</button>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- MENU -->
+    <div class="ikmHdr-menu container-fluid no-padding">
+        <div class="container">
+            <nav class="navbar ow-navigation">
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar">
+                        <span class="sr-only">Menüyü Aç</span>
+                        <span class="icon-bar"></span><span class="icon-bar"></span><span class="icon-bar"></span>
+                    </button>
+                </div>
+
+                <div class="navbar-collapse collapse navbar-right" id="navbar">
+                    <ul class="nav navbar-nav menubar" style="position:relative;">
+                        <li><a href="/">Anasayfa</a></li>
+                        <li><a href="/product">Ürünlerimiz</a></li>
+
+                        <!-- ✅ KATEGORİ: BUTONUN ALTINDA AÇILAN DROPDOWN -->
+                        <li class="ikmHdr-catHost">
+                            <a href="javascript:void(0)" id="ikmHdrCatBtn" class="ikmHdr-catBtn" aria-haspopup="true" aria-expanded="false">
+                                Kategoriler <span class="caret"></span>
+                            </a>
+
+                            <div id="ikmHdrCatPop" class="ikmHdr-catDrop" role="dialog" aria-label="Kategoriler">
+                                <div class="ikmHdr-catHead">
+                                    <b>Kategoriler</b>
+                                    <span>@catCount</span>
+                                </div>
+
+                                <div class="ikmHdr-catBody">
+                                    <div class="ikmHdr-catLeft">
+                                        <div class="ikmHdr-catSearch">
+                                            <i class="fa fa-search" aria-hidden="true"></i>
+                                            <input id="ikmHdrCatSearch" type="text" placeholder="Kategori ara..." />
+                                        </div>
+
+                                        <a class="ikmHdr-catAllLink" href="/product">
+                                            <span class="t" style="color:#fff !important;">Tüm Ürünler</span>
+                                            <span class="ikmHdr-pill">@catCount</span>
+                                        </a>
+
+                                        <div id="ikmHdrCatList" class="ikmHdr-catList">
+                                            @if (Model.Categories == null || Model.Categories.Count == 0)
+                                            {
+                                                <div class="ikmHdr-suggestEmpty">Kategori bulunamadı.</div>
+                                            }
+                                            else
+                                            {
+                                                var first = Model.Categories.FirstOrDefault();
+                                                foreach (var c in Model.Categories)
+                                                {
+                                                    var isFirst = first != null && c.Id == first.Id;
+                                                    var subsJson = System.Text.Json.JsonSerializer.Serialize(
+                                                        (c.SubCategories).Select(s => new { id = s.Id, name = s.Name }).ToList()
+                                                    );
+
+                                                    <div class="ikmHdr-catItem @(isFirst ? "isActive" : "")"
+                                                         data-cid="@c.Id"
+                                                         data-cname="@c.Name"
+                                                         data-subs='@subsJson'>
+                                                        <div class="t">@c.Name</div>
+                                                        <div class="ikmHdr-pill">@(c.SubCategories != null ? c.SubCategories.Count : 0)</div>
+                                                    </div>
+                                                }
+                                            }
+                                        </div>
+                                    </div>
+
+                                    <div class="ikmHdr-catRight">
+                                        <div class="ikmHdr-catRightTop">
+                                            <b id="ikmHdrCatSelectedTitle">Alt Kategoriler</b>
+                                            <a id="ikmHdrCatToAll" href="/product">Hepsi</a>
+                                        </div>
+                                        <ul id="ikmHdrSubList" class="ikmHdr-subList2"></ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+
+                        <li><a href="/about">Hakkımızda</a></li>
+                        <li><a href="/contact">İletişim</a></li>
+                    </ul>
+                </div>
+            </nav>
+        </div>
+    </div>
+</header>
+
+<!-- ✅ MOBILE "FLYING INPUT" -->
+<div id="ikmHdrSearchModal" class="ikmHdr-searchModal" aria-hidden="true">
+    <div class="ikmHdr-searchSheet">
+        <div class="ikmHdr-searchSheetTop">
+            <button type="button" id="ikmHdrSearchClose" class="ikmHdr-searchClose" aria-label="Kapat">
+                <i class="fa fa-times"></i>
+            </button>
+
+            <div style="flex:1;min-width:0;">
+                <div class="ikmHdr-searchShell" style="margin:0;">
+                    <div class="ikmHdr-searchIcon" aria-hidden="true"><i class="fa fa-search"></i></div>
+                    <input id="ikmHdrQMobile" type="text" class="form-control ikmHdr-searchInput" placeholder="Ürün ara..." />
+                    <button type="button" id="ikmHdrClearMobile" class="ikmHdr-searchClear" aria-label="Temizle"><i class="fa fa-times"></i></button>
+                    <button type="button" id="ikmHdrGoMobile" class="btn ikmHdr-searchBtn" aria-label="Ara"><i class="fa fa-arrow-right"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <div class="ikmHdr-searchHint">En az 2 karakter yazın. Enter ile aratabilirsiniz.</div>
+
+        <div class="ikmHdr-searchModalBody">
+            <div id="ikmHdrSuggestMobile" class="ikmHdr-modalSuggest"></div>
+        </div>
+    </div>
+</div>
+
+<!-- MOBILE BOTTOM NAV -->
+<nav class="ikmHdr-mobileNav" aria-label="Mobil Menü">
+    <div class="ikmHdr-mobileNavInner">
+        <a href="/" class="ikmHdr-mHome"><i class="fa fa-home"></i><span>Anasayfa</span></a>
+        <a href="/product" class="ikmHdr-mProducts"><i class="fa fa-th-large"></i><span>Ürünler</span></a>
+        <a href="javascript:void(0)" id="ikmHdrMobileSearchBtn" class="ikmHdr-mSearch"><i class="fa fa-search"></i><span>Ara</span></a>
+        <a href="/cart" class="ikmHdr-mobileCart">
+            <i class="fa fa-shopping-cart"></i><span>Sepet</span>
+            <span class="ikmHdr-mobileBadge" id="ikmHdrMobileCartCount">@Model.CartCount</span>
+        </a>
+        <a href="@(isAuth ? "/account/profile" : "/account/login")" class="ikmHdr-mAccount"><i class="fa fa-user"></i><span>@(isAuth ? "Hesap" : "Giriş")</span></a>
+    </div>
+</nav>
+
+<script>
+    (function () {
+        var overlay = document.getElementById('ikmHdrOverlay');
+
+        var accBtn = document.getElementById('ikmHdrAccBtn');
+        var accPop = document.getElementById('ikmHdrAccPop');
+
+        var cartBtn = document.getElementById('ikmHdrCartBtn');
+        var cartPop = document.getElementById('ikmHdrCartPop');
+
+        // ✅ dropdown kategoriler
+        var catBtn = document.getElementById('ikmHdrCatBtn');
+        var catPop = document.getElementById('ikmHdrCatPop');
+
+        var q = document.getElementById('ikmHdrQ');
+        var clear = document.getElementById('ikmHdrClear');
+        var suggest = document.getElementById('ikmHdrSuggest');
+
+        var mSearchBtn = document.getElementById('ikmHdrMobileSearchBtn');
+        var mCartCount = document.getElementById('ikmHdrMobileCartCount');
+
+        var searchModal = document.getElementById('ikmHdrSearchModal');
+        var qM = document.getElementById('ikmHdrQMobile');
+        var clearM = document.getElementById('ikmHdrClearMobile');
+        var goM = document.getElementById('ikmHdrGoMobile');
+        var closeM = document.getElementById('ikmHdrSearchClose');
+        var suggestM = document.getElementById('ikmHdrSuggestMobile');
+
+        var refreshBtn = document.getElementById('ikmHdrCartRefreshBtn');
+
+        var catSearch = document.getElementById('ikmHdrCatSearch');
+        var catList = document.getElementById('ikmHdrCatList');
+        var subList = document.getElementById('ikmHdrSubList');
+        var catTitle = document.getElementById('ikmHdrCatSelectedTitle');
+        var catToAll = document.getElementById('ikmHdrCatToAll');
+
+        function isMobile() { return window.matchMedia && window.matchMedia('(max-width: 767px)').matches; }
+        function contains(el, target) { return !!(el && target && el.contains(target)); }
+        function hasOpen(el) { return !!(el && el.classList && el.classList.contains('isOpen')); }
+
+        function getAntiToken() {
+            var el = document.querySelector('input[name="__RequestVerificationToken"]');
+            return el ? el.value : '';
+        }
+
+        function moneyTR(n) {
+            try { return new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n); }
+            catch (e) { return n; }
+        }
+
+        function setOverlay(on) {
+            // Kategori dropdown "popup" olmadığı için overlay şart değil,
+            // ama dış tıklama ile kapatmayı kolaylaştırmak için kullanıyoruz.
+            if (!overlay) return;
+            overlay.classList.toggle('isOpen', !!on);
+        }
+
+        function anyPopupOpen() {
+            return hasOpen(accPop) || hasOpen(cartPop) || hasOpen(catPop) || hasOpen(searchModal) || hasOpen(suggest);
+        }
+
+        function markCartDirty() { if (!refreshBtn) return; refreshBtn.classList.add('isOpen'); }
+        if (refreshBtn) refreshBtn.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); window.location.reload(); });
+
+        function safeParse(json) { try { return JSON.parse(json); } catch (e) { return []; } }
+
+        function setActiveCat(el) {
+            if (!catList) return;
+
+            var items = catList.querySelectorAll('.ikmHdr-catItem');
+            for (var i = 0; i < items.length; i++) items[i].classList.remove('isActive');
+
+            if (el) el.classList.add('isActive');
+
+            var cid = el ? el.getAttribute('data-cid') : '';
+            var cname = el ? el.getAttribute('data-cname') : '';
+            var subs = el ? safeParse(el.getAttribute('data-subs') || '[]') : [];
+
+            if (catTitle) catTitle.textContent = cname ? (cname + " • Alt Kategoriler") : "Alt Kategoriler";
+            if (catToAll) catToAll.href = cid ? ("/product?categoryId=" + encodeURIComponent(cid)) : "/product";
+
+            if (!subList) return;
+            var html = "";
+
+            if (!cid) {
+                html = '<li><div class="ikmHdr-suggestEmpty">Önce kategori seçin.</div></li>';
+                subList.innerHTML = html;
+                return;
+            }
+
+            html += '<li><a href="/product?categoryId=' + encodeURIComponent(cid) + '"><span>Kategoriyi Gör</span><span class="ikmHdr-pill">›</span></a></li>';
+
+            if (!subs || subs.length === 0) {
+                html += '<li><div class="ikmHdr-suggestEmpty">Bu kategoride alt kategori yok.</div></li>';
+                subList.innerHTML = html;
+                return;
+            }
+
+            for (var j = 0; j < subs.length; j++) {
+                var s = subs[j];
+                var sid = s.id;
+                var sn = s.name || '';
+                html += '<li><a href="/product?categoryId=' + encodeURIComponent(cid) + '&subCategoryId=' + encodeURIComponent(sid) + '">' +
+                    '<span class="t">' + sn + '</span><span class="ikmHdr-pill">›</span></a></li>';
+            }
+
+            subList.innerHTML = html;
+        }
+
+        function initCategoryPane() {
+            if (!catList) return;
+            var first = catList.querySelector('.ikmHdr-catItem.isActive') || catList.querySelector('.ikmHdr-catItem');
+            if (first) setActiveCat(first);
+        }
+
+        if (catList) {
+            catList.addEventListener('click', function (e) {
+                var item = e.target.closest ? e.target.closest('.ikmHdr-catItem') : null;
+                if (!item) return;
+                setActiveCat(item);
+            });
+        }
+
+        if (catSearch) {
+            catSearch.addEventListener('input', function () {
+                var term = (catSearch.value || '').trim().toLowerCase();
+                if (!catList) return;
+                var items = catList.querySelectorAll('.ikmHdr-catItem');
+                for (var i = 0; i < items.length; i++) {
+                    var t = (items[i].getAttribute('data-cname') || '').toLowerCase();
+                    items[i].style.display = (term.length === 0 || t.indexOf(term) >= 0) ? '' : 'none';
+                }
+            });
+        }
+
+        function closeSuggest() { if (!suggest) return; suggest.classList.remove('isOpen'); suggest.innerHTML = ''; }
+
+        function closeSearchModal() {
+            if (!searchModal) return;
+            searchModal.classList.remove('isOpen');
+            searchModal.setAttribute('aria-hidden', 'true');
+            if (!anyPopupOpen()) setOverlay(false);
+        }
+
+        function openSearchModal() {
+            if (!searchModal) return;
+            searchModal.classList.add('isOpen');
+            searchModal.setAttribute('aria-hidden', 'false');
+            closeAcc(); closeCart(); closeCat(); closeSuggest();
+            setOverlay(true);
+            setTimeout(function () { if (qM) qM.focus(); }, 30);
+            if (suggestM) suggestM.innerHTML = '<div class="ikmHdr-suggestEmpty">Aramaya başlayın…</div>';
+        }
+
+        function closeAcc() { if (!accPop) return; accPop.classList.remove('isOpen'); if (accBtn) accBtn.setAttribute('aria-expanded', 'false'); }
+        function openAcc() { if (!accPop) return; accPop.classList.add('isOpen'); if (accBtn) accBtn.setAttribute('aria-expanded', 'true'); setOverlay(true); }
+        function toggleAcc() {
+            if (!accPop) return;
+            if (hasOpen(accPop)) { closeAcc(); if (!anyPopupOpen()) setOverlay(false); }
+            else { closeCart(); closeCat(); closeSuggest(); closeSearchModal(); openAcc(); }
+        }
+
+        function closeCart() { if (!cartPop) return; cartPop.classList.remove('isOpen'); if (cartBtn) cartBtn.setAttribute('aria-expanded', 'false'); }
+        function openCart() { if (!cartPop) return; cartPop.classList.add('isOpen'); if (cartBtn) cartBtn.setAttribute('aria-expanded', 'true'); setOverlay(true); }
+        function toggleCart() {
+            if (!cartPop) return;
+            if (hasOpen(cartPop)) { closeCart(); if (!anyPopupOpen()) setOverlay(false); }
+            else { closeAcc(); closeCat(); closeSuggest(); closeSearchModal(); openCart(); }
+        }
+
+        // ✅ category dropdown open/close (popup değil)
+        function closeCat() { if (!catPop) return; catPop.classList.remove('isOpen'); if (catBtn) catBtn.setAttribute('aria-expanded', 'false'); }
+        function openCat() {
+            if (!catPop) return;
+            catPop.classList.add('isOpen');
+            if (catBtn) catBtn.setAttribute('aria-expanded', 'true');
+            // overlay opsiyonel: desktop'ta dış tık ile kapatmayı kolaylaştırıyoruz
+            if (!isMobile()) setOverlay(true);
+            initCategoryPane();
+            setTimeout(function () { if (catSearch) catSearch.focus(); }, 30);
+        }
+        function toggleCat() {
+            if (!catPop) return;
+            if (hasOpen(catPop)) { closeCat(); if (!anyPopupOpen()) setOverlay(false); }
+            else { closeAcc(); closeCart(); closeSuggest(); closeSearchModal(); openCat(); }
+        }
+
+        function closeAll() {
+            closeAcc(); closeCart(); closeCat(); closeSuggest(); closeSearchModal();
+            setOverlay(false);
+        }
+
+        // dış tık kapatma
+        document.addEventListener('click', function (e) {
+            var t = e.target;
+
+            if (contains(accBtn, t) || contains(accPop, t) ||
+                contains(cartBtn, t) || contains(cartPop, t) ||
+                contains(catBtn, t) || contains(catPop, t) ||
+                contains(suggest, t) ||
+                contains(searchModal, t) ||
+                contains(q, t) || contains(clear, t) ||
+                contains(qM, t) || contains(clearM, t) || contains(goM, t) || contains(closeM, t) ||
+                contains(refreshBtn, t)) return;
+
+            closeAll();
+        }, false);
+
+        if (overlay) overlay.addEventListener('click', function () { closeAll(); });
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeAll(); });
+
+        if (accBtn) accBtn.addEventListener('click', function (e) { e.preventDefault(); toggleAcc(); });
+        if (cartBtn) cartBtn.addEventListener('click', function (e) { e.preventDefault(); toggleCart(); });
+        if (catBtn) catBtn.addEventListener('click', function (e) { e.preventDefault(); toggleCat(); });
+
+        function setClearVisibility() { if (!clear || !q) return; clear.style.display = (q.value && q.value.trim().length > 0) ? 'flex' : 'none'; }
+        if (clear) clear.addEventListener('click', function (e) { e.preventDefault(); if (!q) return; q.value = ''; setClearVisibility(); closeSuggest(); q.focus(); });
+
+        var tmr = null;
+        async function fetchSuggest(term) {
+            var res = await fetch('/product/suggest?q=' + encodeURIComponent(term));
+            if (!res.ok) return [];
+            return await res.json();
+        }
+        function buildSuggestHtml(data) {
+            if (!data || data.length === 0) return '<div class="ikmHdr-suggestEmpty">Sonuç bulunamadı.</div>';
+            return data.map(function (x) {
+                var img = x.imageUrl ? x.imageUrl : '/images/product-9.jpg';
+                return (
+                    '<a class="ikmHdr-suggestItem" href="/product/details/' + x.id + '">' +
+                    '<img src="' + img + '" alt="">' +
+                    '<div><div class="ikmHdr-suggestTitle">' + (x.title || '') + '</div>' +
+                    '<div class="ikmHdr-suggestPrice">₺ ' + (x.priceText || '') + '</div></div></a>'
+                );
+            }).join('');
+        }
+        function openSuggest(html) { if (!suggest) return; suggest.innerHTML = html; suggest.classList.add('isOpen'); }
+
+        if (q) q.addEventListener('input', function () {
+            setClearVisibility();
+            if (isMobile()) return;
+
+            var term = (q.value || '').trim();
+            if (tmr) clearTimeout(tmr);
+            if (term.length < 2) { closeSuggest(); return; }
+
+            openSuggest('<div class="ikmHdr-suggestLoading"><i class="fa fa-spinner fa-spin"></i> Yükleniyor…</div>');
+            tmr = setTimeout(async function () {
+                try { var data = await fetchSuggest(term); openSuggest(buildSuggestHtml(data)); }
+                catch (_) { closeSuggest(); }
+            }, 220);
+        });
+
+        function setClearVisibilityM() { if (!clearM || !qM) return; clearM.style.display = (qM.value && qM.value.trim().length > 0) ? 'flex' : 'none'; }
+        function openSuggestMobile(html) { if (!suggestM) return; suggestM.innerHTML = html; }
+
+        var tmrM = null;
+        if (qM) {
+            qM.addEventListener('input', function () {
+                setClearVisibilityM();
+                var term = (qM.value || '').trim();
+                if (tmrM) clearTimeout(tmrM);
+                if (term.length < 2) { openSuggestMobile('<div class="ikmHdr-suggestEmpty">Aramak için en az 2 karakter yazın.</div>'); return; }
+
+                openSuggestMobile('<div class="ikmHdr-suggestLoading"><i class="fa fa-spinner fa-spin"></i> Yükleniyor…</div>');
+                tmrM = setTimeout(async function () {
+                    try { var data = await fetchSuggest(term); openSuggestMobile(buildSuggestHtml(data)); }
+                    catch (e) { openSuggestMobile('<div class="ikmHdr-suggestEmpty">Arama yapılamadı.</div>'); }
+                }, 220);
+            });
+
+            qM.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    var term = (qM.value || '').trim();
+                    if (!term) return;
+                    window.location.href = '/Product/Search?q=' + encodeURIComponent(term);
+                }
+            });
+        }
+
+        if (mSearchBtn) mSearchBtn.addEventListener('click', function (e) { e.preventDefault(); openSearchModal(); });
+        if (closeM) closeM.addEventListener('click', function (e) { e.preventDefault(); closeSearchModal(); });
+
+        if (clearM) clearM.addEventListener('click', function (e) {
+            e.preventDefault();
+            if (!qM) return;
+            qM.value = '';
+            setClearVisibilityM();
+            openSuggestMobile('<div class="ikmHdr-suggestEmpty">Aramaya başlayın…</div>');
+            qM.focus();
+        });
+
+        if (goM) goM.addEventListener('click', function (e) {
+            e.preventDefault();
+            var term = (qM ? qM.value : '').trim();
+            if (!term) return;
+            window.location.href = '/Product/Search?q=' + encodeURIComponent(term);
+        });
+
+        function updateHeaderTotals(count, total) {
+            var cc = document.getElementById('ikmHdrCartCount');
+            var cmc = document.getElementById('ikmHdrCartMiniCount');
+            var cs = document.getElementById('ikmHdrCartSum');
+            var ctb = document.getElementById('ikmHdrCartTotalBottom');
+            if (cc) cc.textContent = count;
+            if (mCartCount) mCartCount.textContent = count;
+            if (cmc) cmc.textContent = count + ' ürün';
+            if (cs) cs.textContent = '₺ ' + moneyTR(total);
+            if (ctb) ctb.textContent = '₺ ' + moneyTR(total);
+        }
+
+        async function postForm(url, paramsObj) {
+            var token = getAntiToken();
+            var body = new URLSearchParams();
+            Object.keys(paramsObj).forEach(function (k) { body.append(k, String(paramsObj[k])); });
+            body.append('__RequestVerificationToken', token);
+
+            var res = await fetch(url, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                    'RequestVerificationToken': token
+                },
+                body: body.toString()
+            });
+
+            return res;
+        }
+
+        async function miniSetQty(row, newQty) {
+            var pid = row.getAttribute('data-pid');
+            var sid = row.getAttribute('data-sid');
+
+            var res = await postForm('/cart/mini/setqty', { productId: pid, sizeId: sid, quantity: newQty });
+            if (!res.ok) return;
+
+            var data = await res.json();
+            if (!data || !data.ok) return;
+
+            if (data.removed) row.remove();
+            else {
+                var qEl = row.querySelector('.js-ikmQty');
+                if (qEl) qEl.textContent = data.qty;
+            }
+
+            updateHeaderTotals(data.count, data.total);
+            markCartDirty();
+
+            var cartBody = document.getElementById('ikmHdrCartBody');
+            if (cartBody && cartBody.querySelectorAll('.ikmHdr-cartRow').length === 0) {
+                cartBody.innerHTML = '<div class="ikmHdr-suggestEmpty">Sepetiniz boş.</div>';
+            }
+        }
+
+        async function miniRemove(row) {
+            var pid = row.getAttribute('data-pid');
+            var sid = row.getAttribute('data-sid');
+
+            var res = await postForm('/cart/mini/remove', { productId: pid, sizeId: sid });
+            if (!res.ok) return;
+
+            var data = await res.json();
+            if (!data || !data.ok) return;
+
+            row.remove();
+            updateHeaderTotals(data.count, data.total);
+            markCartDirty();
+
+            var cartBody = document.getElementById('ikmHdrCartBody');
+            if (cartBody && cartBody.querySelectorAll('.ikmHdr-cartRow').length === 0) {
+                cartBody.innerHTML = '<div class="ikmHdr-suggestEmpty">Sepetiniz boş.</div>';
+            }
+        }
+
+        document.addEventListener('click', function (e) {
+            if (!e.target || !e.target.closest) return;
+
+            var plusBtn = e.target.closest('.js-ikmPlus');
+            var minusBtn = e.target.closest('.js-ikmMinus');
+            var removeBtn = e.target.closest('.js-ikmRemove');
+
+            var btn = plusBtn || minusBtn || removeBtn;
+            if (!btn) return;
+
+            var row = btn.closest('.ikmHdr-cartRow');
+            if (!row) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (plusBtn) {
+                var v = parseInt(((row.querySelector('.js-ikmQty') || {}).textContent || '1'), 10);
+                if (isNaN(v)) v = 1;
+                miniSetQty(row, v + 1);
+                return;
+            }
+
+            if (minusBtn) {
+                var v2 = parseInt(((row.querySelector('.js-ikmQty') || {}).textContent || '1'), 10);
+                if (isNaN(v2)) v2 = 1;
+                miniSetQty(row, v2 - 1);
+                return;
+            }
+
+            if (removeBtn) {
+                miniRemove(row);
+                return;
+            }
+        }, true);
+
+        // init
+        setClearVisibility();
+        setClearVisibilityM();
+        initCategoryPane();
+    })();
+</script>

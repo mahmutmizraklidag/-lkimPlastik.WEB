@@ -1,0 +1,1334 @@
+﻿@* =========================
+    Views/Account/Profile.cshtml  (TEK PARÇA - DÜZENLENMİŞ)
+    - Hızlı adres ekleme/düzenleme/silme: AJAX + anında liste güncelleme
+    - Profil güncelle / şifre değiştir: AJAX + toast
+    - Ekranda “yazılımsal” uyarı/metinler azaltıldı
+    ========================= *@
+
+@model ilkimPlastik.WEB.Controllers.AccountController.ProfileVm
+@{
+    ViewData["Title"] = "Hesabım";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var ok = TempData["OK"] as string;
+    var err = TempData["ERR"] as string;
+}
+
+<style>
+    /* ===== Page ===== */
+    .acct-wrap {
+        --accent: #1daaa3;
+        --accent2: #168d87;
+        --text: #101828;
+        --muted: #667085;
+        --line: #eef0f3;
+        --soft: #f6f7f9;
+        --shadow: 0 18px 44px rgba(16,24,40,.12);
+        --r: 16px;
+    }
+
+        .acct-wrap * {
+            box-sizing: border-box
+        }
+
+        .acct-wrap .title {
+            font-size: 18px;
+            font-weight: 900;
+            color: var(--text);
+            margin: 0
+        }
+
+        .acct-wrap .sub {
+            margin: 6px 0 0;
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 700
+        }
+
+        .acct-wrap .grid {
+            display: grid;
+            grid-template-columns: 1.1fr .9fr;
+            gap: 18px;
+            align-items: start
+        }
+
+    @@media(max-width:992px) {
+        .acct-wrap .grid {
+            grid-template-columns: 1fr
+        }
+    }
+
+    .acct-wrap .alert {
+        border-radius: 14px;
+        padding: 12px 14px;
+        margin: 12px 0;
+        font-size: 13px;
+        font-weight: 800;
+        border: 1px solid transparent
+    }
+
+        .acct-wrap .alert.ok {
+            background: #ecfdf5;
+            border-color: #b8f2d4;
+            color: #065f46
+        }
+
+        .acct-wrap .alert.err {
+            background: #fff1f2;
+            border-color: #fecdd3;
+            color: #9f1239
+        }
+
+    .acct-wrap .card {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: var(--r);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+    }
+
+    .acct-wrap .card-h {
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+        .acct-wrap .card-h b {
+            font-size: 13px;
+            font-weight: 900;
+            color: var(--text)
+        }
+
+    .acct-wrap .card-b {
+        padding: 16px
+    }
+
+    .acct-wrap .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(29,170,163,.10);
+        border: 1px solid rgba(29,170,163,.22);
+        color: var(--accent2);
+        border-radius: 999px;
+        padding: 6px 10px;
+        font-size: 12px;
+        font-weight: 900;
+    }
+
+    .acct-wrap .mini {
+        font-size: 12px;
+        color: var(--muted);
+        font-weight: 700;
+        margin-top: 8px;
+        line-height: 1.45
+    }
+
+    /* ===== Buttons ===== */
+    .acct-wrap .btn {
+        height: 44px;
+        border-radius: 14px;
+        border: 1px solid transparent;
+        cursor: pointer;
+        font-weight: 900;
+        font-size: 13px;
+        padding: 0 14px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: .12s ease;
+        user-select: none;
+    }
+
+        .acct-wrap .btn.primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff
+        }
+
+            .acct-wrap .btn.primary:hover {
+                background: var(--accent2);
+                border-color: var(--accent2)
+            }
+
+        .acct-wrap .btn.ghost {
+            background: #fff;
+            border-color: #e4e7ec;
+            color: #344054
+        }
+
+            .acct-wrap .btn.ghost:hover {
+                background: #fafafa
+            }
+
+        .acct-wrap .btn.danger {
+            background: #fff;
+            border-color: #fee4e2;
+            color: #b42318
+        }
+
+            .acct-wrap .btn.danger:hover {
+                background: #fff5f5
+            }
+
+        .acct-wrap .btn.full {
+            width: 100%
+        }
+
+        .acct-wrap .btn[disabled] {
+            opacity: .65;
+            cursor: not-allowed
+        }
+
+    /* ===== Profile summary ===== */
+    .acct-summary {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+
+    .acct-avatar {
+        width: 52px;
+        height: 52px;
+        border-radius: 999px;
+        background: #f2f4f7;
+        border: 1px solid var(--line);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 900;
+        color: var(--text);
+        flex: 0 0 auto;
+    }
+
+    .acct-meta {
+        min-width: 0
+    }
+
+    .acct-name {
+        font-size: 14px;
+        font-weight: 900;
+        color: var(--text);
+        line-height: 1.2
+    }
+
+    .acct-email {
+        font-size: 12px;
+        font-weight: 800;
+        color: var(--muted);
+        margin-top: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 320px
+    }
+
+    .acct-kv {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 14px
+    }
+
+    @@media(max-width:520px) {
+        .acct-kv {
+            grid-template-columns: 1fr
+        }
+    }
+
+    .kv {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: #fff;
+        padding: 12px;
+    }
+
+        .kv .k {
+            font-size: 12px;
+            color: var(--muted);
+            font-weight: 900
+        }
+
+        .kv .v {
+            margin-top: 4px;
+            color: var(--text);
+            font-weight: 900
+        }
+
+    /* ===== Address list ===== */
+    .addr-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px
+    }
+
+    .addr-card {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 12px;
+        background: #fff;
+        display: flex;
+        gap: 12px;
+        justify-content: space-between;
+        align-items: flex-start;
+        flex-wrap: wrap;
+    }
+
+        .addr-card:hover {
+            background: #fafafa
+        }
+
+    .addr-left {
+        min-width: 240px;
+        flex: 1
+    }
+
+    .addr-title {
+        font-weight: 900;
+        color: var(--text)
+    }
+
+    .addr-lines {
+        margin-top: 6px;
+        font-size: 12px;
+        font-weight: 800;
+        color: #344054;
+        line-height: 1.45
+    }
+
+    .addr-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: flex-end
+    }
+
+    /* ===== Modal ===== */
+    .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(16,24,40,.55);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 99999;
+        padding: 18px;
+    }
+
+        .modal-backdrop.open {
+            display: flex
+        }
+
+    .modal-panel {
+        width: 100%;
+        max-width: 820px;
+        background: #fff;
+        border-radius: 18px;
+        box-shadow: var(--shadow);
+        overflow: hidden;
+    }
+
+    .modal-h {
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+    }
+
+        .modal-h b {
+            font-size: 13px;
+            font-weight: 900;
+            color: var(--text)
+        }
+
+    .modal-x {
+        width: 40px;
+        height: 40px;
+        border-radius: 14px;
+        border: 1px solid #e4e7ec;
+        background: #fff;
+        cursor: pointer;
+        font-weight: 900;
+    }
+
+        .modal-x:hover {
+            background: #fafafa
+        }
+
+    .modal-b {
+        padding: 16px
+    }
+
+    .modal-actions {
+        margin-top: 14px;
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        flex-wrap: wrap
+    }
+
+    /* ===== Form ===== */
+    .frow2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px
+    }
+
+    .frow1 {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px
+    }
+
+    @@media(max-width:700px) {
+        .frow2 {
+            grid-template-columns: 1fr
+        }
+    }
+
+    label {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+        font-weight: 900;
+        margin: 0 0 6px
+    }
+
+    input, textarea {
+        width: 100%;
+        border: 1px solid #e4e7ec;
+        border-radius: 14px;
+        padding: 0 12px;
+        height: 46px;
+        font-size: 14px;
+        font-weight: 800;
+        color: var(--text);
+        outline: none;
+    }
+
+    textarea {
+        height: auto;
+        min-height: 96px;
+        padding: 10px 12px;
+        resize: vertical
+    }
+
+        input:focus, textarea:focus {
+            border-color: rgba(29,170,163,.55);
+            box-shadow: 0 0 0 4px rgba(29,170,163,.12)
+        }
+
+    .is-invalid {
+        border-color: #fda29b !important;
+        box-shadow: none !important
+    }
+
+    .is-valid {
+        border-color: #86efac !important;
+        box-shadow: none !important
+    }
+
+    .field-err {
+        display: none;
+        font-size: 12px;
+        font-weight: 900;
+        color: #b42318;
+        margin-top: 6px
+    }
+
+        .field-err.show {
+            display: block
+        }
+
+    .modal-alert {
+        display: none;
+        border-radius: 14px;
+        padding: 12px 14px;
+        margin-bottom: 12px;
+        font-size: 13px;
+        font-weight: 800;
+        border: 1px solid transparent;
+    }
+
+        .modal-alert.err {
+            display: block;
+            background: #fff1f2;
+            border-color: #fecdd3;
+            color: #9f1239
+        }
+
+        .modal-alert.ok {
+            display: block;
+            background: #ecfdf5;
+            border-color: #b8f2d4;
+            color: #065f46
+        }
+
+    /* ===== Toast ===== */
+    .toast-wrap {
+        position: fixed;
+        right: 18px;
+        bottom: 18px;
+        z-index: 100000;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-end;
+    }
+
+    .toast {
+        min-width: 260px;
+        max-width: 360px;
+        border-radius: 16px;
+        padding: 12px 14px;
+        border: 1px solid transparent;
+        box-shadow: var(--shadow);
+        background: #fff;
+        font-weight: 900;
+        font-size: 13px;
+        color: var(--text);
+    }
+
+        .toast.ok {
+            background: #ecfdf5;
+            border-color: #b8f2d4;
+            color: #065f46
+        }
+
+        .toast.err {
+            background: #fff1f2;
+            border-color: #fecdd3;
+            color: #9f1239
+        }
+
+        .toast .t {
+            opacity: .9;
+            font-weight: 900
+        }
+</style>
+
+<main class="site-main page-spacing acct-wrap">
+    <div class="page-banner checkout-banner container-fluid no-padding">
+        <div class="page-banner-content">
+            <h3>Hesabım</h3>
+        </div>
+    </div>
+
+    <div class="container" style="margin-top:18px">
+
+        @if (!string.IsNullOrWhiteSpace(ok))
+        {
+            <div class="alert ok">@ok</div>
+        }
+        @if (!string.IsNullOrWhiteSpace(err))
+        {
+            <div class="alert err">@err</div>
+        }
+
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+            <div>
+                <h1 class="title">Profil ve Adresler</h1>
+                <p class="sub">Bilgilerini güncelle, adreslerini yönet.</p>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <button type="button" class="btn ghost" id="btnOpenProfile">Profil</button>
+                <button type="button" class="btn ghost" id="btnOpenPwd">Şifre</button>
+                <button type="button" class="btn primary" id="btnOpenAddrAdd">+ Adres</button>
+            </div>
+        </div>
+
+        <div class="grid">
+
+            <!-- LEFT: Profile summary -->
+            <div class="card">
+                <div class="card-h">
+                    <b>Profil</b>
+                    <span class="pill" id="pillPhone">Telefon: @(string.IsNullOrWhiteSpace(Model.Phone) ? "-" : Model.Phone)</span>
+                </div>
+                <div class="card-b">
+                    @{
+                        var initials = "";
+                        var full = (Model.Name + " " + Model.Surname).Trim();
+                        if (!string.IsNullOrWhiteSpace(full))
+                        {
+                            var parts = full.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                            initials = string.Join("", parts.Take(2).Select(x => x.Substring(0, 1).ToUpperInvariant()));
+                        }
+                    }
+
+                    <div class="acct-summary">
+                        <div class="acct-avatar" id="avatarInit">@(!string.IsNullOrWhiteSpace(initials) ? initials : "U")</div>
+                        <div class="acct-meta">
+                            <div class="acct-name" id="uiFullName">@full</div>
+                            <div class="acct-email" id="uiEmail">@Model.Email</div>
+                        </div>
+                    </div>
+
+                    <div class="acct-kv">
+                        <div class="kv">
+                            <div class="k">Ad</div>
+                            <div class="v" id="uiName">@Model.Name</div>
+                        </div>
+                        <div class="kv">
+                            <div class="k">Soyad</div>
+                            <div class="v" id="uiSurname">@Model.Surname</div>
+                        </div>
+                        <div class="kv">
+                            <div class="k">E-posta</div>
+                            <div class="v" id="uiEmail2">@Model.Email</div>
+                        </div>
+                        <div class="kv">
+                            <div class="k">Telefon</div>
+                            <div class="v" id="uiPhone">@(string.IsNullOrWhiteSpace(Model.Phone) ? "-" : Model.Phone)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: Address list -->
+            <div class="card">
+                <div class="card-h">
+                    <b>Adresler</b>
+                    <span class="kicker" id="addrCount">@Model.Addresses.Count kayıt</span>
+                </div>
+
+                <div class="card-b">
+                    <div class="mini" id="addrEmpty" style="@(Model.Addresses.Count == 0 ? "" : "display:none")">
+                        Henüz adres eklenmedi.
+                    </div>
+
+                    <div class="addr-list" id="addrList" style="@(Model.Addresses.Count == 0 ? "display:none" : "")">
+                        @foreach (var a in Model.Addresses)
+                        {
+                            <div class="addr-card" data-id="@a.Id" id="addr-@a.Id">
+                                <div class="addr-left">
+                                    <div class="addr-title" data-role="title">@a.Name @a.Surname</div>
+                                    <div class="addr-lines">
+                                        <div><span class="muted">Telefon:</span> <span data-role="phone">@a.Phone</span></div>
+                                        <div>
+                                            <span class="muted">Konum:</span>
+                                            <span data-role="loc">@a.City / @a.District</span>
+                                            <span data-role="post">@(!string.IsNullOrWhiteSpace(a.PostCode) ? (" - " + a.PostCode) : "")</span>
+                                        </div>
+                                        @if (!string.IsNullOrWhiteSpace(a.Details))
+                                        {
+                                            <div><span class="muted">Adres:</span> <span data-role="details">@a.Details</span></div>
+                                        }
+                                        else
+                                        {
+
+                                            <div style="display:none"><span data-role="details"></span></div>
+                                        }
+                                    </div>
+                                </div>
+
+                                <div class="addr-actions">
+                                    <button type="button" class="btn ghost jsEditAddr"
+                                            data-id="@a.Id"
+                                            data-name="@a.Name"
+                                            data-surname="@a.Surname"
+                                            data-phone="@a.Phone"
+                                            data-city="@a.City"
+                                            data-district="@a.District"
+                                            data-post="@a.PostCode"
+                                            data-details="@a.Details">
+                                        Düzenle
+                                    </button>
+
+                                    <button type="button" class="btn danger jsDelAddr" data-id="@a.Id">
+                                        Sil
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</main>
+
+<div class="toast-wrap" id="toastWrap" aria-live="polite" aria-atomic="true"></div>
+
+<!-- ========================= MODALS ========================= -->
+<!-- Profile Update Modal -->
+<div class="modal-backdrop" id="mProfile">
+    <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="mProfileT">
+        <div class="modal-h">
+            <b id="mProfileT">Profil</b>
+            <button type="button" class="modal-x" data-close="#mProfile">✕</button>
+        </div>
+        <div class="modal-b">
+            <div class="modal-alert err" id="mProfileErr" style="display:none"></div>
+            <form id="fProfile" method="post" action="/account/profile/update" novalidate>
+                @Html.AntiForgeryToken()
+                <div class="frow2">
+                    <div>
+                        <label>Ad *</label>
+                        <input name="Name" id="pName" value="@Model.Name" />
+                        <div class="field-err" id="ePName">Ad zorunludur.</div>
+                    </div>
+                    <div>
+                        <label>Soyad *</label>
+                        <input name="Surname" id="pSurname" value="@Model.Surname" />
+                        <div class="field-err" id="ePSurname">Soyad zorunludur.</div>
+                    </div>
+                </div>
+                <div class="frow1" style="margin-top:12px;">
+                    <div>
+                        <label>E-posta *</label>
+                        <input name="Email" id="pEmail" value="@Model.Email" inputmode="email" />
+                        <div class="field-err" id="ePEmail">Geçerli bir e-posta girin.</div>
+                    </div>
+                </div>
+                <div class="frow1" style="margin-top:12px;">
+                    <div>
+                        <label>Telefon</label>
+                        <input name="Phone" id="pPhone" value="@Model.Phone" />
+                        <div class="field-err" id="ePPhone">Geçerli bir telefon girin.</div>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn ghost" data-close="#mProfile">Vazgeç</button>
+                    <button type="submit" class="btn primary" id="pSubmitBtn">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Password Change Modal -->
+<div class="modal-backdrop" id="mPwd">
+    <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="mPwdT">
+        <div class="modal-h">
+            <b id="mPwdT">Şifre</b>
+            <button type="button" class="modal-x" data-close="#mPwd">✕</button>
+        </div>
+        <div class="modal-b">
+            <div class="modal-alert err" id="mPwdErr" style="display:none"></div>
+            <form id="fPwd" method="post" action="/account/password/change" novalidate>
+                @Html.AntiForgeryToken()
+
+                <div class="frow1">
+                    <div>
+                        <label>Mevcut Şifre *</label>
+                        <input type="password" name="CurrentPassword" id="curPwd" autocomplete="current-password" />
+                        <div class="field-err" id="eCurPwd">Mevcut şifre zorunludur.</div>
+                    </div>
+                </div>
+
+                <div class="frow2" style="margin-top:12px;">
+                    <div>
+                        <label>Yeni Şifre *</label>
+                        <input type="password" name="NewPassword" id="newPwd" autocomplete="new-password" />
+                        <div class="field-err" id="eNewPwd">En az 6 karakter olmalıdır.</div>
+                    </div>
+                    <div>
+                        <label>Yeni Şifre (Tekrar) *</label>
+                        <input type="password" name="NewPassword2" id="newPwd2" autocomplete="new-password" />
+                        <div class="field-err" id="eNewPwd2">Şifreler eşleşmiyor.</div>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn ghost" data-close="#mPwd">Vazgeç</button>
+                    <button type="submit" class="btn primary" id="pwdSubmitBtn">Güncelle</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Address Add/Edit Modal -->
+<div class="modal-backdrop" id="mAddr">
+    <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="mAddrT">
+        <div class="modal-h">
+            <b id="mAddrT">Adres</b>
+            <button type="button" class="modal-x" data-close="#mAddr">✕</button>
+        </div>
+        <div class="modal-b">
+            <div class="modal-alert err" id="mAddrErr" style="display:none"></div>
+
+            <form id="fAddr" method="post" action="/account/address/add" novalidate>
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="Id" id="aId" value="0" />
+
+                <div class="frow2">
+                    <div>
+                        <label>Ad *</label>
+                        <input name="Name" id="aName" />
+                        <div class="field-err" id="eAName">Ad zorunludur.</div>
+                    </div>
+                    <div>
+                        <label>Soyad *</label>
+                        <input name="Surname" id="aSurname" />
+                        <div class="field-err" id="eASurname">Soyad zorunludur.</div>
+                    </div>
+                </div>
+
+                <div class="frow2" style="margin-top:12px;">
+                    <div>
+                        <label>Telefon *</label>
+                        <input name="Phone" id="aPhone" inputmode="tel" placeholder="05xx xxx xx xx" />
+                        <div class="field-err" id="eAPhone">Telefon zorunludur.</div>
+                    </div>
+                    <div>
+                        <label>Posta Kodu</label>
+                        <input name="PostCode" id="aPost" inputmode="numeric" />
+                    </div>
+                </div>
+
+                <div class="frow2" style="margin-top:12px;">
+                    <div>
+                        <label>İl *</label>
+                        <input name="City" id="aCity" />
+                        <div class="field-err" id="eACity">İl zorunludur.</div>
+                    </div>
+                    <div>
+                        <label>İlçe *</label>
+                        <input name="District" id="aDistrict" />
+                        <div class="field-err" id="eADistrict">İlçe zorunludur.</div>
+                    </div>
+                </div>
+
+                <div class="frow1" style="margin-top:12px;">
+                    <div>
+                        <label>Adres *</label>
+                        <textarea name="Details" id="aDetails"></textarea>
+                        <div class="field-err" id="eADetails">Adres zorunludur.</div>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn ghost" data-close="#mAddr">Vazgeç</button>
+                    <button type="submit" class="btn primary" id="aSubmitBtn">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function(){
+      // ============== Modal helpers ==============
+      function openModal(sel){
+        var el = document.querySelector(sel);
+        if(!el) return;
+        el.classList.add('open');
+        document.body.style.overflow='hidden';
+      }
+      function closeModal(sel){
+        var el = document.querySelector(sel);
+        if(!el) return;
+        el.classList.remove('open');
+        document.body.style.overflow='';
+      }
+      document.addEventListener('click', function(e){
+        var x = e.target.closest && e.target.closest('[data-close]');
+        if(x){ e.preventDefault(); closeModal(x.getAttribute('data-close')); }
+      });
+      document.addEventListener('click', function(e){
+        var bd = e.target.classList && e.target.classList.contains('modal-backdrop') ? e.target : null;
+        if(bd){ bd.classList.remove('open'); document.body.style.overflow=''; }
+      });
+      document.addEventListener('keydown', function(e){
+        if(e.key !== 'Escape') return;
+        document.querySelectorAll('.modal-backdrop.open').forEach(function(m){ m.classList.remove('open'); });
+        document.body.style.overflow='';
+      });
+
+      // ============== Toast ==============
+      var toastWrap = document.getElementById('toastWrap');
+      function toast(type, msg){
+        if(!toastWrap) return;
+        var t = document.createElement('div');
+        t.className = 'toast ' + (type || '');
+        t.innerHTML = '<div class="t">'+ escapeHtml(msg || '') +'</div>';
+        toastWrap.appendChild(t);
+        setTimeout(function(){
+          t.style.opacity = '0';
+          t.style.transform = 'translateY(6px)';
+          setTimeout(function(){ t.remove(); }, 180);
+        }, 2600);
+      }
+      function escapeHtml(s){
+        return String(s||'').replace(/[&<>"']/g, function(m){
+          return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]);
+        });
+      }
+
+      // ============== Open buttons ==============
+      var btnOpenProfile = document.getElementById('btnOpenProfile');
+      var btnOpenPwd = document.getElementById('btnOpenPwd');
+      var btnOpenAddrAdd = document.getElementById('btnOpenAddrAdd');
+      btnOpenProfile && btnOpenProfile.addEventListener('click', function(){ openModal('#mProfile'); });
+      btnOpenPwd && btnOpenPwd.addEventListener('click', function(){ openModal('#mPwd'); });
+      btnOpenAddrAdd && btnOpenAddrAdd.addEventListener('click', function(){
+        resetAddrForm();
+        setAddrModeAdd();
+        openModal('#mAddr');
+      });
+
+      // ============== Shared helpers ==============
+      function emailOk(v){
+        v = String(v||'').trim().toLowerCase();
+        // ✅ HATA DÜZELTİLDİ: '@@' değil '@@' olmalı
+        return v.length >= 6 && v.includes('@@') && v.includes('.');
+      }
+      function setInvalid(input, errEl, msg){
+        if(input){ input.classList.remove('is-valid'); input.classList.add('is-invalid'); }
+        if(errEl){ if(msg) errEl.textContent = msg; errEl.classList.add('show'); }
+      }
+      function setValid(input, errEl){
+        if(input){ input.classList.remove('is-invalid'); input.classList.add('is-valid'); }
+        if(errEl){ errEl.classList.remove('show'); }
+      }
+      function clearModalAlert(id){
+        var el = document.getElementById(id);
+        if(el){ el.style.display='none'; el.textContent=''; el.classList.remove('ok','err'); }
+      }
+      function showModalAlert(id, type, msg){
+        var el = document.getElementById(id);
+        if(!el) return;
+        el.textContent = msg || '';
+        el.style.display='block';
+        el.classList.remove('ok','err');
+        el.classList.add(type === 'ok' ? 'ok' : 'err');
+      }
+
+      // Anti-forgery token (hidden input)
+      function getAfToken(form){
+        var t = form && form.querySelector('input[name="__RequestVerificationToken"]');
+        return t ? t.value : '';
+      }
+
+      async function postFormAjax(form, url){
+        var fd = new FormData(form);
+        var af = getAfToken(form);
+
+        var res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'RequestVerificationToken': af
+          },
+          body: fd
+        });
+
+        // Eğer server redirect döndürürse (beklenmedik), yine de yakala
+        var ct = res.headers.get('content-type') || '';
+        if(ct.includes('application/json')){
+          return await res.json();
+        }
+        // fallback: HTML geldiyse hata kabul et
+        return { ok:false, message:'İşlem tamamlanamadı.' };
+      }
+
+      function setBusy(btn, busy, textWhenBusy){
+        if(!btn) return;
+        if(busy){
+          btn.dataset.oldText = btn.textContent;
+          btn.textContent = textWhenBusy || 'Lütfen bekleyin...';
+          btn.disabled = true;
+        }else{
+          btn.textContent = btn.dataset.oldText || btn.textContent;
+          btn.disabled = false;
+        }
+      }
+
+      // ============== Profile form ==============
+      var fProfile = document.getElementById('fProfile');
+      var pName = document.getElementById('pName');
+      var pSurname = document.getElementById('pSurname');
+      var pEmail = document.getElementById('pEmail');
+      var pPhone = document.getElementById('pPhone');
+      var ePName = document.getElementById('ePName');
+      var ePSurname = document.getElementById('ePSurname');
+      var ePEmail = document.getElementById('ePEmail');
+       var ePPhone = document.getElementById('ePPhone');
+      var pSubmitBtn = document.getElementById('pSubmitBtn');
+
+      function validateProfile(){
+        clearModalAlert('mProfileErr');
+        var ok = true;
+
+        if(!pName.value.trim()){ setInvalid(pName,ePName,'Ad zorunludur.'); ok=false; } else setValid(pName,ePName);
+        if(!pSurname.value.trim()){ setInvalid(pSurname,ePSurname,'Soyad zorunludur.'); ok=false; } else setValid(pSurname,ePSurname);
+
+        pEmail.value = (pEmail.value||'').trim();
+        if(!emailOk(pEmail.value)){ setInvalid(pEmail,ePEmail,'Geçerli bir e-posta girin.'); ok=false; } else setValid(pEmail,ePEmail);
+
+        return ok;
+      }
+      [pName,pSurname,pEmail].forEach(function(inp){
+        inp && inp.addEventListener('input', validateProfile);
+        inp && inp.addEventListener('blur', validateProfile);
+      });
+
+      fProfile && fProfile.addEventListener('submit', async function(e){
+        e.preventDefault();
+        if(!validateProfile()){
+          showModalAlert('mProfileErr','err','Lütfen alanları kontrol edin.');
+          return;
+        }
+
+        setBusy(pSubmitBtn, true, 'Kaydediliyor...');
+        try{
+          var r = await postFormAjax(fProfile, '/account/profile/update');
+          if(r && r.ok){
+            // UI update
+            var name = r.data && r.data.name ? r.data.name : pName.value.trim();
+            var surname = r.data && r.data.surname ? r.data.surname : pSurname.value.trim();
+            var email = r.data && r.data.email ? r.data.email : pEmail.value.trim();
+            var phone = r.data && r.data.phone ? r.data.phone : pPhone.value.trim();
+
+            var full = (name + ' ' + surname).trim();
+            document.getElementById('uiFullName').textContent = full;
+            document.getElementById('uiName').textContent = name;
+            document.getElementById('uiSurname').textContent = surname;
+            document.getElementById('uiEmail').textContent = email;
+            document.getElementById('uiEmail2').textContent = email;
+                document.getElementById('uiPhone').textContent = phone;
+                document.getElementById('pillPhone').textContent = phone;
+                
+            // avatar initials
+            var parts = full.split(' ').filter(Boolean);
+            var init = (parts[0] ? parts[0][0] : 'U') + (parts[1] ? parts[1][0] : '');
+            document.getElementById('avatarInit').textContent = init.toUpperCase();
+
+            toast('ok', r.message || 'Güncellendi.');
+            closeModal('#mProfile');
+          }else{
+            showModalAlert('mProfileErr','err', (r && r.message) || 'İşlem tamamlanamadı.');
+          }
+        }catch{
+          showModalAlert('mProfileErr','err','İşlem tamamlanamadı.');
+        }finally{
+          setBusy(pSubmitBtn, false);
+        }
+      });
+
+      // ============== Password form ==============
+      var fPwd = document.getElementById('fPwd');
+      var curPwd = document.getElementById('curPwd');
+      var newPwd = document.getElementById('newPwd');
+      var newPwd2 = document.getElementById('newPwd2');
+      var eCurPwd = document.getElementById('eCurPwd');
+      var eNewPwd = document.getElementById('eNewPwd');
+      var eNewPwd2 = document.getElementById('eNewPwd2');
+      var pwdSubmitBtn = document.getElementById('pwdSubmitBtn');
+
+      function validatePwd(){
+        clearModalAlert('mPwdErr');
+        var ok = true;
+
+        if(!curPwd.value.trim()){ setInvalid(curPwd,eCurPwd,'Mevcut şifre zorunludur.'); ok=false; } else setValid(curPwd,eCurPwd);
+        if((newPwd.value||'').length < 6){ setInvalid(newPwd,eNewPwd,'En az 6 karakter olmalıdır.'); ok=false; } else setValid(newPwd,eNewPwd);
+        if(newPwd2.value !== newPwd.value || !newPwd2.value){ setInvalid(newPwd2,eNewPwd2,'Şifreler eşleşmiyor.'); ok=false; } else setValid(newPwd2,eNewPwd2);
+
+        return ok;
+      }
+      [curPwd,newPwd,newPwd2].forEach(function(inp){
+        inp && inp.addEventListener('input', validatePwd);
+        inp && inp.addEventListener('blur', validatePwd);
+      });
+
+      fPwd && fPwd.addEventListener('submit', async function(e){
+        e.preventDefault();
+        if(!validatePwd()){
+          showModalAlert('mPwdErr','err','Lütfen alanları kontrol edin.');
+          return;
+        }
+
+        setBusy(pwdSubmitBtn, true, 'Güncelleniyor...');
+        try{
+          var r = await postFormAjax(fPwd, '/account/password/change');
+          if(r && r.ok){
+            toast('ok', r.message || 'Güncellendi.');
+            // temizle
+            curPwd.value=''; newPwd.value=''; newPwd2.value='';
+            [curPwd,newPwd,newPwd2].forEach(function(i){ i.classList.remove('is-valid','is-invalid'); });
+            closeModal('#mPwd');
+          }else{
+            showModalAlert('mPwdErr','err', (r && r.message) || 'İşlem tamamlanamadı.');
+          }
+        }catch{
+          showModalAlert('mPwdErr','err','İşlem tamamlanamadı.');
+        }finally{
+          setBusy(pwdSubmitBtn, false);
+        }
+      });
+
+      // ============== Address modal ==============
+      var fAddr = document.getElementById('fAddr');
+      var aId = document.getElementById('aId');
+      var aName = document.getElementById('aName');
+      var aSurname = document.getElementById('aSurname');
+      var aPhone = document.getElementById('aPhone');
+      var aPost = document.getElementById('aPost');
+      var aCity = document.getElementById('aCity');
+      var aDistrict = document.getElementById('aDistrict');
+      var aDetails = document.getElementById('aDetails');
+      var aSubmitBtn = document.getElementById('aSubmitBtn');
+
+      var eAName = document.getElementById('eAName');
+      var eASurname = document.getElementById('eASurname');
+      var eAPhone = document.getElementById('eAPhone');
+      var eACity = document.getElementById('eACity');
+      var eADistrict = document.getElementById('eADistrict');
+      var eADetails = document.getElementById('eADetails');
+
+      function sanitizePhone(v){
+        v = String(v||'').replace(/[^\d+]/g,''); // sadece rakam + kalsın
+        // Eğer + yoksa ve 0 ile başlıyorsa bırak; değilse sadece rakam
+        return v;
+      }
+      function sanitizeText(v){
+        return String(v||'').replace(/\s+/g,' ').trim();
+      }
+      // input cleanups
+      aPhone && aPhone.addEventListener('input', function(){ aPhone.value = sanitizePhone(aPhone.value); });
+      aPost && aPost.addEventListener('input', function(){ aPost.value = String(aPost.value||'').replace(/[^\d]/g,'').slice(0,10); });
+
+      function resetAddrForm(){
+        clearModalAlert('mAddrErr');
+        if(aId) aId.value = '0';
+        [aName,aSurname,aPhone,aPost,aCity,aDistrict].forEach(function(i){ if(i) i.value=''; });
+        if(aDetails) aDetails.value='';
+
+        [aName,aSurname,aPhone,aCity,aDistrict,aDetails].forEach(function(i){
+          if(i){ i.classList.remove('is-invalid','is-valid'); }
+        });
+        [eAName,eASurname,eAPhone,eACity,eADistrict,eADetails].forEach(function(ei){
+          if(ei) ei.classList.remove('show');
+        });
+      }
+
+      function setAddrModeAdd(){
+        fAddr.action = '/account/address/add';
+        if(aSubmitBtn) aSubmitBtn.textContent = 'Ekle';
+        var t = document.getElementById('mAddrT'); if(t) t.textContent = 'Adres Ekle';
+      }
+      function setAddrModeEdit(){
+        fAddr.action = '/account/address/update';
+        if(aSubmitBtn) aSubmitBtn.textContent = 'Güncelle';
+        var t = document.getElementById('mAddrT'); if(t) t.textContent = 'Adresi Düzenle';
+      }
+
+      function validateAddr(){
+        clearModalAlert('mAddrErr');
+        var ok = true;
+
+        aName.value = sanitizeText(aName.value);
+        aSurname.value = sanitizeText(aSurname.value);
+        aCity.value = sanitizeText(aCity.value);
+        aDistrict.value = sanitizeText(aDistrict.value);
+        aDetails.value = sanitizeText(aDetails.value);
+        aPhone.value = sanitizePhone(aPhone.value);
+
+        if(!aName.value){ setInvalid(aName,eAName,'Ad zorunludur.'); ok=false; } else setValid(aName,eAName);
+        if(!aSurname.value){ setInvalid(aSurname,eASurname,'Soyad zorunludur.'); ok=false; } else setValid(aSurname,eASurname);
+        if(!aPhone.value){ setInvalid(aPhone,eAPhone,'Telefon zorunludur.'); ok=false; } else setValid(aPhone,eAPhone);
+        if(!aCity.value){ setInvalid(aCity,eACity,'İl zorunludur.'); ok=false; } else setValid(aCity,eACity);
+        if(!aDistrict.value){ setInvalid(aDistrict,eADistrict,'İlçe zorunludur.'); ok=false; } else setValid(aDistrict,eADistrict);
+        if(!aDetails.value){ setInvalid(aDetails,eADetails,'Adres zorunludur.'); ok=false; } else setValid(aDetails,eADetails);
+
+        return ok;
+      }
+
+      [aName,aSurname,aPhone,aCity,aDistrict,aDetails].forEach(function(inp){
+        inp && inp.addEventListener('input', validateAddr);
+        inp && inp.addEventListener('blur', validateAddr);
+      });
+
+      function updateAddrCount(){
+        var list = document.getElementById('addrList');
+        var count = list ? list.querySelectorAll('.addr-card').length : 0;
+        document.getElementById('addrCount').textContent = count + ' kayıt';
+        var empty = document.getElementById('addrEmpty');
+        if(count === 0){
+          empty.style.display = '';
+          list.style.display = 'none';
+        }else{
+          empty.style.display = 'none';
+          list.style.display = '';
+        }
+      }
+
+      function addrCardHtml(a){
+        var post = a.postCode ? (' - ' + escapeHtml(a.postCode)) : '';
+        var details = a.details ? escapeHtml(a.details) : '';
+        var detailsRow = a.details
+          ? '<div><span class="muted">Adres:</span> <span data-role="details">'+details+'</span></div>'
+          : '<div style="display:none"><span data-role="details"></span></div>';
+
+        return ''+
+        '<div class="addr-card" data-id="'+a.id+'" id="addr-'+a.id+'">'+
+          '<div class="addr-left">'+
+            '<div class="addr-title" data-role="title">'+escapeHtml(a.name)+' '+escapeHtml(a.surname)+'</div>'+
+            '<div class="addr-lines">'+
+              '<div><span class="muted">Telefon:</span> <span data-role="phone">'+escapeHtml(a.phone)+'</span></div>'+
+              '<div><span class="muted">Konum:</span> <span data-role="loc">'+escapeHtml(a.city)+' / '+escapeHtml(a.district)+'</span><span data-role="post">'+post+'</span></div>'+
+              detailsRow+
+            '</div>'+
+          '</div>'+
+          '<div class="addr-actions">'+
+            '<button type="button" class="btn ghost jsEditAddr" '+
+              'data-id="'+a.id+'" '+
+              'data-name="'+escapeHtml(a.name)+'" '+
+              'data-surname="'+escapeHtml(a.surname)+'" '+
+              'data-phone="'+escapeHtml(a.phone)+'" '+
+              'data-city="'+escapeHtml(a.city)+'" '+
+              'data-district="'+escapeHtml(a.district)+'" '+
+              'data-post="'+escapeHtml(a.postCode||'')+'" '+
+              'data-details="'+escapeHtml(a.details||'')+'">Düzenle</button>'+
+            '<button type="button" class="btn danger jsDelAddr" data-id="'+a.id+'">Sil</button>'+
+          '</div>'+
+        '</div>';
+      }
+
+      fAddr && fAddr.addEventListener('submit', async function(e){
+        e.preventDefault();
+        if(!validateAddr()){
+          showModalAlert('mAddrErr','err','Lütfen alanları kontrol edin.');
+          return;
+        }
+
+        setBusy(aSubmitBtn, true, 'Kaydediliyor...');
+        try{
+          var url = fAddr.action || '/account/address/add';
+          var r = await postFormAjax(fAddr, url);
+          if(r && r.ok && r.data){
+            var a = r.data;
+
+            if(url.includes('/update')){
+              // update existing card
+              var el = document.getElementById('addr-' + a.id);
+              if(el){
+                el.querySelector('[data-role="title"]').textContent = a.name + ' ' + a.surname;
+                el.querySelector('[data-role="phone"]').textContent = a.phone;
+                el.querySelector('[data-role="loc"]').textContent = a.city + ' / ' + a.district;
+                el.querySelector('[data-role="post"]').textContent = a.postCode ? (' - ' + a.postCode) : '';
+
+                var dWrap = el.querySelector('[data-role="details"]');
+                if(dWrap){
+                  dWrap.textContent = a.details || '';
+                  dWrap.parentElement.style.display = a.details ? '' : 'none';
+                }
+
+                // button dataset refresh
+                var btn = el.querySelector('.jsEditAddr');
+                if(btn){
+                  btn.setAttribute('data-name', a.name);
+                  btn.setAttribute('data-surname', a.surname);
+                  btn.setAttribute('data-phone', a.phone);
+                  btn.setAttribute('data-city', a.city);
+                  btn.setAttribute('data-district', a.district);
+                  btn.setAttribute('data-post', a.postCode || '');
+                  btn.setAttribute('data-details', a.details || '');
+                }
+              }
+              toast('ok', r.message || 'Güncellendi.');
+            }else{
+              // add new card (top)
+              var list = document.getElementById('addrList');
+              list.insertAdjacentHTML('afterbegin', addrCardHtml(a));
+              toast('ok', r.message || 'Eklendi.');
+            }
+
+            updateAddrCount();
+            closeModal('#mAddr');
+            resetAddrForm();
+          }else{
+            showModalAlert('mAddrErr','err', (r && r.message) || 'İşlem tamamlanamadı.');
+          }
+        }catch{
+          showModalAlert('mAddrErr','err','İşlem tamamlanamadı.');
+        }finally{
+          setBusy(aSubmitBtn, false);
+        }
+      });
+
+      // edit address click
+      document.addEventListener('click', function(e){
+        var btn = e.target.closest && e.target.closest('.jsEditAddr');
+        if(!btn) return;
+
+        resetAddrForm();
+        setAddrModeEdit();
+
+        aId.value = btn.getAttribute('data-id') || '0';
+        aName.value = btn.getAttribute('data-name') || '';
+        aSurname.value = btn.getAttribute('data-surname') || '';
+        aPhone.value = btn.getAttribute('data-phone') || '';
+        aCity.value = btn.getAttribute('data-city') || '';
+        aDistrict.value = btn.getAttribute('data-district') || '';
+        aPost.value = btn.getAttribute('data-post') || '';
+        aDetails.value = btn.getAttribute('data-details') || '';
+
+        openModal('#mAddr');
+      });
+
+      // delete address click (AJAX)
+      document.addEventListener('click', async function(e){
+        var btn = e.target.closest && e.target.closest('.jsDelAddr');
+        if(!btn) return;
+
+        var id = btn.getAttribute('data-id');
+        if(!id) return;
+
+        if(!confirm('Adres silinsin mi?')) return;
+
+        // Anti forgery token: herhangi bir formdan al (adres formu var)
+        var af = getAfToken(document.getElementById('fAddr'));
+        try{
+          btn.disabled = true;
+          var fd = new FormData();
+          fd.append('id', id);
+          fd.append('__RequestVerificationToken', af);
+
+          var res = await fetch('/account/address/delete', {
+            method:'POST',
+            headers:{
+              'X-Requested-With':'XMLHttpRequest',
+              'RequestVerificationToken': af
+            },
+            body: fd
+          });
+
+          var ct = res.headers.get('content-type') || '';
+          var r = ct.includes('application/json') ? await res.json() : {ok:false,message:'İşlem tamamlanamadı.'};
+
+          if(r && r.ok){
+            var row = document.getElementById('addr-' + id);
+            if(row) row.remove();
+            updateAddrCount();
+            toast('ok', r.message || 'Silindi.');
+          }else{
+            toast('err', (r && r.message) || 'Silinemedi.');
+            btn.disabled = false;
+          }
+        }catch{
+          toast('err','Silinemedi.');
+          btn.disabled = false;
+        }
+      });
+
+    })();
+</script>
+
+@* =========================
+    Controllers/AccountController.cs (TEK PARÇA - DÜZENLENMİŞ)
+    - AJAX destekli: Profile/Password/Address işlemleri JSON dönebilir
+    - Cookie claim refresh (profil güncelleme)
+    ========================= *@
+
+@* Not: Bu blok aynı dosyada durmaz; sen “tek parça” istediğin için altına ekledim. *@

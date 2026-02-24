@@ -1,0 +1,98 @@
+/* /Areas/Admin/Views/Shared/_Layout.cshtml.rz.scp.css */
+/* Please see documentation at https://learn.microsoft.com/aspnet/core/client-side/bundling-and-minification
+for details on configuring this project to bundle and minify static web assets. */
+
+a.navbar-brand[b-xt66g8f37u] {
+  white-space: normal;
+  text-align: center;
+  word-break: break-all;
+}
+
+a[b-xt66g8f37u] {
+  color: #0077cc;
+}
+
+.btn-primary[b-xt66g8f37u] {
+  color: #fff;
+  background-color: #1b6ec2;
+  border-color: #1861ac;
+}
+
+.nav-pills .nav-link.active[b-xt66g8f37u], .nav-pills .show > .nav-link[b-xt66g8f37u] {
+  color: #fff;
+  background-color: #1b6ec2;
+  border-color: #1861ac;
+}
+
+.border-top[b-xt66g8f37u] {
+  border-top: 1px solid #e5e5e5;
+}
+.border-bottom[b-xt66g8f37u] {
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.box-shadow[b-xt66g8f37u] {
+  box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .05);
+}
+
+button.accept-policy[b-xt66g8f37u] {
+  font-size: 1rem;
+  line-height: inherit;
+}
+
+.footer[b-xt66g8f37u] {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  white-space: nowrap;
+  line-height: 60px;
+}
+/* /Views/Shared/_Layout.cshtml.rz.scp.css */
+/* Please see documentation at https://learn.microsoft.com/aspnet/core/client-side/bundling-and-minification
+for details on configuring this project to bundle and minify static web assets. */
+
+a.navbar-brand[b-fndjjktviv] {
+  white-space: normal;
+  text-align: center;
+  word-break: break-all;
+}
+
+a[b-fndjjktviv] {
+  color: #0077cc;
+}
+
+.btn-primary[b-fndjjktviv] {
+  color: #fff;
+  background-color: #1b6ec2;
+  border-color: #1861ac;
+}
+
+.nav-pills .nav-link.active[b-fndjjktviv], .nav-pills .show > .nav-link[b-fndjjktviv] {
+  color: #fff;
+  background-color: #1b6ec2;
+  border-color: #1861ac;
+}
+
+.border-top[b-fndjjktviv] {
+  border-top: 1px solid #e5e5e5;
+}
+.border-bottom[b-fndjjktviv] {
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.box-shadow[b-fndjjktviv] {
+  box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .05);
+}
+
+button.accept-policy[b-fndjjktviv] {
+  font-size: 1rem;
+  line-height: inherit;
+}
+
+.footer[b-fndjjktviv] {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  white-space: nowrap;
+  line-height: 60px;
+}

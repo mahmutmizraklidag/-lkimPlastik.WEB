@@ -1,0 +1,431 @@
+﻿@model dynamic
+@{
+    Layout = "~/Areas/Admin/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Dashboard";
+
+    // Last7 gün çizgi (basit normalize)
+    var last7 = (IEnumerable<dynamic>)(Model.Last7 ?? new List<dynamic>());
+    var last7List = last7.OrderBy(x => (DateTime)x.Day).ToList();
+
+    decimal max7 = 0;
+    foreach (var d in last7List)
+        if ((decimal)d.Total > max7) max7 = (decimal)d.Total;
+    if (max7 <= 0) max7 = 1;
+
+    // Status dağılımı
+    var statusRows = (IEnumerable<dynamic>)(Model.OrderByStatus ?? new List<dynamic>());
+    decimal statusMax = 0;
+    foreach (var s in statusRows)
+        if ((int)s.Count > statusMax) statusMax = (int)s.Count;
+    if (statusMax <= 0) statusMax = 1;
+
+    string fmtMoney(decimal v) => string.Format(System.Globalization.CultureInfo.GetCultureInfo("tr-TR"), "{0:N2}", v);
+
+    // ✅ Durum çeviri
+    string TrStatus(string s) => (s ?? "") switch
+    {
+        "Pending" => "Beklemede",
+        "Paid" => "Ödendi",
+        "Shipped" => "Kargoda",
+        "Cancelled" => "İptal",
+        _ => s
+    };
+}
+
+<style>
+    :root{
+        --bg:#f6f7fb;
+        --card:#ffffff;
+        --text:#0f172a;
+        --muted:#6b7280;
+        --bd:#e5e7eb;
+        --pri:#5D12D2;
+        --pri2:#7b3ff0;
+        --good:#16a34a;
+        --warn:#f59e0b;
+        --bad:#e11d48;
+        --shadow2:0 8px 20px rgba(15,23,42,.08);
+        --r:18px;
+    }
+    *{box-sizing:border-box}
+    a{color:var(--pri);text-decoration:none}
+    .wrap{max-width:1400px;margin:0 auto;display:grid;gap:14px}
+    .grid6{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}
+    .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+    .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .card{
+        background:var(--card);
+        border:1px solid var(--bd);
+        border-radius:var(--r);
+        box-shadow:var(--shadow2);
+        overflow:hidden;
+    }
+    .head{
+        padding:12px 14px;
+        border-bottom:1px solid var(--bd);
+        display:flex;justify-content:space-between;align-items:center;
+        background:linear-gradient(180deg,#fff,#fbfbff);
+    }
+    .head b{font-weight:950}
+    .body{padding:14px}
+    .k{font-size:12px;color:var(--muted)}
+    .v{font-size:22px;font-weight:950;margin-top:4px}
+    .mini{font-size:12px;color:var(--muted);margin-top:6px}
+    .btn{
+        border:1px solid var(--bd);
+        background:#fff;
+        padding:8px 10px;border-radius:12px;
+        font-weight:750;font-size:13px;
+        display:inline-flex;align-items:center;gap:8px;
+    }
+    .btn.pri{
+        background:linear-gradient(180deg,var(--pri2),var(--pri));
+        border-color:transparent;color:#fff;
+        box-shadow:0 14px 20px rgba(93,18,210,.16);
+    }
+    .badge{display:inline-flex;gap:6px;align-items:center;font-size:12px;border-radius:999px;padding:6px 10px;border:1px solid var(--bd);background:#fff;color:var(--muted)}
+    .dot{width:8px;height:8px;border-radius:999px;background:var(--muted)}
+    .dot.good{background:var(--good)}
+    .dot.warn{background:var(--warn)}
+    .dot.bad{background:var(--bad)}
+
+    /* Bar list */
+    .barRow{display:grid;grid-template-columns:1fr 70px;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--bd)}
+    .barRow:last-child{border-bottom:0}
+    .barName{min-width:0}
+    .barName .t{font-weight:850;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .barName .s{font-size:12px;color:var(--muted);margin-top:2px}
+    .bar{
+        height:10px;border-radius:999px;background:#eef2ff;overflow:hidden;border:1px solid #e6e8f5
+    }
+    .bar > i{display:block;height:100%;background:linear-gradient(90deg,var(--pri),var(--pri2));border-radius:999px}
+    .rightNum{text-align:right;font-weight:900;font-size:13px}
+
+    /* Trend */
+    .trend{display:flex;gap:8px;align-items:flex-end;height:54px}
+    .trend span{
+        flex:1;background:#eef2ff;border:1px solid #e6e8f5;border-radius:10px;
+        position:relative;overflow:hidden;
+    }
+    .trend span i{
+        position:absolute;left:0;bottom:0;right:0;
+        background:linear-gradient(180deg,var(--pri2),var(--pri));
+        border-radius:10px;
+        height:20%;
+    }
+
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .split{display:flex;gap:10px;align-items:center;justify-content:space-between}
+    .table{width:100%;border-collapse:collapse}
+    .table th,.table td{padding:10px 0;border-bottom:1px solid var(--bd);text-align:left;font-size:13px}
+    .table th{color:var(--muted);font-size:12px;font-weight:850}
+    .table tr:last-child td{border-bottom:0}
+    .muted{color:var(--muted)}
+
+    @@media(max-width:1200px){.grid6{grid-template-columns:repeat(3,1fr)}}
+    @@media(max-width:900px){.grid6{grid-template-columns:repeat(2,1fr)}.grid3{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}}
+</style>
+
+<div class="wrap">
+
+    <!-- KPI ŞERİDİ -->
+    <div class="grid6">
+        <div class="card">
+            <div class="head"><b>Toplam Ürün</b><a class="btn" href="/Admin/Product">Git</a></div>
+            <div class="body">
+                <div class="v">@Model.Products</div>
+                <div class="mini">Model kodu çeşitliliği: <b>@Model.ModelCodes</b></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="head">
+                <b>Toplam Stok</b>
+                <span class="badge">
+                    <span class="dot @(Model.OutOfStockRows>0 ? "bad" : (Model.LowStockRows>0 ? "warn" : "good"))"></span>
+                    Stok Durumu
+                </span>
+            </div>
+            <div class="body">
+                <div class="v">@Model.TotalStock</div>
+                <div class="mini">Stok satırı: <b>@Model.StockRows</b> • Ortalama: <b>@fmtMoney((decimal)Model.AvgStockPerSize)</b></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="head"><b>Kategoriler</b><a class="btn" href="/Admin/Category">Git</a></div>
+            <div class="body">
+                <div class="v">@Model.Categories</div>
+                <div class="mini">Alt kategori: <b>@Model.SubCategories</b></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="head"><b>Cihazlar</b><a class="btn" href="/Admin/Device">Git</a></div>
+            <div class="body">
+                <div class="v">@Model.Devices</div>
+                <div class="mini">Cihaza bağlanmamış ürün: <b>@Model.ProductsWithoutDevice</b></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="head"><b>Siparişler</b><a class="btn" href="/Admin/Order">Git</a></div>
+            <div class="body">
+                <div class="v">@Model.Orders</div>
+                <div class="mini">Son 7 gün trendi aşağıda</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="head">
+                <b>Medya</b>
+                <span class="badge">
+                    <span class="dot @(Model.ProductsWithNoImage>0 ? "warn" : "good")"></span>
+                    Görsel
+                </span>
+            </div>
+            <div class="body">
+                <div class="v">@Model.Images</div>
+                <div class="mini">Görselsiz ürün: <b>@Model.ProductsWithNoImage</b></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- HIZLI AKSİYONLAR + FİYAT ÖZETİ -->
+    <div class="grid2">
+        <div class="card">
+            <div class="head">
+                <b>Önemli Aksiyonlar</b>
+                <span class="badge">
+                    <span class="dot @(Model.MissingBarcode+Model.MissingModelCode+Model.MissingCategory+Model.MissingPrice>0 ? "warn" : "good")"></span>
+                    Veri Kalitesi
+                </span>
+            </div>
+            <div class="body">
+                <div class="row">
+                    <span class="badge"><span class="dot @(Model.OutOfStockRows>0 ? "bad" : "good")"></span>Stok 0: <b>@Model.OutOfStockRows</b></span>
+                    <span class="badge"><span class="dot @(Model.LowStockRows>0 ? "warn" : "good")"></span>Düşük stok (≤5): <b>@Model.LowStockRows</b></span>
+                </div>
+
+                <div style="height:10px"></div>
+
+                <div class="row">
+                    <span class="badge"><span class="dot @(Model.MissingBarcode>0 ? "warn" : "good")"></span>Eksik barkod: <b>@Model.MissingBarcode</b></span>
+                    <span class="badge"><span class="dot @(Model.MissingModelCode>0 ? "warn" : "good")"></span>Eksik model kodu: <b>@Model.MissingModelCode</b></span>
+                    <span class="badge"><span class="dot @(Model.MissingPrice>0 ? "warn" : "good")"></span>Fiyat ≤ 0: <b>@Model.MissingPrice</b></span>
+                </div>
+
+                <div style="height:12px"></div>
+
+                <div class="split">
+                    <div class="mini">Hızlı düzenleme için ilgili bölüme git.</div>
+                    <a class="btn pri" href="/Admin/Product">Ürünleri Yönet</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="head"><b>Fiyat Analizi</b><span class="badge"><span class="dot good"></span>Özet</span></div>
+            <div class="body">
+                <div class="grid3">
+                    <div>
+                        <div class="k">Ortalama Fiyat</div>
+                        <div class="v">₺ @fmtMoney((decimal)Model.AvgPrice)</div>
+                    </div>
+                    <div>
+                        <div class="k">Min</div>
+                        <div class="v">₺ @fmtMoney((decimal)Model.MinPrice)</div>
+                    </div>
+                    <div>
+                        <div class="k">Max</div>
+                        <div class="v">₺ @fmtMoney((decimal)Model.MaxPrice)</div>
+                    </div>
+                </div>
+                <div style="height:12px"></div>
+                <div class="mini">Bu değerler ürün tablosundaki fiyatlara göre hesaplanır.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SİPARİŞ DURUMLARI + 7 GÜNLÜK TREND -->
+    <div class="grid2">
+        <div class="card">
+            <div class="head"><b>Sipariş Durumları</b><a class="btn" href="/Admin/Order">Detay</a></div>
+            <div class="body">
+                @if (!statusRows.Any())
+                {
+                    <div class="mini">Henüz sipariş yok.</div>
+                }
+                else
+                {
+                    foreach (var s in statusRows.OrderByDescending(x => (int)x.Count))
+                    {
+                        var w = ((int)s.Count / statusMax) * 100m;
+                        <div class="barRow">
+                            <div class="barName">
+                                <div class="t">@TrStatus((string)s.Status)</div>
+                                <div class="s">Toplam tutar: ₺ @fmtMoney((decimal)s.Total)</div>
+                                <div class="bar"><i style="width:@w%"></i></div>
+                            </div>
+                            <div class="rightNum">@s.Count</div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="head"><b>Son 7 Gün (Ciro)</b><span class="badge"><span class="dot good"></span>Trend</span></div>
+            <div class="body">
+                @if (!last7List.Any())
+                {
+                    <div class="mini">Son 7 günde veri yok.</div>
+                }
+                else
+                {
+                    <div class="trend" title="Son 7 gün">
+                        @foreach (var d in last7List)
+                        {
+                            var h = ((decimal)d.Total / max7) * 100m;
+                            if (h < 6) h = 6;
+                            <span title="@(((DateTime)d.Day).ToString("dd.MM")) • ₺ @fmtMoney((decimal)d.Total) • @d.Count sipariş">
+                                <i style="height:@h%"></i>
+                            </span>
+                        }
+                    </div>
+
+                    <div style="height:10px"></div>
+
+                    <table class="table">
+                        <thead>
+                            <tr><th>Gün</th><th>Sipariş</th><th style="text-align:right">Tutar</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var d in last7List)
+                            {
+                                <tr>
+                                    <td>@(((DateTime)d.Day).ToString("dd.MM.yyyy"))</td>
+                                    <td>@d.Count</td>
+                                    <td style="text-align:right">₺ @fmtMoney((decimal)d.Total)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- TOP LİSTELER -->
+    <div class="grid3">
+
+        <div class="card">
+            <div class="head"><b>En Yoğun Kategoriler</b><a class="btn" href="/Admin/Category">Git</a></div>
+            <div class="body">
+                @foreach (var c in (IEnumerable<dynamic>)Model.TopCategories)
+                {
+                    <div class="barRow">
+                        <div class="barName">
+                            <div class="t">@c.Name</div>
+                            <div class="bar">
+                                @{
+                                    var w = Model.Products == 0 ? 0m : ((decimal)c.ProductCount / (decimal)Model.Products) * 100m;
+                                }
+                                <i style="width:@w%"></i>
+                            </div>
+                        </div>
+                        <div class="rightNum">@c.ProductCount</div>
+                    </div>
+                }
+                @if (((IEnumerable<dynamic>)Model.TopCategories).Count() == 0)
+                {<div class="mini">Kategori verisi yok.</div>}
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="head"><b>Cihaza Bağlı Ürünler</b><a class="btn" href="/Admin/Device">Git</a></div>
+            <div class="body">
+                @foreach (var d in (IEnumerable<dynamic>)Model.TopDevices)
+                {
+                    <div class="barRow">
+                        <div class="barName">
+                            <div class="t">@d.Name</div>
+                            <div class="s">Bağlı ürün</div>
+                            <div class="bar">
+                                @{
+                                    var w = Model.Products == 0 ? 0m : ((decimal)d.ProductCount / (decimal)Model.Products) * 100m;
+                                }
+                                <i style="width:@w%"></i>
+                            </div>
+                        </div>
+                        <div class="rightNum">@d.ProductCount</div>
+                    </div>
+                }
+                @if (((IEnumerable<dynamic>)Model.TopDevices).Count() == 0)
+                {<div class="mini">Cihaz verisi yok.</div>}
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="head"><b>Model Kodu Grupları</b><a class="btn" href="/Admin/Product">Git</a></div>
+            <div class="body">
+                @foreach (var m in (IEnumerable<dynamic>)Model.TopModelCodes)
+                {
+                    <div class="barRow">
+                        <div class="barName">
+                            <div class="t">@m.ModelCode</div>
+                            <div class="s">Aynı model koduna sahip ürün</div>
+                            <div class="bar">
+                                @{
+                                    var w = Model.Products == 0 ? 0m : ((decimal)m.Count / (decimal)Model.Products) * 100m;
+                                }
+                                <i style="width:@w%"></i>
+                            </div>
+                        </div>
+                        <div class="rightNum">@m.Count</div>
+                    </div>
+                }
+                @if (((IEnumerable<dynamic>)Model.TopModelCodes).Count() == 0)
+                {<div class="mini">Model kodu verisi yok.</div>}
+            </div>
+        </div>
+
+    </div>
+
+    <!-- STOKTA EN BÜYÜK ÜRÜNLER -->
+    <div class="card">
+        <div class="head"><b>Stok Taşıyan Ürünler</b><a class="btn" href="/Admin/Product">Ürünler</a></div>
+        <div class="body">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Ürün</th>
+                        <th>Model</th>
+                        <th>Boyut Satırı</th>
+                        <th style="text-align:right">Toplam Stok</th>
+                        <th style="text-align:right"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in (IEnumerable<dynamic>)Model.TopStockProducts)
+                    {
+                        <tr>
+                            <td style="font-weight:850">@p.Title</td>
+                            <td class="muted">@p.ModelCode</td>
+                            <td class="muted">@p.SizeCount</td>
+                            <td style="text-align:right;font-weight:900">@p.TotalStock</td>
+                            <td style="text-align:right">
+                                <a class="btn" href="/Admin/Product?editId=@p.Id">Düzenle</a>
+                            </td>
+                        </tr>
+                    }
+                    @if (((IEnumerable<dynamic>)Model.TopStockProducts).Count() == 0)
+                    {
+                        <tr><td colspan="5" class="muted">Stok verisi yok.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
