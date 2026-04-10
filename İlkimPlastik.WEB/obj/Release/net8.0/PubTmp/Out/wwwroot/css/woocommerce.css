@@ -208,13 +208,14 @@
     position: absolute;
     text-align: center;
     margin: 0;
-    background-color: #ff7a5f;
-    color: #fff;
+    background-color: #fff;
+    color: #1daaa3;
+    border: 1px solid #1daaa3;
     font-size: 11px;
-	letter-spacing: 0.77px;
+    letter-spacing: 0.77px;
     -webkit-font-smoothing: antialiased;
-	text-transform: uppercase;
-	font-family: 'latosemibold';
+    text-transform: uppercase;
+    font-family: 'latosemibold';
 }
 .woocommerce ul.products li.product .onsale {
     top: 15px;
@@ -456,7 +457,7 @@
 	padding: 0 5px;
 }
 .woocommerce .amount{
-	color: #1daaa3;
+	color: #1daaa3 !important;
     font-size: 16px;
 	font-family: 'Poppins', sans-serif;
 	font-weight: 600;
@@ -815,7 +816,7 @@
 /* - max-width: 991 */
 @media (max-width: 991px) {
 	.woocommerce ul.products li.product {
-		max-width: 270px;
+		max-width: 400px;
 		/*display: block;*/
 		margin: 0 auto 30px;
 	}

@@ -1,0 +1,299 @@
+﻿@{
+    ViewData["Title"] = "Sipariş Başarılı";
+    var orderId = TempData["OrderId"]?.ToString();
+}
+
+<section class="payment-result-page success-page">
+    <div class="container">
+        <div class="result-card">
+            <div class="result-icon success-icon">
+                <span>✓</span>
+            </div>
+
+            <div class="result-badge success-badge">
+                Ödeme Başarılı
+            </div>
+
+            <h1 class="result-title">
+                Siparişiniz başarıyla oluşturuldu
+            </h1>
+
+            <p class="result-text">
+                Ödemeniz başarıyla alındı. Siparişiniz tarafımıza ulaşmıştır ve en kısa sürede işleme alınacaktır.
+            </p>
+
+            @if (!string.IsNullOrWhiteSpace(orderId))
+            {
+                <div class="result-info-box">
+                    <div class="info-label">Sipariş Numaranız</div>
+                    <div class="info-value">#@orderId</div>
+                </div>
+            }
+
+            <div class="result-steps">
+                <div class="step-item active">
+                    <div class="step-dot"></div>
+                    <div class="step-content">
+                        <strong>Sipariş Alındı</strong>
+                        <span>Siparişiniz sisteme başarıyla kaydedildi.</span>
+                    </div>
+                </div>
+
+                <div class="step-item">
+                    <div class="step-dot"></div>
+                    <div class="step-content">
+                        <strong>Hazırlık Süreci</strong>
+                        <span>Ürünleriniz paketleme ve hazırlık sürecine alınacaktır.</span>
+                    </div>
+                </div>
+
+                <div class="step-item">
+                    <div class="step-dot"></div>
+                    <div class="step-content">
+                        <strong>Kargolama</strong>
+                        <span>Siparişiniz kargoya verildiğinde sizinle bilgi paylaşılacaktır.</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="result-actions">
+                <a href="/" class="btn-result btn-primary-result">
+                    Anasayfaya Dön
+                </a>
+
+                <a href="/products" class="btn-result btn-light-result">
+                    Alışverişe Devam Et
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+    .payment-result-page {
+        min-height: calc(100vh - 120px);
+        padding: 80px 0;
+        background: radial-gradient(circle at top left, rgba(34,197,94,.08), transparent 35%), radial-gradient(circle at bottom right, rgba(59,130,246,.08), transparent 35%), #f8fafc;
+        display: flex;
+        align-items: center;
+    }
+
+        .payment-result-page .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+
+    .result-card {
+        background: #fff;
+        border-radius: 28px;
+        padding: 48px 36px;
+        box-shadow: 0 20px 60px rgba(15, 23, 42, 0.10);
+        border: 1px solid rgba(226,232,240,.9);
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+    }
+
+        .result-card::before {
+            content: "";
+            position: absolute;
+            inset: 0 0 auto 0;
+            height: 6px;
+            background: linear-gradient(90deg, #22c55e, #16a34a);
+        }
+
+    .result-icon {
+        width: 96px;
+        height: 96px;
+        border-radius: 50%;
+        margin: 0 auto 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 44px;
+        font-weight: 700;
+    }
+
+    .success-icon {
+        background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+        color: #15803d;
+        box-shadow: 0 12px 30px rgba(34,197,94,.20);
+    }
+
+    .result-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 18px;
+        border-radius: 999px;
+        font-size: 14px;
+        font-weight: 700;
+        margin-bottom: 18px;
+    }
+
+    .success-badge {
+        background: #ecfdf3;
+        color: #15803d;
+        border: 1px solid #bbf7d0;
+    }
+
+    .result-title {
+        font-size: 36px;
+        line-height: 1.2;
+        font-weight: 800;
+        color: #0f172a;
+        margin-bottom: 14px;
+    }
+
+    .result-text {
+        max-width: 650px;
+        margin: 0 auto 26px;
+        font-size: 17px;
+        line-height: 1.75;
+        color: #475569;
+    }
+
+    .result-info-box {
+        max-width: 360px;
+        margin: 0 auto 34px;
+        background: #f8fafc;
+        border: 1px dashed #cbd5e1;
+        border-radius: 18px;
+        padding: 18px 20px;
+    }
+
+    .info-label {
+        font-size: 13px;
+        color: #64748b;
+        margin-bottom: 6px;
+    }
+
+    .info-value {
+        font-size: 28px;
+        font-weight: 800;
+        color: #0f172a;
+        letter-spacing: 1px;
+    }
+
+    .result-steps {
+        margin: 10px auto 34px;
+        max-width: 680px;
+        text-align: left;
+        display: grid;
+        gap: 16px;
+    }
+
+    .step-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
+        padding: 18px;
+        border: 1px solid #e2e8f0;
+        border-radius: 18px;
+        background: #fff;
+    }
+
+        .step-item.active {
+            border-color: #86efac;
+            background: #f0fdf4;
+        }
+
+    .step-dot {
+        width: 14px;
+        height: 14px;
+        min-width: 14px;
+        border-radius: 50%;
+        background: #cbd5e1;
+        margin-top: 6px;
+    }
+
+    .step-item.active .step-dot {
+        background: #22c55e;
+        box-shadow: 0 0 0 6px rgba(34,197,94,.12);
+    }
+
+    .step-content strong {
+        display: block;
+        color: #0f172a;
+        font-size: 16px;
+        margin-bottom: 4px;
+    }
+
+    .step-content span {
+        color: #64748b;
+        font-size: 14px;
+        line-height: 1.6;
+    }
+
+    .result-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 14px;
+    }
+
+    .btn-result {
+        min-width: 220px;
+        padding: 15px 24px;
+        border-radius: 14px;
+        text-decoration: none;
+        font-weight: 700;
+        font-size: 15px;
+        transition: .25s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .btn-primary-result {
+        background: linear-gradient(135deg, #16a34a, #22c55e);
+        color: #fff;
+        box-shadow: 0 12px 28px rgba(34,197,94,.22);
+    }
+
+        .btn-primary-result:hover {
+            color: #fff;
+            transform: translateY(-2px);
+        }
+
+    .btn-light-result {
+        background: #fff;
+        color: #0f172a;
+        border: 1px solid #dbe2ea;
+    }
+
+        .btn-light-result:hover {
+            color: #0f172a;
+            transform: translateY(-2px);
+            border-color: #94a3b8;
+        }
+
+    @@media (max-width: 767.98px) {
+        .payment-result-page {
+            padding: 40px 0;
+        }
+
+        .result-card {
+            padding: 32px 20px;
+            border-radius: 22px;
+        }
+
+        .result-title {
+            font-size: 28px;
+        }
+
+        .result-text {
+            font-size: 15px;
+        }
+
+        .btn-result {
+            width: 100%;
+            min-width: auto;
+        }
+
+        .info-value {
+            font-size: 24px;
+        }
+    }
+</style>

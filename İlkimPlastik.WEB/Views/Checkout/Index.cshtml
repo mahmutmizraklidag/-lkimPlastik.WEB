@@ -743,9 +743,13 @@
         </div>
 
         @if (!string.IsNullOrWhiteSpace(ok))
-        {<div class="alert alert-ok">@ok</div>}
+        {
+            <div class="alert alert-ok">@ok</div>
+        }
         @if (!string.IsNullOrWhiteSpace(err))
-        {<div class="alert alert-er">@err</div>}
+        {
+            <div class="alert alert-er">@err</div>
+        }
 
         <div class="grid">
 
@@ -949,7 +953,9 @@
                                         <div class="line-title">
                                             @it.Title
                                             @if (it.OfferRate > 0)
-                                            {<span class="disc-badge">% @it.OfferRate İndirim</span>}
+                                            {
+                                                <span class="disc-badge">% @it.OfferRate İndirim</span>
+                                            }
                                         </div>
 
                                         <div class="line-sub">Beden: @it.SizeName</div>
@@ -958,14 +964,18 @@
                                             Birim:
                                             <span class="js-unit">₺ @Money(it.UnitPrice)</span>
                                             @if (it.OfferRate > 0)
-                                            {<del class="price-del js-oldunit">₺ @Money(it.OldUnitPrice)</del>}
+                                            {
+                                                <del class="price-del js-oldunit">₺ @Money(it.OldUnitPrice)</del>
+                                            }
                                         </div>
 
                                         <div class="line-price">
                                             <span class="kicker">Tutar:</span>
                                             <b class="js-line">₺ @Money(it.LineTotal)</b>
                                             @if (it.OfferRate > 0)
-                                            {<del class="price-del js-oldline">₺ @Money(it.OldLineTotal)</del>}
+                                            {
+                                                <del class="price-del js-oldline">₺ @Money(it.OldLineTotal)</del>
+                                            }
                                         </div>
                                     </div>
 
@@ -1088,7 +1098,7 @@
 </main>
 
 <script>
-    (function () {
+    (function() {
         // ===== helpers =====
         function getAntiToken() {
             var el = document.querySelector('input[name="__RequestVerificationToken"]');
@@ -1107,7 +1117,7 @@
             refreshBtn.classList.add('isOpen');
         }
         if (refreshBtn) {
-            refreshBtn.addEventListener('click', function (e) {
+            refreshBtn.addEventListener('click', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
                 window.location.reload();
@@ -1119,7 +1129,7 @@
             var rows = document.querySelectorAll('#lines .line');
             var subBefore = 0, subAfter = 0;
 
-            rows.forEach(function (r) {
+            rows.forEach(function(r) {
                 var unit = parseFloat(r.getAttribute('data-unit') || '0');
                 var oldUnit = parseFloat(r.getAttribute('data-oldunit') || '0');
 
@@ -1181,7 +1191,7 @@
             if (!card) return;
 
             var cards = addrGrid ? addrGrid.querySelectorAll('.addr-card') : [];
-            cards.forEach(function (c) {
+            cards.forEach(function(c) {
                 c.classList.remove('sel');
                 c.setAttribute('aria-pressed', 'false');
             });
@@ -1207,8 +1217,8 @@
             if (addrPreview && apText) {
                 apText.innerHTML =
                     `<div><b>${name} ${surname}</b> · ${phone}</div>
-                     <div style="margin-top:6px;">${city} / ${district} ${post ? ('- ' + post) : ''}</div>
-                     <div style="margin-top:6px;">${details}</div>`;
+                         <div style="margin-top:6px;">${city} / ${district} ${post ? ('- ' + post) : ''}</div>
+                         <div style="margin-top:6px;">${details}</div>`;
                 addrPreview.style.display = 'block';
             }
 
@@ -1216,12 +1226,12 @@
         }
 
         if (addrGrid) {
-            addrGrid.addEventListener('click', function (e) {
+            addrGrid.addEventListener('click', function(e) {
                 var card = e.target.closest('.addr-card');
                 if (!card) return;
                 setAddrSelected(card);
             });
-            addrGrid.addEventListener('keydown', function (e) {
+            addrGrid.addEventListener('keydown', function(e) {
                 if (e.key !== 'Enter' && e.key !== ' ') return;
                 var card = e.target.closest('.addr-card');
                 if (!card) return;
@@ -1265,8 +1275,8 @@
             return ok;
         }
 
-        if (agDist) agDist.addEventListener('change', function () { paintAgreeState(); validateAll(); });
-        if (agRet) agRet.addEventListener('change', function () { paintAgreeState(); validateAll(); });
+        if (agDist) agDist.addEventListener('change', function() { paintAgreeState(); validateAll(); });
+        if (agRet) agRet.addEventListener('change', function() { paintAgreeState(); validateAll(); });
 
         // ===== card form validation =====
         var payBtn = document.getElementById('payBtn');
@@ -1365,21 +1375,21 @@
         window.setAddrSelected = setAddrSelected;
 
         if (cardNo) {
-            cardNo.addEventListener('input', function () {
+            cardNo.addEventListener('input', function() {
                 cardNo.value = formatCardNumber(cardNo.value);
                 validateAll();
             });
             cardNo.addEventListener('blur', validateAll);
         }
         if (exp) {
-            exp.addEventListener('input', function () {
+            exp.addEventListener('input', function() {
                 exp.value = formatExp(exp.value);
                 validateAll();
             });
             exp.addEventListener('blur', validateAll);
         }
         if (cvv) {
-            cvv.addEventListener('input', function () {
+            cvv.addEventListener('input', function() {
                 cvv.value = onlyDigits(cvv.value).slice(0, 4);
                 validateAll();
             });
@@ -1391,7 +1401,7 @@
         }
 
         if (payForm && payBtn) {
-            payForm.addEventListener('submit', function (e) {
+            payForm.addEventListener('submit', function(e) {
                 if (!validateAll()) { e.preventDefault(); return false; }
                 payBtn.disabled = true;
                 payBtn.textContent = 'Sipariş oluşturuluyor...';
@@ -1429,7 +1439,7 @@
             validateAll();
         }
 
-        document.addEventListener('click', function (e) {
+        document.addEventListener('click', function(e) {
             var row = e.target.closest && e.target.closest('#lines .line');
             if (!row) return;
 
@@ -1454,7 +1464,7 @@
 
 <script>
     /* Quick Address v2 + tam client validation */
-    (function () {
+    (function() {
         var openBtn = document.getElementById('btnAddAddr');
         var bd = document.getElementById('qa2Backdrop');
         var panel = bd ? bd.querySelector('.qa2-panel') : null;
@@ -1483,11 +1493,11 @@
             hideErr(); hideOk();
             if (form) {
                 form.reset();
-                form.querySelectorAll('.is-invalid,.is-valid').forEach(function (x) {
+                form.querySelectorAll('.is-invalid,.is-valid').forEach(function(x) {
                     x.classList.remove('is-invalid', 'is-valid');
                 });
             }
-            setTimeout(function () {
+            setTimeout(function() {
                 var first = bd.querySelector('input[name="Name"]');
                 if (first) first.focus();
             }, 10);
@@ -1504,9 +1514,9 @@
         if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
 
         if (bd) {
-            bd.addEventListener('click', function (e) { if (e.target === bd) closeModal(); });
-            document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && bd.classList.contains('qa2-open')) closeModal(); });
-            if (panel) panel.addEventListener('click', function (e) { e.stopPropagation(); });
+            bd.addEventListener('click', function(e) { if (e.target === bd) closeModal(); });
+            document.addEventListener('keydown', function(e) { if (e.key === 'Escape' && bd.classList.contains('qa2-open')) closeModal(); });
+            if (panel) panel.addEventListener('click', function(e) { e.stopPropagation(); });
         }
 
         function validateQa2Form() {
@@ -1515,7 +1525,7 @@
 
             var ok = true;
             var required = form.querySelectorAll('[required]');
-            required.forEach(function (el) {
+            required.forEach(function(el) {
                 var v = String(el.value || '').trim();
                 var valid = v.length > 0;
                 el.classList.remove('is-valid', 'is-invalid');
@@ -1528,7 +1538,7 @@
         }
 
         if (form) {
-            form.addEventListener('input', function (e) {
+            form.addEventListener('input', function(e) {
                 var el = e.target;
                 if (!el) return;
                 var isReq = el.hasAttribute('required');
@@ -1540,7 +1550,7 @@
         }
 
         if (form) {
-            form.addEventListener('submit', async function (ev) {
+            form.addEventListener('submit', async function(ev) {
                 ev.preventDefault();
 
                 if (!validateQa2Form()) return;
@@ -1574,12 +1584,12 @@
 
                         var pc = data.address.postCode ? ('- ' + data.address.postCode) : '';
                         card.innerHTML = `
-                        <span class="addr-badge">Seçili</span>
-                        <div class="addr-name">${(data.address.name || '')} ${(data.address.surname || '')}</div>
-                        <div class="addr-meta"><span class="muted">Telefon:</span> ${(data.address.phone || '')}</div>
-                        <div class="addr-meta"><span class="muted">Konum:</span> ${(data.address.city || '')} / ${(data.address.district || '')} ${pc}</div>
-                        <div class="addr-meta"><span class="muted">Adres:</span> ${(data.address.details || '')}</div>
-                    `;
+                            <span class="addr-badge">Seçili</span>
+                            <div class="addr-name">${(data.address.name || '')} ${(data.address.surname || '')}</div>
+                            <div class="addr-meta"><span class="muted">Telefon:</span> ${(data.address.phone || '')}</div>
+                            <div class="addr-meta"><span class="muted">Konum:</span> ${(data.address.city || '')} / ${(data.address.district || '')} ${pc}</div>
+                            <div class="addr-meta"><span class="muted">Adres:</span> ${(data.address.details || '')}</div>
+                        `;
 
                         addrGrid.prepend(card);
 

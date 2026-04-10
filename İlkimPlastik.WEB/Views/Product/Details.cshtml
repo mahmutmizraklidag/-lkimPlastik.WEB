@@ -59,112 +59,285 @@
     var firstAvailableSize = sizesAll.FirstOrDefault(x => x.StockCount > 0);
     var defaultSizeId = firstAvailableSize?.Id ?? 0;
     var defaultStock = firstAvailableSize?.StockCount ?? 0;
+
+    var totalStock = sizesAll.Sum(x => x.StockCount);
 }
 
 <style>
-    .no-image {
-        width: 100%;
-        height: 360px;
-        background: #f4f4f4;
-        display: flex;
+    .product-detail-page {
+        position: relative;
+    }
+
+        .product-detail-page .section-padding {
+            padding: 35px 0;
+        }
+
+    .detail-shell {
+        display: grid;
+        grid-template-columns: minmax(0, 1.05fr) minmax(340px, 0.95fr);
+        gap: 28px;
+        align-items: start;
+    }
+
+    @@media (max-width: 991px) {
+        .detail-shell {
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+    }
+
+    .detail-card,
+    .detail-info-card,
+    .detail-tab-card,
+    .alt-list-card,
+    .latest-card-wrap {
+        background: #fff;
+        border: 1px solid #eef0f3;
+        border-radius: 22px;
+        box-shadow: 0 12px 34px rgba(16, 24, 40, .06);
+    }
+
+    .detail-card {
+        padding: 20px;
+    }
+
+    .detail-info-card {
+        padding: 22px;
+        position: sticky;
+        top: 24px;
+    }
+
+    @@media (max-width: 991px) {
+        .detail-info-card {
+            position: static;
+        }
+    }
+
+    .detail-breadcrumb-mini {
+        display: inline-flex;
         align-items: center;
-        justify-content: center;
-        color: #777;
-        font-size: 14px;
+        gap: 8px;
+        padding: 7px 12px;
+        border-radius: 999px;
+        background: #f7f9fb;
+        border: 1px solid #edf1f5;
+        font-size: 12px;
+        font-weight: 800;
+        color: #667085;
+        margin-bottom: 14px;
+    }
+
+    .detail-title {
+        margin: 0 0 12px;
+        font-size: 34px;
+        line-height: 1.15;
+        font-weight: 900;
+        color: #101828;
+        letter-spacing: -.02em;
+    }
+
+    @@media (max-width: 767px) {
+        .detail-title {
+            font-size: 26px;
+        }
+    }
+
+    .detail-meta-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 16px;
+    }
+
+    .detail-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 38px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: #f8fafc;
+        border: 1px solid #eef2f6;
+        color: #475467;
+        font-size: 12px;
+        font-weight: 800;
+    }
+
+        .detail-pill strong {
+            color: #101828;
+        }
+
+    .detail-price-box {
+        padding: 16px 18px;
+        background: linear-gradient(180deg, #fcfcfd 0%, #f8fafc 100%);
+        border: 1px solid #eef2f6;
+        border-radius: 18px;
+        margin-bottom: 18px;
+    }
+
+    .price-wrap {
+        display: flex;
+        align-items: baseline;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin: 0;
+    }
+
+        .price-wrap .amount {
+            font-weight: 900;
+            font-size: 30px;
+            line-height: 1;
+            color: #101828;
+        }
+
+        .price-wrap del {
+            opacity: .6;
+            font-size: 15px;
+            color: #667085;
+        }
+
+    .detail-price-note {
+        margin-top: 8px;
+        font-size: 12px;
+        color: #667085;
         font-weight: 700;
-        border-radius: 14px;
+    }
+
+    .detail-section-title {
+        font-size: 14px;
+        font-weight: 900;
+        color: #101828;
+        margin: 0 0 10px;
+        letter-spacing: .02em;
+    }
+
+    .detail-media {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+        .detail-media .main-media {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            background: linear-gradient(180deg, #ffffff 0%, #fafbfc 100%);
+            border: 1px solid #eef0f3;
+            border-radius: 20px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+            .detail-media .main-media img {
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+                display: block;
+                padding: 22px;
+                background: transparent !important;
+                transform: none !important;
+                transition: none !important;
+                filter: none !important;
+            }
+
+    .thumb-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
     }
 
     .thumb-img {
-        width: 70px;
-        height: 70px;
+        width: 78px;
+        height: 78px;
         object-fit: cover;
         cursor: pointer;
-        border-radius: 10px;
-        border: 1px solid #eee;
-        margin-right: 6px;
-        margin-bottom: 6px;
+        border-radius: 14px;
+        border: 1px solid #e8edf2;
+        background: #fff;
+        padding: 4px;
+        margin: 0;
+        transition: .18s ease;
     }
 
-    /* ========= Badge genel: sayfanın köşesine kaçmasın ========= */
-    .product-img,
-    .detail-media,
-    .detail-media .main-media,
-    .products .product .product-img {
-        position: relative !important;
+        .thumb-img:hover {
+            border-color: #d0d5dd;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(16,24,40,.08);
+        }
+
+    .no-image {
+        width: 100%;
+        height: 100%;
+        min-height: 320px;
+        background: #f6f7f8;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #667085;
+        font-size: 14px;
+        font-weight: 800;
+        border-radius: 16px;
+        text-align: center;
+        padding: 20px;
     }
 
     .onsale {
         position: absolute !important;
-        top: 12px !important;
-        left: 12px !important;
+        top: 16px !important;
+        left: 16px !important;
         z-index: 30 !important;
-        display: inline-block !important;
-        padding: 4px 10px !important;
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        min-height: 34px !important;
+        padding: 6px 12px !important;
         border-radius: 999px !important;
-        font-weight: 700 !important;
+        font-weight: 900 !important;
         font-size: 12px !important;
         background: #1daaa3 !important;
         color: #fff !important;
         line-height: 1.2 !important;
         white-space: nowrap !important;
+        box-shadow: 0 10px 20px rgba(29,170,163,.24);
     }
 
-    /* ========= Alternatif kart: badge sağ üstte ========= */
-    .alt-card {
-        border: 1px solid #e5e5e5;
-        padding: 10px;
-        margin-top: 10px;
-        border-radius: 12px;
-        position: relative; /* badge referansı */
+    .detail-divider {
+        height: 1px;
+        background: #edf1f5;
+        margin: 18px 0;
     }
-
-        .alt-card:hover {
-            background: #fafafa;
-        }
-
-        .alt-card .onsale {
-            top: 10px !important;
-            right: 10px !important;
-            left: auto !important;
-            z-index: 40 !important;
-        }
-
-    .price-wrap {
-        display: flex;
-        align-items: baseline;
-        gap: 10px;
-        margin-top: 6px;
-        margin-bottom: 12px;
-        flex-wrap: wrap;
-    }
-
-        .price-wrap .amount {
-            font-weight: 800;
-            font-size: 20px;
-        }
-
-        .price-wrap del {
-            opacity: .65;
-            font-size: 14px;
-        }
 
     .size-box {
         display: flex;
-        gap: 8px;
+        gap: 10px;
         flex-wrap: wrap;
-        margin-top: 10px;
+        margin-top: 0;
     }
 
     .size-item {
-        padding: 7px 12px;
-        border: 1px solid #ccc;
-        border-radius: 10px;
+        min-width: 52px;
+        min-height: 44px;
+        padding: 9px 14px;
+        border: 1px solid #d7dde5;
+        border-radius: 12px;
         font-size: 13px;
         cursor: pointer;
         user-select: none;
         background: #fff;
+        font-weight: 800;
+        color: #101828;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: .18s ease;
     }
+
+        .size-item:hover {
+            border-color: #111;
+            transform: translateY(-1px);
+        }
 
         .size-item.disabled {
             opacity: .35;
@@ -173,30 +346,58 @@
             background: #fafafa;
         }
 
+            .size-item.disabled:hover {
+                transform: none;
+                border-color: #d7dde5;
+            }
+
         .size-item.active {
             border-color: #111;
-            font-weight: 700;
-            background: #f7f7f7;
+            font-weight: 900;
+            background: #f4f6f8;
+            box-shadow: inset 0 0 0 1px #111;
         }
 
+    .qty-row {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 16px;
+    }
+
+    .qty-label {
+        font-size: 14px;
+        font-weight: 900;
+        color: #101828;
+        margin: 0;
+    }
+
     .qty-input {
-        width: 110px;
+        width: 130px;
+        height: 46px;
+        border-radius: 12px;
+        border: 1px solid #d7dde5;
+        box-shadow: none !important;
+        font-weight: 800;
     }
 
     .add-cart-btn {
         width: 100%;
+        min-height: 52px;
         background: #1daaa3;
         color: #fff;
-        padding: 12px;
+        padding: 12px 16px;
         border: 0;
-        border-radius: 8px;
+        border-radius: 14px;
         font-size: 15px;
-        font-weight: 700;
-        margin-top: 12px;
+        font-weight: 900;
+        margin-top: 16px;
         display: flex;
         gap: 10px;
         align-items: center;
         justify-content: center;
+        transition: .18s ease;
+        box-shadow: 0 14px 28px rgba(29,170,163,.22);
     }
 
         .add-cart-btn:hover {
@@ -208,21 +409,23 @@
         .add-cart-btn[disabled] {
             opacity: .65;
             cursor: not-allowed;
+            box-shadow: none;
         }
 
     .notice {
-        padding: 10px 12px;
+        padding: 12px 14px;
         font-size: 13px;
-        border-radius: 10px;
+        border-radius: 12px;
         margin-top: 10px;
-        line-height: 1.45;
+        line-height: 1.5;
         border: 1px solid transparent;
+        font-weight: 700;
     }
 
         .notice.info {
-            background: #f7f7f7;
-            border-color: #e9e9e9;
-            color: #444;
+            background: #f7f8fa;
+            border-color: #e8eaee;
+            color: #475467;
         }
 
         .notice.warn {
@@ -238,28 +441,354 @@
             display: none;
         }
 
+    .summary-desc {
+        margin-top: 16px;
+        color: #475467;
+        font-size: 14px;
+        line-height: 1.8;
+    }
+
+    .alt-list-card {
+        margin-top: 18px;
+        padding: 18px;
+    }
+
+    .alt-list-title {
+        margin: 0 0 12px;
+        font-size: 18px;
+        font-weight: 900;
+        color: #101828;
+    }
+
+    .alt-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .alt-link {
+        display: block;
+        color: inherit;
+        text-decoration: none !important;
+    }
+
+    .alt-card {
+        border: 1px solid #e8edf2;
+        padding: 14px;
+        border-radius: 16px;
+        position: relative;
+        background: #fff;
+        transition: .18s ease;
+    }
+
+        .alt-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(16,24,40,.06);
+            border-color: #dbe3ea;
+            background: #fcfcfd;
+        }
+
+        .alt-card .onsale {
+            top: 12px !important;
+            right: 12px !important;
+            left: auto !important;
+            z-index: 40 !important;
+        }
+
+    .alt-card-inner {
+        display: flex;
+        gap: 12px;
+    }
+
     .alt-img {
-        width: 80px;
-        height: 80px;
+        width: 88px;
+        height: 88px;
         object-fit: cover;
-        border-radius: 12px;
+        border-radius: 14px;
         border: 1px solid #eee;
         display: block;
+        background: #fff;
+        flex: 0 0 88px;
     }
 
-    /* Latest ürün fiyat görünümü */
-    .products .product .price .amount {
-        font-weight: 800;
+    .alt-info {
+        flex: 1;
+        min-width: 0;
     }
 
-    .products .product .price del {
-        margin-left: 8px;
-        opacity: .65;
+    .alt-title {
+        font-weight: 900;
+        color: #101828;
+        line-height: 1.4;
+        margin: 0;
+    }
+
+    .alt-price {
+        margin-top: 8px;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+        .alt-price strong {
+            font-size: 17px;
+            color: #101828;
+        }
+
+        .alt-price del {
+            opacity: .65;
+            color: #667085;
+        }
+
+    .alt-sizes {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+    }
+
+        .alt-sizes .size-item {
+            min-height: 34px;
+            padding: 6px 10px;
+            border-radius: 10px;
+            cursor: default;
+            font-size: 12px;
+        }
+
+    .detail-tab-card {
+        margin-top: 28px;
+        padding: 22px;
+    }
+
+    .product-details-tab .nav.nav-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        border-bottom: 0;
+        margin-bottom: 18px;
+    }
+
+        .product-details-tab .nav.nav-tabs > li {
+            float: none;
+            margin: 0;
+        }
+
+            .product-details-tab .nav.nav-tabs > li > a {
+                margin: 0;
+                border: 1px solid #e7edf3 !important;
+                background: #f8fafc;
+                color: #475467;
+                border-radius: 999px !important;
+                padding: 10px 16px;
+                font-weight: 900;
+                font-size: 13px;
+                line-height: 1.2;
+                transition: .18s ease;
+            }
+
+                .product-details-tab .nav.nav-tabs > li.active > a,
+                .product-details-tab .nav.nav-tabs > li > a:hover,
+                .product-details-tab .nav.nav-tabs > li > a:focus {
+                    background: #1daaa3 !important;
+                    color: #fff !important;
+                    border-color: #1daaa3 !important;
+                }
+
+    .product-details-tab .tab-content {
+        border: 1px solid #edf1f5;
+        border-radius: 18px;
+        padding: 22px;
+        background: #fff;
+    }
+
+        .product-details-tab .tab-content p,
+        .product-details-tab .tab-content li,
+        .product-details-tab .tab-content td,
+        .product-details-tab .tab-content th {
+            color: #475467;
+            line-height: 1.8;
+            font-size: 14px;
+        }
+
+        .product-details-tab .tab-content ul {
+            margin: 0;
+            padding-left: 18px;
+        }
+
+    .product-details-tab .table {
+        margin-bottom: 0;
+    }
+
+        .product-details-tab .table > tbody > tr > td,
+        .product-details-tab .table > tbody > tr > th,
+        .product-details-tab .table > thead > tr > td,
+        .product-details-tab .table > thead > tr > th {
+            border-color: #edf1f5;
+            padding: 12px 10px;
+            vertical-align: middle;
+        }
+
+    .detail-bottom-space {
+        margin-top: 30px;
+    }
+
+    .latest-card-wrap {
+        margin-top: 28px;
+        padding: 22px;
+    }
+
+    .section-header-modern {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 18px;
+        flex-wrap: wrap;
+    }
+
+        .section-header-modern h3 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 900;
+            color: #101828;
+        }
+
+    .section-subtext {
         font-size: 13px;
+        color: #667085;
+        font-weight: 700;
     }
+
+    .products {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 18px;
+    }
+
+    @@media (max-width: 1199px) {
+        .products {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+    }
+
+    @@media (max-width: 991px) {
+        .products {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @@media (max-width: 575px) {
+        .products {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .products .product {
+        width: 100% !important;
+        margin: 0 !important;
+        float: none !important;
+        background: #fff;
+        border: 1px solid #eef0f3;
+        border-radius: 18px;
+        overflow: hidden;
+        box-shadow: 0 10px 28px rgba(16,24,40,.06);
+        transition: transform .18s ease, box-shadow .18s ease;
+    }
+
+        .products .product:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 16px 34px rgba(16,24,40,.08);
+        }
+
+        .products .product > a {
+            position: relative;
+            display: block;
+            text-decoration: none;
+            color: inherit;
+            background: #fff !important;
+        }
+
+        .products .product .product-img {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 300px;
+            background: #fff !important;
+            overflow: hidden;
+            border-bottom: 1px solid #f2f4f7;
+        }
+
+            .products .product .product-img img {
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+                display: block;
+                padding: 18px;
+                background: transparent !important;
+                transform: none !important;
+                transition: none !important;
+                filter: none !important;
+                opacity: 1 !important;
+            }
+
+            .products .product .product-img::before,
+            .products .product .product-img::after,
+            .products .product > a::before,
+            .products .product > a::after {
+                display: none !important;
+                content: none !important;
+            }
+
+        .products .product h3 {
+            margin: 0;
+            padding: 14px 16px 8px;
+            font-size: 16px;
+            line-height: 1.45;
+            min-height: 56px;
+            font-weight: 900;
+            color: #101828;
+        }
+
+        .products .product .price {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 0 16px 16px;
+        }
+
+            .products .product .price .amount {
+                font-weight: 900;
+                font-size: 18px;
+                color: #101828;
+            }
+
+            .products .product .price del {
+                margin-left: 0;
+                opacity: .65;
+                font-size: 13px;
+                color: #667085;
+            }
+
+        .products .product:hover .product-img,
+        .products .product:hover .product-img img,
+        .products .product:hover > a,
+        .products .product:hover > a img {
+            background: #fff !important;
+            transform: none !important;
+            transition: none !important;
+            filter: none !important;
+            opacity: 1 !important;
+        }
 </style>
 
-<main class="site-main page-spacing">
+<main class="site-main page-spacing product-detail-page">
 
     <div class="page-banner product-detail container-fluid no-padding">
         <div class="page-banner-content">
@@ -271,10 +800,11 @@
         <div class="section-padding"></div>
 
         <div class="container">
-            <div class="row">
+
+            <div class="detail-shell">
 
                 <!-- SOL GÖRSEL -->
-                <div class="col-md-6">
+                <div class="detail-card">
                     <div class="detail-media">
                         <div class="main-media">
                             @if (pctOut > 0)
@@ -291,38 +821,69 @@
                                 <div class="no-image">Görsel Yok</div>
                             }
                         </div>
-                    </div>
 
-                    @if (images.Any())
-                    {
-                        <div style="margin-top:10px">
-                            @foreach (var i in images)
-                            {
-                                <img src="@Img(i.Filename)" class="thumb-img" data-src="@Img(i.Filename)" alt="@Model.Title" />
-                            }
-                        </div>
-                    }
+                        @if (images.Any())
+                        {
+                            <div class="thumb-list">
+                                @foreach (var i in images)
+                                {
+                                    <img src="@Img(i.Filename)" class="thumb-img" data-src="@Img(i.Filename)" alt="@Model.Title" />
+                                }
+                            </div>
+                        }
+                    </div>
                 </div>
 
                 <!-- SAĞ BİLGİ -->
-                <div class="col-md-6">
-                    <div class="summary entry-summary">
+                <div>
+                    <div class="detail-info-card">
+                        <div class="detail-breadcrumb-mini">
+                            <i class="fa fa-cube"></i>
+                            <span>Ürün Detayı</span>
+                        </div>
 
-                        <h1>@Model.Title</h1>
+                        <h1 class="detail-title">@Model.Title</h1>
 
-                        <div class="price-wrap">
+                        <div class="detail-meta-row">
+                            <span class="detail-pill">
+                                <i class="fa fa-cubes"></i>
+                                <span>Toplam stok: <strong>@totalStock</strong></span>
+                            </span>
+
+                            @if (sizesAll.Any())
+                            {
+                                <span class="detail-pill">
+                                    <i class="fa fa-tags"></i>
+                                    <span>Beden seçeneği: <strong>@sizesAll.Count</strong></span>
+                                </span>
+                            }
+
                             @if (pctOut > 0)
                             {
-                                <span class="amount">₺ @Money(newPrice)</span>
-                                <del>₺ @Money(oldPrice)</del>
-                            }
-                            else
-                            {
-                                <span class="amount">₺ @Money(Model.Price)</span>
+                                <span class="detail-pill">
+                                    <i class="fa fa-percent"></i>
+                                    <span>İndirim: <strong>% @pctOut</strong></span>
+                                </span>
                             }
                         </div>
 
-                       
+                        <div class="detail-price-box">
+                            <div class="price-wrap">
+                                @if (pctOut > 0)
+                                {
+                                    <span class="amount">₺ @Money(newPrice)</span>
+                                    <del>₺ @Money(oldPrice)</del>
+                                }
+                                else
+                                {
+                                    <span class="amount">₺ @Money(Model.Price)</span>
+                                }
+                            </div>
+
+                            <div class="detail-price-note">
+                                Fiyat bilgisi seçtiğiniz beden ve stok durumuna göre sepete ekleme aşamasında doğrulanır.
+                            </div>
+                        </div>
 
                         <form id="addToCartForm" method="post" action="/cart/add" onsubmit="return validateCart()">
                             @Html.AntiForgeryToken()
@@ -334,7 +895,7 @@
 
                             @if (sizesAll.Any())
                             {
-                                <h4>Beden / Ölçü</h4>
+                                <div class="detail-section-title">Beden / Ölçü Seçimi</div>
 
                                 <div class="size-box" id="sizeBox">
                                     @foreach (var s in sizesAll)
@@ -357,7 +918,6 @@
                                         Bu üründe stoklu beden bulunamadı. Sepete ekleme devre dışı.
                                     </div>
                                 }
-                              
                             }
                             else
                             {
@@ -366,8 +926,8 @@
                                 </div>
                             }
 
-                            <div style="margin-top:12px">
-                                <label><strong>Adet</strong></label>
+                            <div class="qty-row">
+                                <label class="qty-label">Adet</label>
                                 <input type="number" name="quantity" id="qty" class="form-control qty-input" value="1" min="1" />
                                 <div class="notice info" id="qtyHint" style="display:none"></div>
                             </div>
@@ -377,181 +937,194 @@
                             <button type="submit"
                                     id="addCartBtn"
                                     class="add-cart-btn"
-                                    @((!sizesAll.Any() || defaultSizeId == 0) ? "disabled" : "")>
+                                @((!sizesAll.Any() || defaultSizeId == 0) ? "disabled" : "")>
                                 <span id="btnText"><i class="fa fa-shopping-cart"></i> Sepete Ekle</span>
                                 <span id="btnSpinner" style="display:none"><i class="fa fa-spinner fa-spin"></i></span>
                             </button>
                         </form>
 
-                        <!-- ALTERNATİFLER -->
-                        @if (alternatives.Any())
+                        @if (!string.IsNullOrWhiteSpace(Model.Description))
                         {
-                            <h4 style="margin-top:22px">Alternatifler</h4>
+                            <div class="detail-divider"></div>
+                            <div class="detail-section-title">Kısa Bilgi</div>
+                            <div class="summary-desc">
+                                @Model.Description
+                            </div>
+                        }
+                    </div>
 
-                            @foreach (var alt in alternatives)
-                            {
-                                var img = alt.ImageItems.FirstOrDefault()?.Filename;
+                    <!-- ALTERNATİFLER -->
+                    @if (alternatives.Any())
+                    {
+                        <div class="alt-list-card">
+                            <h4 class="alt-list-title">Alternatifler</h4>
 
-                                var pctAlt = OfferPct(alt);
-                                var (oldAlt, newAlt, pctAltOut) = CalcOffer(alt.Price, pctAlt);
+                            <div class="alt-grid">
+                                @foreach (var alt in alternatives)
+                                {
+                                    var img = alt.ImageItems.FirstOrDefault()?.Filename;
+                                    var pctAlt = OfferPct(alt);
+                                    var (oldAlt, newAlt, pctAltOut) = CalcOffer(alt.Price, pctAlt);
 
-                                <a href="/product/details/@alt.Id" style="color:inherit">
-                                    <div class="alt-card">
+                                    <a href="/product/details/@alt.Id" class="alt-link">
+                                        <div class="alt-card">
 
-                                        @if (pctAltOut > 0)
-                                        {
-                                            <span class="onsale">% @pctAltOut İndirim</span>
-                                        }
-
-                                        <div style="display:flex;gap:10px">
-                                            @if (!string.IsNullOrWhiteSpace(img))
+                                            @if (pctAltOut > 0)
                                             {
-                                                <img src="@Img(img)" class="alt-img" alt="@alt.Title" />
-                                            }
-                                            else
-                                            {
-                                                <div class="no-image" style="width:80px;height:80px;border-radius:12px">Görsel Yok</div>
+                                                <span class="onsale">% @pctAltOut İndirim</span>
                                             }
 
-                                            <div style="flex:1">
-                                                <strong>@alt.Title</strong>
-
-                                                <div style="margin-top:6px">
-                                                    @if (pctAltOut > 0)
-                                                    {
-                                                        <span style="font-weight:800">₺ @Money(newAlt)</span>
-                                                        <del style="margin-left:8px;opacity:.65">₺ @Money(oldAlt)</del>
-                                                    }
-                                                    else
-                                                    {
-                                                        <span style="font-weight:800">₺ @Money(alt.Price)</span>
-                                                    }
-                                                </div>
-
-                                                @if (alt.ProductSizes != null && alt.ProductSizes.Any())
+                                            <div class="alt-card-inner">
+                                                @if (!string.IsNullOrWhiteSpace(img))
                                                 {
-                                                    <div class="size-box" style="margin-top:8px">
-                                                        @foreach (var s in alt.ProductSizes.OrderBy(x => x.Name))
+                                                    <img src="@Img(img)" class="alt-img" alt="@alt.Title" />
+                                                }
+                                                else
+                                                {
+                                                    <div class="no-image" style="width:88px;height:88px;min-height:88px;border-radius:14px;">Görsel Yok</div>
+                                                }
+
+                                                <div class="alt-info">
+                                                    <p class="alt-title">@alt.Title</p>
+
+                                                    <div class="alt-price">
+                                                        @if (pctAltOut > 0)
                                                         {
-                                                            <div class="size-item" style="cursor:default">@s.Name</div>
+                                                            <strong>₺ @Money(newAlt)</strong>
+                                                            <del>₺ @Money(oldAlt)</del>
+                                                        }
+                                                        else
+                                                        {
+                                                            <strong>₺ @Money(alt.Price)</strong>
                                                         }
                                                     </div>
-                                                }
+
+                                                    @if (alt.ProductSizes != null && alt.ProductSizes.Any())
+                                                    {
+                                                        <div class="alt-sizes">
+                                                            @foreach (var s in alt.ProductSizes.OrderBy(x => x.Name))
+                                                            {
+                                                                <div class="size-item">@s.Name</div>
+                                                            }
+                                                        </div>
+                                                    }
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                </a>
-                            }
-                        }
-
-                    </div>
-                </div>
-
-                <!-- ALT DETAY -->
-                <div class="col-md-12">
-                    <div class="product-details-tab">
-                        <ul class="nav nav-tabs">
-                            <li class="active"><a href="#desc" data-toggle="tab">Açıklama</a></li>
-                            <li><a href="#features" data-toggle="tab">Özellikler</a></li>
-                            <li><a href="#devices" data-toggle="tab">Uyumlu Cihazlar</a></li>
-                            <li><a href="#sizes" data-toggle="tab">Beden & Stok</a></li>
-                        </ul>
-
-                        <div class="tab-content">
-                            <div id="desc" class="tab-pane active">
-                                <p>@(string.IsNullOrWhiteSpace(Model.Description) ? "Bu ürün için açıklama yakında eklenecektir." : Model.Description)</p>
-                            </div>
-
-                            <div id="features" class="tab-pane">
-                                @if (Model.ProductFeatures != null && Model.ProductFeatures.Any())
-                                {
-                                    <ul>
-                                        @foreach (var f in Model.ProductFeatures)
-                                        {
-                                            <li><strong>@f.Name</strong> @f.Description</li>
-                                        }
-                                    </ul>
-                                }
-                                else
-                                {
-                                    <p>Bu ürün için özellik bilgisi bulunmuyor.</p>
-                                }
-                            </div>
-
-                            <div id="devices" class="tab-pane">
-                                @if (Model.ProductDevices != null && Model.ProductDevices.Any())
-                                {
-                                    <ul>
-                                        @foreach (var d in Model.ProductDevices)
-                                        {
-                                            <li>@d.Name</li>
-                                        }
-                                    </ul>
-                                }
-                                else
-                                {
-                                    <p>Uyumlu cihaz bilgisi bulunmuyor.</p>
-                                }
-                            </div>
-
-                            <div id="sizes" class="tab-pane">
-                                @if (sizesAll.Any())
-                                {
-                                    <table class="table">
-                                        <tr><th>Beden</th><th>Stok</th></tr>
-                                        @foreach (var s in sizesAll)
-                                        {
-                                            <tr>
-                                                <td>@s.Name</td>
-                                                <td>@s.StockCount</td>
-                                            </tr>
-                                        }
-                                    </table>
-                                }
-                                else
-                                {
-                                    <p>Beden/stok bilgisi bulunmuyor.</p>
+                                    </a>
                                 }
                             </div>
                         </div>
+                    }
+                </div>
+            </div>
+
+            <!-- ALT DETAY -->
+            <div class="detail-tab-card">
+                <div class="product-details-tab">
+                    <ul class="nav nav-tabs">
+                        <li class="active"><a href="#desc" data-toggle="tab">Açıklama</a></li>
+                        <li><a href="#features" data-toggle="tab">Özellikler</a></li>
+                        <li><a href="#devices" data-toggle="tab">Uyumlu Cihazlar</a></li>
+                        <li><a href="#sizes" data-toggle="tab">Beden & Stok</a></li>
+                    </ul>
+
+                    <div class="tab-content">
+                        <div id="desc" class="tab-pane active">
+                            <p>@(string.IsNullOrWhiteSpace(Model.Description) ? "Bu ürün için açıklama yakında eklenecektir." : Model.Description)</p>
+                        </div>
+
+                        <div id="features" class="tab-pane">
+                            @if (Model.ProductFeatures != null && Model.ProductFeatures.Any())
+                            {
+                                <ul>
+                                    @foreach (var f in Model.ProductFeatures)
+                                    {
+                                        <li><strong>@f.Name</strong> @f.Description</li>
+                                    }
+                                </ul>
+                            }
+                            else
+                            {
+                                <p>Bu ürün için özellik bilgisi bulunmuyor.</p>
+                            }
+                        </div>
+
+                        <div id="devices" class="tab-pane">
+                            @if (Model.ProductDevices != null && Model.ProductDevices.Any())
+                            {
+                                <ul>
+                                    @foreach (var d in Model.ProductDevices)
+                                    {
+                                        <li>@d.Name</li>
+                                    }
+                                </ul>
+                            }
+                            else
+                            {
+                                <p>Uyumlu cihaz bilgisi bulunmuyor.</p>
+                            }
+                        </div>
+
+                        <div id="sizes" class="tab-pane">
+                            @if (sizesAll.Any())
+                            {
+                                <table class="table">
+                                    <tr>
+                                        <th>Beden</th>
+                                        <th>Stok</th>
+                                    </tr>
+                                    @foreach (var s in sizesAll)
+                                    {
+                                        <tr>
+                                            <td>@s.Name</td>
+                                            <td>@s.StockCount</td>
+                                        </tr>
+                                    }
+                                </table>
+                            }
+                            else
+                            {
+                                <p>Beden/stok bilgisi bulunmuyor.</p>
+                            }
+                        </div>
                     </div>
                 </div>
-
             </div>
-        </div>
 
-        <!-- ALT ÜRÜNLER -->
-        @if (latest.Any())
-        {
-            <div class="latest-product container-fluid no-padding woocommerce">
-                <div class="container">
-                    <div class="section-header">
-                        <h3>Son Eklenen Ürünler</h3>
+            <!-- ALT ÜRÜNLER -->
+            @if (latest.Any())
+            {
+                <div class="latest-card-wrap">
+                    <div class="section-header-modern">
+                        <div>
+                            <h3>Son Eklenen Ürünler</h3>
+                            <div class="section-subtext">İlginizi çekebilecek diğer ürünler</div>
+                        </div>
                     </div>
 
                     <ul class="products">
                         @foreach (var p in latest)
                         {
                             var img = p.ImageItems.FirstOrDefault()?.Filename;
-
                             var pctL = OfferPct(p);
                             var (oldL, newL, pctLout) = CalcOffer(p.Price, pctL);
 
                             <li class="product">
                                 <a href="/product/details/@p.Id" title="@p.Title">
-                                        @if (pctLout > 0)
-                                        {
-                                            <span class="onsale">% @pctLout İndirim</span>
-                                        }
-                                    <span class="product-img">
+                                    @if (pctLout > 0)
+                                    {
+                                        <span class="onsale">% @pctLout İndirim</span>
+                                    }
 
+                                    <span class="product-img">
                                         @if (!string.IsNullOrWhiteSpace(img))
                                         {
                                             <img src="@Img(img)" width="270" height="360" alt="@p.Title" />
                                         }
                                         else
                                         {
-                                            <div class="no-image" style="height:360px;border-radius:14px">Görsel Yok</div>
+                                            <div class="no-image" style="height:300px;min-height:300px;border-radius:0;">Görsel Yok</div>
                                         }
                                     </span>
 
@@ -572,15 +1145,15 @@
                             </li>
                         }
                     </ul>
-
                 </div>
-            </div>
-        }
+            }
 
+        </div>
+    </div>
 </main>
 
 <script>
-    (function () {
+    (function() {
         // Thumbnail -> ana görsel
         document.querySelectorAll('.thumb-img').forEach(i => {
             i.addEventListener('click', () => {
@@ -602,6 +1175,7 @@
             errBox.textContent = msg;
             errBox.style.display = 'block';
         }
+
         function clearError() {
             if (!errBox) return;
             errBox.textContent = '';
@@ -635,7 +1209,7 @@
             const id = el.dataset.id || '';
             const stock = el.dataset.stock || '0';
 
-            document.querySelectorAll('.size-item').forEach(x => x.classList.remove('active'));
+            document.querySelectorAll('.size-item:not(.disabled)').forEach(x => x.classList.remove('active'));
             el.classList.add('active');
 
             if (sizeIdInput) sizeIdInput.value = id;
@@ -664,7 +1238,7 @@
         });
 
         // Submit sırasında buton kilitle + spinner
-        window.validateCart = function () {
+        window.validateCart = function() {
             clearError();
 
             const sizeId = (sizeIdInput?.value || '').trim();

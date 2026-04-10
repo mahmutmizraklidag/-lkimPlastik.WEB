@@ -3,20 +3,34 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// 1. MVC ve Veritabanı Servisleri
 builder.Services.AddControllersWithViews();
-
 builder.Services.AddSqlServer<EfCoreContext>(builder.Configuration.GetConnectionString("dbConnection"));
 
-builder.Services.AddSession(opt =>
+// 2. Cookie Policy Yapılandırması (SameSite=None için kritik)
+builder.Services.Configure<CookiePolicyOptions>(options =>
 {
-    opt.IdleTimeout = TimeSpan.FromHours(8);
-    opt.Cookie.HttpOnly = true;
-    opt.Cookie.IsEssential = true;
+    options.CheckConsentNeeded = context => false;
+    options.MinimumSameSitePolicy = SameSiteMode.None; // Bankadan gelen POST verisi için şart
 });
 
+// 3. Session Yapılandırması
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+
+    // Localhost'ta HTTPS kullanıyorsanız bunlar aktif olmalı:
+    options.Cookie.SameSite = SameSiteMode.None;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+});
+
+// 4. Diğer Yardımcı Servisler
 builder.Services.AddScoped<IRazorViewToStringRenderer, RazorViewToStringRenderer>();
 
+// 5. Authentication (Kimlik Doğrulama)
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(opt =>
     {
@@ -24,24 +38,28 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         opt.LogoutPath = "/Account/Logout";
         opt.AccessDeniedPath = "/Account/Login";
 
-        // Kullanıcı çıkış yapmadıkça oturum kalıcı olsun:
-        opt.ExpireTimeSpan = TimeSpan.FromDays(365);   // 1 yıl
+        opt.ExpireTimeSpan = TimeSpan.FromDays(365);
         opt.SlidingExpiration = true;
 
         opt.Cookie.HttpOnly = true;
-        opt.Cookie.SameSite = SameSiteMode.Lax;
         opt.Cookie.IsEssential = true;
-        opt.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest; // prod: Always (HTTPS)
+
+        // Auth çerezi için de aynı SameSite politikasını uygulayalım
+        opt.Cookie.SameSite = SameSiteMode.Lax;
+        opt.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
     });
+
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// =====================================================
+// PIPELINE (SIRALAMA ÇOK ÖNEMLİ)
+// =====================================================
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
@@ -50,11 +68,17 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
-app.UseAuthentication(); // ✅
+// 1. Önce Cookie Policy
+app.UseCookiePolicy();
+
+// 2. Sonra Session
+app.UseSession();
+
+// 3. Sonra Auth ve Authorization
+app.UseAuthentication();
 app.UseAuthorization();
-app.UseSession(); // ✅ önemli
 
-
+// Route Yapılandırmaları
 app.MapControllerRoute(
     name: "Admin",
     pattern: "{area:exists}/{controller=Home}/{action=Index}/{id?}");
@@ -62,7 +86,5 @@ app.MapControllerRoute(
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
-
-
 
 app.Run();

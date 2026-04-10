@@ -816,7 +816,7 @@
 /* - max-width: 991 */
 @media (max-width: 991px) {
 	.woocommerce ul.products li.product {
-		max-width: 270px;
+		max-width: 400px;
 		/*display: block;*/
 		margin: 0 auto 30px;
 	}

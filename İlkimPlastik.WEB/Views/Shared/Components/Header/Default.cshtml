@@ -18,7 +18,7 @@
     var phone = !string.IsNullOrWhiteSpace(st?.Phone) ? st.Phone : "(+90) 000 000 00 00";
     var email = !string.IsNullOrWhiteSpace(st?.Email) ? st.Email : "info@site.com";
     var logo = !string.IsNullOrWhiteSpace(st?.LogoFileName) ? ("/uploads/site/" + st.LogoFileName.TrimStart('/')) : "/images/logo-1.png";
-    var siteTitle = !string.IsNullOrWhiteSpace(st?.Title) ? st.Title : "İlkim Plastik";
+    var siteTitle = !string.IsNullOrWhiteSpace(st?.Title) ? st.Title : "Tornado Toptan";
     var workingHours = !string.IsNullOrWhiteSpace(st?.WorkingHours) ? st.WorkingHours : "";
 
     var fb = st?.FacebookUrl;
@@ -861,7 +861,7 @@
         gap: 10px;
         padding: 10px 10px;
         border-radius: 14px;
-        background: #0b0f14;
+        background: #1daaa3;
         color: #fff !important;
         font-weight: 600;
         border: 1px solid rgba(255,255,255,.08);
@@ -1377,7 +1377,7 @@
                             <div id="ikmHdrCatPop" class="ikmHdr-catDrop" role="dialog" aria-label="Kategoriler">
                                 <div class="ikmHdr-catHead">
                                     <b>Kategoriler</b>
-                                    <span>@catCount</span>
+                                   @*  <span>@catCount</span> *@
                                 </div>
 
                                 <div class="ikmHdr-catBody">
@@ -1389,7 +1389,7 @@
 
                                         <a class="ikmHdr-catAllLink" href="/product">
                                             <span class="t" style="color:#fff !important;">Tüm Ürünler</span>
-                                            <span class="ikmHdr-pill">@catCount</span>
+                                            @* <span class="ikmHdr-pill">@catCount</span> *@
                                         </a>
 
                                         <div id="ikmHdrCatList" class="ikmHdr-catList">
@@ -1412,7 +1412,7 @@
                                                          data-cname="@c.Name"
                                                          data-subs='@subsJson'>
                                                         <div class="t">@c.Name</div>
-                                                        <div class="ikmHdr-pill">@(c.SubCategories != null ? c.SubCategories.Count : 0)</div>
+                                                        @* <div class="ikmHdr-pill">@(c.SubCategories != null ? c.SubCategories.Count : 0)</div> *@
                                                     </div>
                                                 }
                                             }
@@ -1569,7 +1569,7 @@
                 return;
             }
 
-            html += '<li><a href="/product?categoryId=' + encodeURIComponent(cid) + '"><span>Kategoriyi Gör</span><span class="ikmHdr-pill">›</span></a></li>';
+            html += '<li><a href="/product?categoryId=' + encodeURIComponent(cid) + '"><span>Kategoriyi Gör</span><span class="ikmHdr-pill"><i class="fa-solid fa-chevron-right"></i></span></a></li>';
 
             if (!subs || subs.length === 0) {
                 html += '<li><div class="ikmHdr-suggestEmpty">Bu kategoride alt kategori yok.</div></li>';
@@ -1582,7 +1582,7 @@
                 var sid = s.id;
                 var sn = s.name || '';
                 html += '<li><a href="/product?categoryId=' + encodeURIComponent(cid) + '&subCategoryId=' + encodeURIComponent(sid) + '">' +
-                    '<span class="t">' + sn + '</span><span class="ikmHdr-pill">›</span></a></li>';
+                    '<span class="t">' + sn + '</span><span class="ikmHdr-pill"> <i class="fa-solid fa-chevron-right"></i></span></a></li>';
             }
 
             subList.innerHTML = html;

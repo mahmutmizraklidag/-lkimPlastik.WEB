@@ -267,7 +267,9 @@ C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\bin\Debug
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\bin\Debug\net8.0\ilkimPlastik.WEB.pdb
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\bin\Debug\net8.0\Azure.Core.dll
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\bin\Debug\net8.0\Azure.Identity.dll
+C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\bin\Debug\net8.0\BouncyCastle.Cryptography.dll
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\bin\Debug\net8.0\Humanizer.dll
+C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\bin\Debug\net8.0\MailKit.dll
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\bin\Debug\net8.0\Microsoft.AspNetCore.Razor.Language.dll
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\bin\Debug\net8.0\Microsoft.Bcl.AsyncInterfaces.dll
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\bin\Debug\net8.0\Microsoft.Build.dll
@@ -314,6 +316,7 @@ C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\bin\Debug
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\bin\Debug\net8.0\Microsoft.VisualStudio.Web.CodeGeneration.Templating.dll
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\bin\Debug\net8.0\Microsoft.VisualStudio.Web.CodeGeneration.Utils.dll
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\bin\Debug\net8.0\Microsoft.VisualStudio.Web.CodeGenerators.Mvc.dll
+C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\bin\Debug\net8.0\MimeKit.dll
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\bin\Debug\net8.0\Mono.TextTemplating.dll
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\bin\Debug\net8.0\Newtonsoft.Json.dll
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\bin\Debug\net8.0\NuGet.Common.dll
@@ -337,6 +340,7 @@ C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\bin\Debug
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\bin\Debug\net8.0\System.Memory.Data.dll
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\bin\Debug\net8.0\System.Reflection.MetadataLoadContext.dll
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\bin\Debug\net8.0\System.Runtime.Caching.dll
+C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\bin\Debug\net8.0\System.Security.Cryptography.Pkcs.dll
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\bin\Debug\net8.0\System.Security.Cryptography.ProtectedData.dll
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\bin\Debug\net8.0\af\Humanizer.resources.dll
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\bin\Debug\net8.0\ar\Humanizer.resources.dll
@@ -484,6 +488,7 @@ C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\bin\Debug
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\bin\Debug\net8.0\runtimes\win-x64\native\Microsoft.Data.SqlClient.SNI.dll
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\bin\Debug\net8.0\runtimes\win-x86\native\Microsoft.Data.SqlClient.SNI.dll
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\bin\Debug\net8.0\runtimes\win\lib\net6.0\System.Runtime.Caching.dll
+C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\bin\Debug\net8.0\runtimes\win\lib\net8.0\System.Security.Cryptography.Pkcs.dll
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Debug\net8.0\ilkimPlastik.WEB.csproj.AssemblyReference.cache
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Debug\net8.0\rpswa.dswa.cache.json
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Debug\net8.0\ilkimPlastik.WEB.GeneratedMSBuildEditorConfig.editorconfig
@@ -493,6 +498,7 @@ C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Debug
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Debug\net8.0\ilkimPlastik.WEB.MvcApplicationPartsAssemblyInfo.cache
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Debug\net8.0\ilkimPlastik.WEB.RazorAssemblyInfo.cache
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Debug\net8.0\ilkimPlastik.WEB.RazorAssemblyInfo.cs
+C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Debug\net8.0\ilkimPlastik.WEB.sourcelink.json
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Debug\net8.0\rjimswa.dswa.cache.json
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Debug\net8.0\rjsmrazor.dswa.cache.json
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Debug\net8.0\rjsmcshtml.dswa.cache.json
@@ -512,8 +518,3 @@ C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Debug
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Debug\net8.0\ilkimPlastik.WEB.pdb
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Debug\net8.0\ilkimPlastik.WEB.genruntimeconfig.cache
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Debug\net8.0\ref\ilkimPlastik.WEB.dll
-C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\bin\Debug\net8.0\BouncyCastle.Cryptography.dll
-C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\bin\Debug\net8.0\MailKit.dll
-C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\bin\Debug\net8.0\MimeKit.dll
-C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\bin\Debug\net8.0\System.Security.Cryptography.Pkcs.dll
-C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\bin\Debug\net8.0\runtimes\win\lib\net8.0\System.Security.Cryptography.Pkcs.dll

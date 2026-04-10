@@ -1,31 +1,42 @@
-﻿
-using ilkimPlastik.WEB.Models;
+﻿using ilkimPlastik.WEB.Models;
 using ilkimPlastik.WEB;
 using ilkimPlastik.WEB.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
+using System.Net;
 using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
+using System.Xml.Linq;
 
 namespace ilkimPlastik.WEB.Controllers
 {
     public class CheckoutController : Controller
     {
-        private string IyziApiBaseUrl { get; set; } = "https://api.iyzipay.com";
-        private string IyziApiKey { get; set; } = "75DuMmSFX3NG6z5dtBDRovSLCAN4yWs8";
-        private string IyziSecretKey { get; set; } = "AhYFDh8MRSnmTPsdacJoWDLXJZ29Vkx2";
-        private string IyziCallbackUrl { get; set; } = "http://localhost:5081/checkout/callback";
+        // =====================================================
+        // VAKIFBANK AYARLARI
+        // =====================================================
+        private bool UseVakifbankTest { get; set; } = true;
+        private string VakifbankMerchantId { get; set; } = "000100000013506";
+        private string VakifbankMerchantPassword { get; set; } = "123456";
+        private string VakifbankTerminalNo { get; set; } = "VP000579";
 
-        private const string IyziLocale = "tr";
-        private const string IyziCurrency = "TRY";
-        private const int IyziInstallment = 1;
-        private const string IyziPaymentChannel = "WEB";
-        private const string IyziPaymentGroup = "PRODUCT";
+        private string VakifbankEnrollmentUrl => UseVakifbankTest
+            ? "https://inbound.apigatewaytest.vakifbank.com.tr:8443/threeDGateway/Enrollment"
+            : "https://inbound.apigateway.vakifbank.com.tr:8443/threeDGateway/Enrollment";
+
+        private string VakifbankVposUrl => UseVakifbankTest
+            ? "https://apiportalprep.vakifbank.com.tr:8443/virtualPos/Vposreq"
+            : "https://apigw.vakifbank.com.tr:8443/virtualPos/Vposreq";
+
+        private const string VakifbankCurrencyCode = "949"; // TRY
+        private const string VakifbankTransactionType = "Sale";
+        private const string VakifbankTransactionDeviceSource = "0"; // E-Commerce
+        private const string CART_KEY = "CART_V1";
+        private const string VB3D_CACHE_PREFIX = "VB3D_";
 
         private readonly EfCoreContext _db;
-        private const string CART_KEY = "CART_V1";
+        private readonly IDistributedCache _cache;
 
         private static readonly JsonSerializerOptions JsonOpts = new JsonSerializerOptions
         {
@@ -33,7 +44,11 @@ namespace ilkimPlastik.WEB.Controllers
             WriteIndented = false
         };
 
-        public CheckoutController(EfCoreContext db) => _db = db;
+        public CheckoutController(EfCoreContext db, IDistributedCache cache)
+        {
+            _db = db;
+            _cache = cache;
+        }
 
         // ===== Offer helpers =====
         private static int ClampOffer(int pct)
@@ -42,6 +57,7 @@ namespace ilkimPlastik.WEB.Controllers
             if (pct > 95) pct = 95;
             return pct;
         }
+
         private static decimal R2(decimal v) => decimal.Round(v, 2);
 
         private static (decimal oldUnit, decimal newUnit, int pct) CalcOffer(decimal price, int pct)
@@ -192,18 +208,17 @@ namespace ilkimPlastik.WEB.Controllers
         }
 
         // =======================
-        // IYZICO 3DS INITIALIZE
+        // VAKIFBANK 3D ENROLLMENT
         // =======================
         [HttpPost("/checkout/pay")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Pay(PaymentModel paymentModel)
         {
-            if (string.IsNullOrWhiteSpace(IyziApiBaseUrl) ||
-                string.IsNullOrWhiteSpace(IyziApiKey) ||
-                string.IsNullOrWhiteSpace(IyziSecretKey) ||
-                string.IsNullOrWhiteSpace(IyziCallbackUrl))
+            if (string.IsNullOrWhiteSpace(VakifbankMerchantId) ||
+                string.IsNullOrWhiteSpace(VakifbankMerchantPassword) ||
+                string.IsNullOrWhiteSpace(VakifbankTerminalNo))
             {
-                TempData["ERR"] = "Ödeme altyapısı ayarları eksik. (Iyzico ApiUrl/ApiKey/Secret/CallbackUrl)";
+                TempData["ERR"] = "Ödeme altyapısı ayarları eksik. (MerchantId / MerchantPassword / TerminalNo)";
                 return Redirect("/checkout");
             }
 
@@ -231,6 +246,7 @@ namespace ilkimPlastik.WEB.Controllers
 
             var isAuth = User?.Identity?.IsAuthenticated == true;
             int? userId = isAuth ? GetUserId() : null;
+
             if (string.IsNullOrWhiteSpace(paymentModel.Email) && isAuth)
                 paymentModel.Email = await ResolveUserEmailAsync(userId);
 
@@ -244,8 +260,6 @@ namespace ilkimPlastik.WEB.Controllers
 
             var orderProducts = new List<OrderProduct>();
             decimal subTotal = 0m;
-
-            var basketItems = new List<BasketItemDto>();
 
             foreach (var ci in cart.Items)
             {
@@ -261,38 +275,25 @@ namespace ilkimPlastik.WEB.Controllers
                 if (qty <= 0) continue;
 
                 var img = p.ImageItems.FirstOrDefault()?.Filename;
-
-                // ✅ indirimli fiyat ile ödeme
                 var (oldUnit, newUnit, pct) = CalcOffer(p.Price, p.OfferRate);
                 var lineTotal = R2(newUnit * qty);
                 subTotal += lineTotal;
 
-                // Order snapshot: Price alanını indirimli birim fiyat olarak yazıyoruz (toplam ile tutarlı)
                 orderProducts.Add(new OrderProduct
                 {
                     ProductId = p.Id,
                     Title = p.Title,
                     Description = p.Description,
                     Keywords = p.Keywords,
-                    Price = newUnit, // ✅ indirimli birim
+                    Price = newUnit,
                     CategoryId = p.CategoryId,
                     CategoryName = p.Category?.Name ?? "",
                     ImageName = img,
                     Count = qty
                 });
 
-                // varsa indirimsiz fiyatı da logla (entity'de alan yoksa sessiz geçer)
                 TrySetProp(orderProducts.Last(), "OldPrice", oldUnit);
                 TrySetProp(orderProducts.Last(), "OfferRate", pct);
-
-                basketItems.Add(new BasketItemDto
-                {
-                    Id = $"{p.Id}-{size.Id}",
-                    Price = lineTotal, // ✅ indirimli satır tutarı
-                    Name = $"{p.Title} ({size.Name}) x{qty}",
-                    Category1 = p.Category?.Name ?? "Ürün",
-                    ItemType = "PHYSICAL"
-                });
             }
 
             if (orderProducts.Count == 0)
@@ -304,91 +305,72 @@ namespace ilkimPlastik.WEB.Controllers
             var shippingCost = 0m;
             var paidPrice = R2(subTotal + shippingCost);
 
-            var (expMonth, expYear) = ParseExpire(paymentModel.ExpirationDate);
+            var cleanCardNumber = OnlyDigits(paymentModel.CardNumber);
+            var cleanCvv = OnlyDigits(paymentModel.CVV);
+            var expDigits = OnlyDigits(paymentModel.ExpirationDate);
 
-            var conversationId = Guid.NewGuid().ToString("N");
-            var rnd = Guid.NewGuid().ToString("N");
-            var initPath = "/payment/3dsecure/initialize";
-            var cardNumber = (paymentModel.CardNumber ?? "").Replace(" ", "");
-
-            var initReq = new InitializeThreeDSPaymentRequestDto
+            if (cleanCardNumber.Length < 13 || expDigits.Length < 4 || cleanCvv.Length < 3)
             {
-                Locale = IyziLocale,
-                ConversationId = conversationId,
-
-                Price = R2(subTotal),
-                PaidPrice = paidPrice,
-                Currency = IyziCurrency,
-                Installment = IyziInstallment,
-                PaymentChannel = IyziPaymentChannel,
-                BasketId = conversationId,
-                PaymentGroup = IyziPaymentGroup,
-                CallbackUrl = IyziCallbackUrl,
-
-                PaymentCard = new PaymentCardDto
-                {
-                    CardHolderName = paymentModel.CardHolderName,
-                    CardNumber = cardNumber,
-                    ExpireYear = expYear,
-                    ExpireMonth = expMonth,
-                    Cvc = (paymentModel.CVV ?? "").Trim()
-                },
-
-                Buyer = new BuyerDto
-                {
-                    Id = conversationId,
-                    Name = paymentModel.Name.Trim(),
-                    Surname = paymentModel.Surname.Trim(),
-                    IdentityNumber = string.IsNullOrWhiteSpace(paymentModel.IdentificationNumber) ? "11111111111" : paymentModel.IdentificationNumber.Trim(),
-                    Email = string.IsNullOrWhiteSpace(paymentModel.Email) ? "no-reply@example.com" : paymentModel.Email.Trim(),
-                    GsmNumber = paymentModel.Phone.Trim(),
-                    RegistrationAddress = paymentModel.Address.Trim(),
-                    City = paymentModel.City.Trim(),
-                    Country = "Turkey",
-                    ZipCode = (paymentModel.PostCode ?? "").Trim(),
-                    Ip = GetClientIp()
-                },
-
-                ShippingAddress = new AddressDto
-                {
-                    Address = paymentModel.Address.Trim(),
-                    ZipCode = (paymentModel.PostCode ?? "").Trim(),
-                    ContactName = $"{paymentModel.Name.Trim()} {paymentModel.Surname.Trim()}",
-                    City = paymentModel.City.Trim(),
-                    Country = "Turkey"
-                },
-
-                BillingAddress = new AddressDto
-                {
-                    Address = paymentModel.Address.Trim(),
-                    ZipCode = (paymentModel.PostCode ?? "").Trim(),
-                    ContactName = $"{paymentModel.Name.Trim()} {paymentModel.Surname.Trim()}",
-                    City = paymentModel.City.Trim(),
-                    Country = "Turkey"
-                },
-
-                BasketItems = basketItems
-            };
-
-            var json = JsonSerializer.Serialize(initReq, JsonOpts);
-
-            var auth = BuildIyziAuthHeader(rnd, initPath, json);
-
-            using var client = new HttpClient { BaseAddress = new Uri(IyziApiBaseUrl) };
-            client.DefaultRequestHeaders.Add("Authorization", auth);
-            client.DefaultRequestHeaders.Add("Accept", "application/json");
-            client.DefaultRequestHeaders.TryAddWithoutValidation("x-iyzi-rnd", rnd);
-
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
-            var resp = await client.PostAsync(initPath, content);
-            var respStr = await resp.Content.ReadAsStringAsync();
-
-            var initResp = DeserializeSafe<InitialPaymentResponseDto>(respStr);
-            if (initResp == null || !string.Equals(initResp.Status, "success", StringComparison.OrdinalIgnoreCase))
-            {
-                TempData["ERR"] = initResp?.ErrorMessage ?? "Ödeme başlatılamadı. Lütfen tekrar deneyin.";
+                TempData["ERR"] = "Kart bilgileri geçersiz görünüyor.";
                 return Redirect("/checkout");
             }
+
+            var verifyEnrollmentRequestId = Guid.NewGuid().ToString("N");
+            var enrollmentExpiry = BuildEnrollmentExpiry(paymentModel.ExpirationDate); // YYAA
+            var vposExpiry = BuildVposExpiry(paymentModel.ExpirationDate);             // YYYYMM
+            var callbackUrl = BuildAbsoluteUrl("/checkout/callback");
+            var sessionInfo = verifyEnrollmentRequestId;
+            var brandName = DetectBrandName(cleanCardNumber);
+            var installment = 0;
+
+            var enrollmentForm = new Dictionary<string, string>
+            {
+                ["MerchantId"] = VakifbankMerchantId,
+                ["MerchantPassword"] = VakifbankMerchantPassword,
+                ["VerifyEnrollmentRequestId"] = verifyEnrollmentRequestId,
+                ["Pan"] = cleanCardNumber,
+                ["ExpiryDate"] = enrollmentExpiry,
+                ["PurchaseAmount"] = ToVakifbankAmount(paidPrice),
+                ["Currency"] = VakifbankCurrencyCode,
+                ["BrandName"] = brandName,
+                ["SessionInfo"] = sessionInfo,
+                ["SuccessUrl"] = callbackUrl,
+                ["FailureUrl"] = callbackUrl
+            };
+
+            if (installment > 1)
+                enrollmentForm["InstallmentCount"] = installment.ToString();
+
+            var enrollmentRespStr = await PostFormAsync(VakifbankEnrollmentUrl, enrollmentForm);
+            var enrollmentResp = ParseEnrollmentResponse(enrollmentRespStr);
+
+            if (enrollmentResp == null)
+            {
+                TempData["ERR"] = "VakıfBank enrollment cevabı okunamadı.";
+                return Redirect("/checkout");
+            }
+
+            if (!string.Equals(enrollmentResp.Status, "Y", StringComparison.OrdinalIgnoreCase))
+            {
+                var failMessage = !string.IsNullOrWhiteSpace(enrollmentResp.ErrorMessage)
+                    ? enrollmentResp.ErrorMessage
+                    : !string.IsNullOrWhiteSpace(enrollmentResp.Status)
+                        ? $"3D doğrulama başlatılamadı. Durum: {enrollmentResp.Status}"
+                        : "3D doğrulama başlatılamadı.";
+
+                TempData["ERR"] = failMessage;
+                return Redirect("/checkout");
+            }
+
+            var subBefore = orderProducts.Sum(op =>
+            {
+                var old = GetPropDecimal(op, "OldPrice", op.Price);
+                return R2(old * op.Count);
+            });
+
+            var subAfter = R2(orderProducts.Sum(op => op.Price * op.Count));
+            var discTotal = R2(subBefore - subAfter);
+            if (discTotal < 0m) discTotal = 0m;
 
             var order = new Order
             {
@@ -406,122 +388,295 @@ namespace ilkimPlastik.WEB.Controllers
                 IsPay = false,
                 Status = "Pending",
 
-                TotalPrice = paidPrice,       // ✅ indirimli toplam
-                OrderProducts = orderProducts
+                TotalPrice = paidPrice,
+                OrderProducts = orderProducts,
+
+                PaymentConversationId = verifyEnrollmentRequestId,
+                PaymentRaw = enrollmentRespStr,
+                MpiTransactionId = verifyEnrollmentRequestId,
+                DiscountTotal = discTotal,
+                SubTotalBeforeDiscount = subBefore
             };
-
-            TrySetProp(order, "PaymentConversationId", conversationId);
-            TrySetProp(order, "PaymentId", initResp.PaymentId);
-            TrySetProp(order, "PaymentRaw", respStr);
-
-            // istersen siparişe de indirim totals set et (alan yoksa sessiz geçer)
-            var subBefore = orderProducts.Sum(op => {
-                var old = GetPropDecimal(op, "OldPrice", op.Price);
-                return R2(old * op.Count);
-            });
-            var subAfter = R2(orderProducts.Sum(op => op.Price * op.Count));
-            var discTotal = R2(subBefore - subAfter);
-            if (discTotal < 0m) discTotal = 0m;
-            TrySetProp(order, "DiscountTotal", discTotal);
-            TrySetProp(order, "SubTotalBeforeDiscount", subBefore);
 
             _db.Orders.Add(order);
             await _db.SaveChangesAsync();
 
-            var htmlBytes = Convert.FromBase64String(initResp.ThreeDSHtmlContent ?? "");
-            var html = Encoding.UTF8.GetString(htmlBytes);
-            return Content(html, "text/html");
+            var cardSession = new VakifbankCardSessionModel
+            {
+                VerifyEnrollmentRequestId = verifyEnrollmentRequestId,
+                CardNumber = cleanCardNumber,
+                Cvv = cleanCvv,
+                EnrollmentExpiry = enrollmentExpiry,
+                VposExpiry = vposExpiry,
+                CardHolderName = paymentModel.CardHolderName?.Trim() ?? "",
+                Amount = paidPrice,
+                InstallmentCount = installment > 1 ? installment : null,
+                OrderId = order.Id
+            };
+
+            await SaveVakifbank3DStateAsync(cardSession);
+
+            var html = BuildThreeDAutoPostHtml(
+                enrollmentResp.ACSUrl,
+                enrollmentResp.PaReq,
+                enrollmentResp.TermUrl,
+                enrollmentResp.MD);
+
+            return Content(html, "text/html; charset=utf-8");
         }
 
         [HttpPost("/checkout/callback")]
-        public async Task<IActionResult> Callback(IyzicoCallbackDto cb)
+        [IgnoreAntiforgeryToken]
+        public async Task<IActionResult> Callback(VakifbankCallbackModel cb)
         {
-            if (cb == null || string.IsNullOrWhiteSpace(cb.ConversationId))
+            if (cb == null || string.IsNullOrWhiteSpace(cb.VerifyEnrollmentRequestId))
                 return Redirect("/checkout/failed");
 
-            var order = await FindOrderByConversationIdAsync(cb.ConversationId);
+            var order = await FindOrderByConversationIdAsync(cb.VerifyEnrollmentRequestId);
+            var sessionData = await GetVakifbank3DStateAsync(cb.VerifyEnrollmentRequestId);
+
+            if (order == null && sessionData?.OrderId > 0)
+            {
+                order = await _db.Orders
+                    .Include(x => x.OrderProducts)
+                    .FirstOrDefaultAsync(x => x.Id == sessionData.OrderId);
+            }
+
             if (order == null)
                 return Redirect("/checkout/failed");
 
-            if (!string.Equals(cb.Status, "success", StringComparison.OrdinalIgnoreCase))
+            if (sessionData == null)
             {
                 order.IsPay = false;
                 order.Status = "Failed";
-                TrySetProp(order, "PaymentRaw", JsonSerializer.Serialize(cb, JsonOpts));
+                order.PaymentRaw = JsonSerializer.Serialize(cb, JsonOpts);
+
                 _db.Update(order);
                 await _db.SaveChangesAsync();
                 return Redirect("/checkout/failed");
             }
 
-            if (string.IsNullOrWhiteSpace(IyziApiBaseUrl) ||
-                string.IsNullOrWhiteSpace(IyziApiKey) ||
-                string.IsNullOrWhiteSpace(IyziSecretKey))
+            var status = (cb.Status ?? "").Trim().ToUpperInvariant();
+
+            if (status != "Y" && status != "A")
             {
                 order.IsPay = false;
                 order.Status = "Failed";
+                order.PaymentRaw = JsonSerializer.Serialize(cb, JsonOpts);
+
                 _db.Update(order);
                 await _db.SaveChangesAsync();
+
+                await ClearVakifbank3DStateAsync(cb.VerifyEnrollmentRequestId);
                 return Redirect("/checkout/failed");
             }
 
-            var rnd = Guid.NewGuid().ToString("N");
-            var authPath = "/payment/3dsecure/auth";
+            var brandName = DetectBrandName(sessionData.CardNumber); // 100: Visa, 200: MC, 300: Troy
+            var eci = NormalizeEciByBrand(cb.ECI, status, brandName);
+            var transactionId = Guid.NewGuid().ToString("N");
+            var amount = sessionData.Amount > 0 ? sessionData.Amount : order.TotalPrice;
 
-            var authReq = new AuthRequestDto
+            string xml;
+
+            if (status == "Y")
             {
-                Locale = IyziLocale,
-                ConversationId = cb.ConversationId,
-                PaymentId = cb.PaymentId ?? "",
-                ConversationData = JsonSerializer.Serialize(cb, JsonOpts)
-            };
-
-            var json = JsonSerializer.Serialize(authReq, JsonOpts);
-            var authHeader = BuildIyziAuthHeader(rnd, authPath, json);
-
-            using var client = new HttpClient { BaseAddress = new Uri(IyziApiBaseUrl) };
-            client.DefaultRequestHeaders.Add("Authorization", authHeader);
-            client.DefaultRequestHeaders.Add("Accept", "application/json");
-            client.DefaultRequestHeaders.TryAddWithoutValidation("x-iyzi-rnd", rnd);
-
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-            HttpResponseMessage? resp = null;
-            for (int attempt = 1; attempt <= 3; attempt++)
+                // Full Secure
+                xml = BuildVposSaleRequestXml_FullSecure(new VakifbankSaleRequestModel
+                {
+                    MerchantId = VakifbankMerchantId,
+                    Password = VakifbankMerchantPassword,
+                    TerminalNo = VakifbankTerminalNo,
+                    TransactionType = VakifbankTransactionType,
+                    TransactionId = transactionId,
+                    CurrencyAmount = ToVakifbankAmount(amount),
+                    CurrencyCode = VakifbankCurrencyCode,
+                    Pan = sessionData.CardNumber,
+                    Expiry = sessionData.VposExpiry,
+                    Cvv = sessionData.Cvv,
+                    CardHoldersName = sessionData.CardHolderName,
+                    ECI = eci,
+                    CAVV = cb.CAVV,
+                    MpiTransactionId = cb.VerifyEnrollmentRequestId,
+                    OrderId = order.Id.ToString(),
+                    OrderDescription = sessionData.OrderNote,
+                    ClientIp = GetClientIp(),
+                    TransactionDeviceSource = VakifbankTransactionDeviceSource,
+                    NumberOfInstallments = sessionData.InstallmentCount
+                });
+            }
+            else
             {
-                try
+                // Half Secure
+                xml = BuildVposSaleRequestXml_HalfSecure(new VakifbankSaleRequestModel
                 {
-                    resp = await client.PostAsync(authPath, content);
-                    if (resp.IsSuccessStatusCode) break;
-                    await Task.Delay(1200);
-                }
-                catch
-                {
-                    if (attempt == 3) throw;
-                    await Task.Delay(1200);
-                }
+                    MerchantId = VakifbankMerchantId,
+                    Password = VakifbankMerchantPassword,
+                    TerminalNo = VakifbankTerminalNo,
+                    TransactionType = VakifbankTransactionType,
+                    TransactionId = transactionId,
+                    Cvv = sessionData.Cvv,
+                    CardHoldersName = sessionData.CardHolderName,
+                    ECI = eci,
+                    CAVV = cb.CAVV,
+                    MpiTransactionId = cb.VerifyEnrollmentRequestId,
+                    OrderId = order.Id.ToString(),
+                    OrderDescription = sessionData.OrderNote,
+                    ClientIp = GetClientIp(),
+                    TransactionDeviceSource = VakifbankTransactionDeviceSource,
+                    NumberOfInstallments = sessionData.InstallmentCount
+                });
             }
 
-            if (resp == null)
-                return Redirect("/checkout/failed");
 
-            var respStr = await resp.Content.ReadAsStringAsync();
-            var authResp = DeserializeSafe<IyzicoAuthResponseDto>(respStr);
+            Console.WriteLine("=== VPOS XML ===");
+            Console.WriteLine(xml);
+            //xml="<?xml version=\"1.0\" encoding=\"utf-8\"?>" + xml; 
+            var vposRespStr = await PostFormAsync(VakifbankVposUrl, new Dictionary<string, string>
+            {
+                ["prmtstr"] = xml
+            });
 
-            var ok = authResp != null && string.Equals(authResp.Status, "success", StringComparison.OrdinalIgnoreCase);
+            Console.WriteLine("=== VPOS RESPONSE ===");
+            Console.WriteLine(vposRespStr);
+
+            var vposResp = ParseVposResponse(vposRespStr);
+            var ok = vposResp != null &&
+                     string.Equals(vposResp.ResultCode, "0000", StringComparison.OrdinalIgnoreCase);
+
             order.IsPay = ok;
             order.Status = ok ? "Paid" : "Failed";
-
-            TrySetProp(order, "PaymentRaw", respStr);
-            if (!string.IsNullOrWhiteSpace(cb.PaymentId))
-                TrySetProp(order, "PaymentId", cb.PaymentId);
+            order.PaymentRaw = vposRespStr;
+            order.PaymentId = vposResp?.TransactionId;
+            order.AuthCode = vposResp?.AuthCode;
+            order.Rrn = vposResp?.Rrn;
+            order.MpiTransactionId = cb.VerifyEnrollmentRequestId;
 
             _db.Update(order);
             await _db.SaveChangesAsync();
 
-            if (!ok) return Redirect("/checkout/failed");
+            await ClearVakifbank3DStateAsync(cb.VerifyEnrollmentRequestId);
+
+            if (!ok)
+                return Redirect("/checkout/failed");
 
             ClearCart();
             return Redirect("/checkout/success");
+        }
+
+        private string NormalizeEciByBrand(string? eciFromCallback, string status, string brandName)
+        {
+            if (!string.IsNullOrWhiteSpace(eciFromCallback))
+                return eciFromCallback.Trim();
+
+            status = (status ?? "").Trim().ToUpperInvariant();
+
+            // brandName: 100 Visa, 200 MasterCard, 300 Troy
+            if (status == "Y")
+            {
+                if (brandName == "100") return "05"; // Visa
+                if (brandName == "200") return "02"; // MasterCard
+                if (brandName == "300") return "02"; // Troy
+            }
+
+            if (status == "A")
+            {
+                if (brandName == "100") return "06"; // Visa
+                if (brandName == "200") return "01"; // MasterCard
+                if (brandName == "300") return "01"; // Troy
+            }
+
+            return "";
+        }
+
+        private string BuildVposSaleRequestXml_FullSecure(VakifbankSaleRequestModel m)
+        {
+            var root = new XElement("VposRequest",
+                new XElement("MerchantId", m.MerchantId),
+                new XElement("Password", m.Password),
+                new XElement("TerminalNo", m.TerminalNo),
+                new XElement("Pan", m.Pan),
+                new XElement("Expiry", m.Expiry),
+                new XElement("CurrencyAmount", m.CurrencyAmount),
+                new XElement("CurrencyCode", m.CurrencyCode),
+                new XElement("TransactionType", m.TransactionType)
+            );
+
+            if (!string.IsNullOrWhiteSpace(m.TransactionId))
+                root.Add(new XElement("TransactionId", m.TransactionId));
+
+            if (m.NumberOfInstallments.HasValue && m.NumberOfInstallments.Value > 1)
+                root.Add(new XElement("NumberOfInstallments", m.NumberOfInstallments.Value.ToString("00")));
+
+            if (!string.IsNullOrWhiteSpace(m.CardHoldersName))
+                root.Add(new XElement("CardHoldersName", m.CardHoldersName));
+
+            root.Add(new XElement("Cvv", m.Cvv));
+
+            root.Add(new XElement("ECI", m.ECI ?? ""));
+
+            if (!string.IsNullOrWhiteSpace(m.CAVV))
+                root.Add(new XElement("CAVV", m.CAVV));
+
+            root.Add(new XElement("MpiTransactionId", m.MpiTransactionId));
+
+            if (!string.IsNullOrWhiteSpace(m.OrderId))
+                root.Add(new XElement("OrderId", m.OrderId));
+
+            if (!string.IsNullOrWhiteSpace(m.OrderDescription))
+                root.Add(new XElement("OrderDescription", m.OrderDescription));
+
+            root.Add(new XElement("ClientIp", m.ClientIp));
+
+            // İstersen bunu da ekleyebilirsin
+            // var customItems = new XElement("CustomItems",
+            //     new XElement("Item",
+            //         new XAttribute("name", "Açıklama"),
+            //         new XAttribute("value", "Sipariş Ödemesi")));
+            // root.Add(customItems);
+
+            root.Add(new XElement("TransactionDeviceSource", m.TransactionDeviceSource));
+
+            var doc = new XDocument(new XDeclaration("1.0", "utf-8", null), root);
+            return doc.ToString(SaveOptions.DisableFormatting);
+        }
+
+        private string BuildVposSaleRequestXml_HalfSecure(VakifbankSaleRequestModel m)
+        {
+            var root = new XElement("VposRequest",
+                new XElement("MerchantId", m.MerchantId),
+                new XElement("Password", m.Password),
+                new XElement("TerminalNo", m.TerminalNo),
+                new XElement("TransactionType", m.TransactionType)
+            );
+
+            if (!string.IsNullOrWhiteSpace(m.TransactionId))
+                root.Add(new XElement("TransactionId", m.TransactionId));
+
+            if (m.NumberOfInstallments.HasValue && m.NumberOfInstallments.Value > 1)
+                root.Add(new XElement("NumberOfInstallments", m.NumberOfInstallments.Value.ToString("00")));
+
+            if (!string.IsNullOrWhiteSpace(m.CardHoldersName))
+                root.Add(new XElement("CardHoldersName", m.CardHoldersName));
+
+            root.Add(new XElement("Cvv", m.Cvv));
+            root.Add(new XElement("ECI", m.ECI ?? ""));
+
+            if (!string.IsNullOrWhiteSpace(m.CAVV))
+                root.Add(new XElement("CAVV", m.CAVV));
+
+            root.Add(new XElement("MpiTransactionId", m.MpiTransactionId));
+
+            if (!string.IsNullOrWhiteSpace(m.OrderId))
+                root.Add(new XElement("OrderId", m.OrderId));
+
+            if (!string.IsNullOrWhiteSpace(m.OrderDescription))
+                root.Add(new XElement("OrderDescription", m.OrderDescription));
+
+            root.Add(new XElement("ClientIp", m.ClientIp));
+            root.Add(new XElement("TransactionDeviceSource", m.TransactionDeviceSource));
+
+            var doc = new XDocument(new XDeclaration("1.0", "utf-8", null), root);
+            return doc.ToString(SaveOptions.DisableFormatting);
         }
 
         [HttpGet("/checkout/success")]
@@ -542,7 +697,6 @@ namespace ilkimPlastik.WEB.Controllers
 
             public List<CartLineVm> CartItems { get; set; } = new();
 
-            // ✅ indirim totals
             public decimal SubTotalBeforeDiscount { get; set; }
             public decimal DiscountTotal { get; set; }
 
@@ -575,7 +729,6 @@ namespace ilkimPlastik.WEB.Controllers
             public string? Barcode { get; set; }
             public string? ImageFile { get; set; }
 
-            // ✅ indirim alanları
             public int OfferRate { get; set; }
             public decimal OldUnitPrice { get; set; }
             public decimal UnitPrice { get; set; }
@@ -586,151 +739,366 @@ namespace ilkimPlastik.WEB.Controllers
             public decimal LineTotal { get; set; }
         }
 
-        // -------- IYZICO DTOs --------
-        public class InitializeThreeDSPaymentRequestDto
+        public class VakifbankCallbackModel
         {
-            public string Locale { get; set; } = "tr";
-            public string ConversationId { get; set; } = "";
-            public decimal Price { get; set; }
-            public decimal PaidPrice { get; set; }
-            public string Currency { get; set; } = "TRY";
-            public int Installment { get; set; } = 1;
-            public string PaymentChannel { get; set; } = "WEB";
-            public string BasketId { get; set; } = "";
-            public string PaymentGroup { get; set; } = "PRODUCT";
-            public string CallbackUrl { get; set; } = "";
-
-            public PaymentCardDto PaymentCard { get; set; } = new();
-            public BuyerDto Buyer { get; set; } = new();
-            public AddressDto ShippingAddress { get; set; } = new();
-            public AddressDto BillingAddress { get; set; } = new();
-            public List<BasketItemDto> BasketItems { get; set; } = new();
+            public string MerchantId { get; set; } = "";
+            public string VerifyEnrollmentRequestId { get; set; } = "";
+            public string ExpiryDate { get; set; } = "";
+            public string PurchAmount { get; set; } = "";
+            public string PurchCurrency { get; set; } = "";
+            public string Xid { get; set; } = "";
+            public string SessionInfo { get; set; } = "";
+            public string Status { get; set; } = "";
+            public string? CAVV { get; set; }
+            public string? ECI { get; set; }
+            public string? InstallmentCount { get; set; }
         }
 
-        public class PaymentCardDto
+        public class VakifbankEnrollmentResponse
         {
-            public string CardHolderName { get; set; } = "";
+            public string Status { get; set; } = "";
+            public string PaReq { get; set; } = "";
+            public string ACSUrl { get; set; } = "";
+            public string TermUrl { get; set; } = "";
+            public string MD { get; set; } = "";
+            public string VerifyEnrollmentRequestId { get; set; } = "";
+            public string MessageErrorCode { get; set; } = "";
+            public string ErrorCode { get; set; } = "";
+            public string ErrorMessage { get; set; } = "";
+        }
+
+        public class VakifbankVposResponse
+        {
+            public string ResultCode { get; set; } = "";
+            public string ResultDetail { get; set; } = "";
+            public string TransactionId { get; set; } = "";
+            public string AuthCode { get; set; } = "";
+            public string Rrn { get; set; } = "";
+            public string HostDate { get; set; } = "";
+            public string BatchNo { get; set; } = "";
+        }
+
+        public class VakifbankCardSessionModel
+        {
+            public string VerifyEnrollmentRequestId { get; set; } = "";
+            public int OrderId { get; set; }
             public string CardNumber { get; set; } = "";
-            public string ExpireYear { get; set; } = "";
-            public string ExpireMonth { get; set; } = "";
-            public string Cvc { get; set; } = "";
+            public string Cvv { get; set; } = "";
+            public string EnrollmentExpiry { get; set; } = "";
+            public string VposExpiry { get; set; } = "";
+            public string CardHolderName { get; set; } = "";
+            public decimal Amount { get; set; }
+            public int? InstallmentCount { get; set; }
+            public string? OrderNote { get; set; }
         }
 
-        public class BuyerDto
+        public class VakifbankSaleRequestModel
         {
-            public string Id { get; set; } = "";
-            public string Name { get; set; } = "";
-            public string Surname { get; set; } = "";
-            public string IdentityNumber { get; set; } = "11111111111";
-            public string Email { get; set; } = "";
-            public string GsmNumber { get; set; } = "";
-            public string RegistrationAddress { get; set; } = "";
-            public string City { get; set; } = "";
-            public string Country { get; set; } = "Turkey";
-            public string ZipCode { get; set; } = "";
-            public string Ip { get; set; } = "";
-        }
-
-        public class AddressDto
-        {
-            public string Address { get; set; } = "";
-            public string ZipCode { get; set; } = "";
-            public string ContactName { get; set; } = "";
-            public string City { get; set; } = "";
-            public string Country { get; set; } = "Turkey";
-        }
-
-        public class BasketItemDto
-        {
-            public string Id { get; set; } = "";
-            public decimal Price { get; set; }
-            public string Name { get; set; } = "";
-            public string Category1 { get; set; } = "";
-            public string ItemType { get; set; } = "PHYSICAL";
-        }
-
-        public class InitialPaymentResponseDto
-        {
-            public string Status { get; set; } = "";
-            public string? PaymentId { get; set; }
-            public string? ConversationId { get; set; }
-            public string? ThreeDSHtmlContent { get; set; }
-            public string? ErrorCode { get; set; }
-            public string? ErrorMessage { get; set; }
-        }
-
-        public class IyzicoCallbackDto
-        {
-            public string Status { get; set; } = "";
-            public string? Locale { get; set; }
-            public long SystemTime { get; set; }
-            public string ConversationId { get; set; } = "";
-            public decimal Price { get; set; }
-            public decimal PaidPrice { get; set; }
-            public int Installment { get; set; }
-            public string? PaymentId { get; set; }
-            public int MdStatus { get; set; }
-            public string? ErrorCode { get; set; }
-            public string? ErrorMessage { get; set; }
-        }
-
-        public class AuthRequestDto
-        {
-            public string Locale { get; set; } = "tr";
-            public string PaymentId { get; set; } = "";
-            public string ConversationId { get; set; } = "";
-            public string ConversationData { get; set; } = "";
-        }
-
-        public class IyzicoAuthResponseDto
-        {
-            public string Status { get; set; } = "";
-            public string? PaymentId { get; set; }
-            public string? ConversationId { get; set; }
-            public string? ErrorCode { get; set; }
-            public string? ErrorMessage { get; set; }
+            public string MerchantId { get; set; } = "";
+            public string Password { get; set; } = "";
+            public string TerminalNo { get; set; } = "";
+            public string TransactionType { get; set; } = "Sale";
+            public string TransactionId { get; set; } = "";
+            public string CurrencyAmount { get; set; } = "";
+            public string CurrencyCode { get; set; } = "949";
+            public string Pan { get; set; } = "";
+            public string Expiry { get; set; } = "";
+            public string Cvv { get; set; } = "";
+            public string? CardHoldersName { get; set; }
+            public string? ECI { get; set; }
+            public string? CAVV { get; set; }
+            public string MpiTransactionId { get; set; } = "";
+            public string? OrderId { get; set; }
+            public string? OrderDescription { get; set; }
+            public string ClientIp { get; set; } = "127.0.0.1";
+            public string TransactionDeviceSource { get; set; } = "0";
+            public int? NumberOfInstallments { get; set; }
         }
 
         // =======================
         // Helpers
         // =======================
-        private string BuildIyziAuthHeader(string randomKey, string path, string jsonBody)
+        private async Task<string> PostFormAsync(string url, Dictionary<string, string> form)
         {
-            var payload = randomKey + path + jsonBody;
-            var keyBytes = Encoding.UTF8.GetBytes(IyziSecretKey);
-            var payloadBytes = Encoding.UTF8.GetBytes(payload);
+            // Vakıfbank ve diğer bankalar için TLS 1.2 zorunluluğu
+            System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12;
 
-            var hash = new HMACSHA256(keyBytes).ComputeHash(payloadBytes);
-            var signature = BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+            // Gelişmiş Handler ile HttpClient oluşturma
+            var handler = new HttpClientHandler
+            {
+                SslProtocols = System.Security.Authentication.SslProtocols.Tls12
+            };
 
-            var authString = $"apiKey:{IyziApiKey}&randomKey:{randomKey}&signature:{signature}";
-            var base64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(authString));
+            using var client = new HttpClient(handler);
+            using var content = new FormUrlEncodedContent(form);
+            Console.WriteLine("Encoded form data:");
+            Console.WriteLine(content.ReadAsStringAsync().Result);
+            using var response = await client.PostAsync(url, content);
 
-            return "IYZWSv2 " + base64;
+            return await response.Content.ReadAsStringAsync();
         }
 
-        private (string month, string year) ParseExpire(string exp)
+        private string BuildAbsoluteUrl(string relativePath)
         {
-            var digits = new string((exp ?? "").Where(char.IsDigit).ToArray());
-            if (digits.Length < 4) return ("01", "30");
+            var req = Request;
+            var scheme = req?.Scheme ?? "https";
+            var host = req?.Host.Value ?? "localhost";
+            return $"{scheme}://{host}{relativePath}";
+        }
+
+        private string BuildThreeDAutoPostHtml(string acsUrl, string paReq, string termUrl, string md)
+        {
+            return $@"<!doctype html>
+<html>
+<head>
+    <meta charset=""utf-8"" />
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1"" />
+    <title>3D Secure Yönlendiriliyor</title>
+</head>
+<body>
+    <form id=""vakifbank3dForm"" name=""vakifbank3dForm"" action=""{WebUtility.HtmlEncode(acsUrl)}"" method=""POST"">
+        <noscript>
+            <div style=""max-width:560px;margin:40px auto;font-family:Arial,sans-serif;padding:20px;border:1px solid #ddd;border-radius:12px;"">
+                <h2>3D Secure doğrulaması</h2>
+                <p>Devam etmek için aşağıdaki butona tıklayın.</p>
+                <button type=""submit"">Devam Et</button>
+            </div>
+        </noscript>
+        <input type=""hidden"" name=""PaReq"" value=""{WebUtility.HtmlEncode(paReq)}"" />
+        <input type=""hidden"" name=""TermUrl"" value=""{WebUtility.HtmlEncode(termUrl)}"" />
+        <input type=""hidden"" name=""MD"" value=""{WebUtility.HtmlEncode(md)}"" />
+    </form>
+    <script>
+        document.getElementById('vakifbank3dForm').submit();
+    </script>
+</body>
+</html>";
+        }
+
+        private VakifbankEnrollmentResponse? ParseEnrollmentResponse(string xml)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(xml)) return null;
+                var doc = XDocument.Parse(xml);
+                return new VakifbankEnrollmentResponse
+                {
+                    Status = GetDescendantValue(doc, "Status"),
+                    PaReq = GetDescendantValue(doc, "PaReq"),
+                    ACSUrl = GetDescendantValue(doc, "ACSUrl"),
+                    TermUrl = GetDescendantValue(doc, "TermUrl"),
+                    MD = GetDescendantValue(doc, "MD"),
+                    VerifyEnrollmentRequestId = GetDescendantValue(doc, "VerifyEnrollmentRequestId"),
+                    MessageErrorCode = GetDescendantValue(doc, "MessageErrorCode"),
+                    ErrorCode = GetDescendantValue(doc, "ErrorCode"),
+                    ErrorMessage = GetDescendantValue(doc, "ErrorMessage")
+                };
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private VakifbankVposResponse? ParseVposResponse(string xml)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(xml)) return null;
+                var doc = XDocument.Parse(xml);
+                return new VakifbankVposResponse
+                {
+                    ResultCode = GetDescendantValue(doc, "ResultCode"),
+                    ResultDetail = GetDescendantValue(doc, "ResultDetail"),
+                    TransactionId = GetDescendantValue(doc, "TransactionId"),
+                    AuthCode = GetDescendantValue(doc, "AuthCode"),
+                    Rrn = GetDescendantValue(doc, "Rrn"),
+                    HostDate = GetDescendantValue(doc, "HostDate"),
+                    BatchNo = GetDescendantValue(doc, "BatchNo")
+                };
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private string BuildVposSaleRequestXml(VakifbankSaleRequestModel m)
+        {
+            var root = new XElement("VposRequest",
+                new XElement("MerchantId", m.MerchantId),
+                new XElement("Password", m.Password),
+                new XElement("TerminalNo", m.TerminalNo),
+                new XElement("Pan", m.Pan),
+                new XElement("Expiry", m.Expiry),
+                new XElement("CurrencyAmount", m.CurrencyAmount),
+                new XElement("CurrencyCode", m.CurrencyCode),
+                new XElement("TransactionType", m.TransactionType),
+                new XElement("TransactionId", m.TransactionId),
+                new XElement("Cvv", m.Cvv),
+                new XElement("ECI", m.ECI ?? ""),
+                new XElement("MpiTransactionId", m.MpiTransactionId),
+                new XElement("ClientIp", m.ClientIp),
+                new XElement("TransactionDeviceSource", m.TransactionDeviceSource)
+            );
+
+            if (!string.IsNullOrWhiteSpace(m.CardHoldersName))
+                root.Add(new XElement("CardHoldersName", m.CardHoldersName));
+
+            if (!string.IsNullOrWhiteSpace(m.CAVV))
+                root.Add(new XElement("CAVV", m.CAVV));
+
+            if (!string.IsNullOrWhiteSpace(m.OrderId))
+                root.Add(new XElement("OrderId", m.OrderId));
+
+            if (!string.IsNullOrWhiteSpace(m.OrderDescription))
+                root.Add(new XElement("OrderDescription", m.OrderDescription));
+
+            if (m.NumberOfInstallments.HasValue && m.NumberOfInstallments.Value > 1)
+                root.Add(new XElement("NumberOfInstallments", m.NumberOfInstallments.Value.ToString("00")));
+
+            var doc = new XDocument(new XDeclaration("1.0", "utf-8", null), root);
+            return doc.ToString(SaveOptions.DisableFormatting);
+        }
+
+        private string GetDescendantValue(XDocument doc, string name)
+        {
+            return doc.Descendants()
+                .FirstOrDefault(x => string.Equals(x.Name.LocalName, name, StringComparison.OrdinalIgnoreCase))
+                ?.Value?.Trim() ?? "";
+        }
+
+        private async Task SaveVakifbank3DStateAsync(VakifbankCardSessionModel model)
+        {
+            var json = JsonSerializer.Serialize(model, JsonOpts);
+
+            await _cache.SetStringAsync(
+                VB3D_CACHE_PREFIX + model.VerifyEnrollmentRequestId,
+                json,
+                new DistributedCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(20)
+                });
+        }
+
+        private async Task<VakifbankCardSessionModel?> GetVakifbank3DStateAsync(string verifyEnrollmentRequestId)
+        {
+            var json = await _cache.GetStringAsync(VB3D_CACHE_PREFIX + verifyEnrollmentRequestId);
+            if (string.IsNullOrWhiteSpace(json)) return null;
+
+            try
+            {
+                return JsonSerializer.Deserialize<VakifbankCardSessionModel>(json, JsonOpts);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private async Task ClearVakifbank3DStateAsync(string verifyEnrollmentRequestId)
+        {
+            await _cache.RemoveAsync(VB3D_CACHE_PREFIX + verifyEnrollmentRequestId);
+        }
+
+        private string DetectBrandName(string pan)
+        {
+            if (string.IsNullOrWhiteSpace(pan)) return "100";
+
+            var card = OnlyDigits(pan);
+            if (card.StartsWith("4")) return "100";       // VISA
+            if (IsMastercard(card)) return "200";         // MASTERCARD
+            if (card.StartsWith("9792")) return "300";    // TROY
+
+            return "100";
+        }
+
+        private bool IsMastercard(string pan)
+        {
+            if (pan.Length < 2) return false;
+
+            if (int.TryParse(pan.Substring(0, 2), out var first2) && first2 >= 51 && first2 <= 55)
+                return true;
+
+            if (pan.Length >= 4 && int.TryParse(pan.Substring(0, 4), out var first4) && first4 >= 2221 && first4 <= 2720)
+                return true;
+
+            return false;
+        }
+
+        private string NormalizeEci(string? eciFromCallback, string status)
+        {
+            if (!string.IsNullOrWhiteSpace(eciFromCallback))
+                return eciFromCallback.Trim();
+
+            return status == "A" ? "06" : "05";
+        }
+
+        private string ToVakifbankAmount(decimal amount)
+        {
+            return amount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+        }
+
+        private string BuildEnrollmentExpiry(string exp)
+        {
+            var digits = OnlyDigits(exp);
+            if (digits.Length < 4) return "3001";
+
             var mm = digits.Substring(0, 2);
             var yy = digits.Substring(2, 2);
+
             if (mm == "00") mm = "01";
-            return (mm, yy);
+            return yy + mm;
+        }
+
+        private string BuildVposExpiry(string exp)
+        {
+            var digits = OnlyDigits(exp);
+            if (digits.Length < 4) return "203001";
+
+            var mm = digits.Substring(0, 2);
+            var yy = digits.Substring(2, 2);
+
+            if (mm == "00") mm = "01";
+            return "20" + yy + mm;
+        }
+
+        private string OnlyDigits(string? value)
+        {
+            return new string((value ?? "").Where(char.IsDigit).ToArray());
         }
 
         private string GetClientIp()
         {
-            try { return Request?.HttpContext?.Connection?.RemoteIpAddress?.ToString() ?? "127.0.0.1"; }
-            catch { return "127.0.0.1"; }
-        }
+            var xff = Request.Headers["X-Forwarded-For"].FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(xff))
+            {
+                var first = xff.Split(',').FirstOrDefault()?.Trim();
+                if (System.Net.IPAddress.TryParse(first, out var forwardedIp))
+                {
+                    if (forwardedIp.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)
+                        return forwardedIp.MapToIPv4().ToString();
 
-        private T? DeserializeSafe<T>(string json)
-        {
-            try { return JsonSerializer.Deserialize<T>(json, JsonOpts); }
-            catch { return default; }
-        }
+                    return forwardedIp.ToString();
+                }
+            }
 
+            var remoteIp = HttpContext.Connection.RemoteIpAddress;
+            if (remoteIp != null)
+            {
+                if (remoteIp.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)
+                    remoteIp = remoteIp.MapToIPv4();
+
+                var ip = remoteIp.ToString();
+
+                if (ip == "0.0.0.1" || ip == "::1")
+                    return "127.0.0.1";
+
+                return ip;
+            }
+
+            return "127.0.0.1";
+        }
         private void TrySetProp(object obj, string propName, object? value)
         {
             try
@@ -748,40 +1116,27 @@ namespace ilkimPlastik.WEB.Controllers
             {
                 var p = obj.GetType().GetProperty(propName);
                 if (p == null) return fallback;
+
                 var v = p.GetValue(obj);
                 if (v == null) return fallback;
                 if (v is decimal d) return d;
-                if (decimal.TryParse(v.ToString(), out var x)) return x;
+
+                if (decimal.TryParse(v.ToString(), out var x))
+                    return x;
+
                 return fallback;
             }
-            catch { return fallback; }
+            catch
+            {
+                return fallback;
+            }
         }
 
         private async Task<Order?> FindOrderByConversationIdAsync(string conversationId)
         {
-            var recent = await _db.Orders
+            return await _db.Orders
                 .Include(x => x.OrderProducts)
-                .OrderByDescending(x => x.Id)
-                .Take(200)
-                .ToListAsync();
-
-            foreach (var o in recent)
-            {
-                var v = GetPropString(o, "PaymentConversationId");
-                if (!string.IsNullOrWhiteSpace(v) && v == conversationId) return o;
-            }
-            return null;
-        }
-
-        private string? GetPropString(object obj, string propName)
-        {
-            try
-            {
-                var p = obj.GetType().GetProperty(propName);
-                if (p == null) return null;
-                return p.GetValue(obj)?.ToString();
-            }
-            catch { return null; }
+                .FirstOrDefaultAsync(x => x.PaymentConversationId == conversationId);
         }
 
         private int? GetUserId()
@@ -826,13 +1181,27 @@ namespace ilkimPlastik.WEB.Controllers
         {
             var json = HttpContext.Session.GetString(CART_KEY);
             if (string.IsNullOrWhiteSpace(json)) return new CartDto();
-            try { return JsonSerializer.Deserialize<CartDto>(json) ?? new CartDto(); }
-            catch { return new CartDto(); }
+
+            try
+            {
+                return JsonSerializer.Deserialize<CartDto>(json) ?? new CartDto();
+            }
+            catch
+            {
+                return new CartDto();
+            }
         }
 
         private void ClearCart()
         {
+            // Sadece anahtarı silmek yerine içeriği boşaltmayı deneyin
             HttpContext.Session.Remove(CART_KEY);
+
+            // Eğer çerez (Cookie) de kullanıyorsanız onu da burada silmelisiniz
+            if (Request.Cookies.ContainsKey(CART_KEY))
+            {
+                Response.Cookies.Delete(CART_KEY);
+            }
         }
 
         private class CartDto
@@ -845,28 +1214,6 @@ namespace ilkimPlastik.WEB.Controllers
             public int ProductId { get; set; }
             public int SizeId { get; set; }
             public int Quantity { get; set; }
-        }
-    }
-
-    namespace ilkimPlastik.WEB.Models
-    {
-        public class PaymentModel
-        {
-            public string Name { get; set; } = "";
-            public string Surname { get; set; } = "";
-            public string? IdentificationNumber { get; set; } = "";
-            public string Email { get; set; } = "";
-            public string Phone { get; set; } = "";
-            public string City { get; set; } = "";
-            public string District { get; set; } = "";
-            public string Address { get; set; } = "";
-            public string? PostCode { get; set; } = "";
-            public string? OrderNote { get; set; } = "";
-
-            public string CardHolderName { get; set; } = "";
-            public string CardNumber { get; set; } = "";
-            public string ExpirationDate { get; set; } = "";
-            public string CVV { get; set; } = "";
         }
     }
 }

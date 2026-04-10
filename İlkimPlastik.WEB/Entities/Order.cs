@@ -17,13 +17,21 @@
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        // basit durum alanı
-        public bool IsPay { get; set; } = false; // Pending / Paid / Shipped / Cancelled
-        public string Status { get; set; } = "Pending"; // Pending / Paid / Shipped / Cancelled
+        public bool IsPay { get; set; } = false;
+        public string Status { get; set; } = "Pending";
 
         public decimal TotalPrice { get; set; }
 
-        public List<OrderProduct> OrderProducts { get; set; } = new();
+        public decimal DiscountTotal { get; set; }
+        public decimal SubTotalBeforeDiscount { get; set; }
 
+        public string? PaymentConversationId { get; set; }
+        public string? PaymentRaw { get; set; }
+        public string? PaymentId { get; set; }
+        public string? AuthCode { get; set; }
+        public string? Rrn { get; set; }
+        public string? MpiTransactionId { get; set; }
+
+        public List<OrderProduct> OrderProducts { get; set; } = new();
     }
 }
