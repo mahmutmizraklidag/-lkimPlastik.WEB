@@ -16,10 +16,12 @@ namespace ilkimPlastik.WEB.Controllers
         // =====================================================
         // VAKIFBANK AYARLARI
         // =====================================================
-        private bool UseVakifbankTest { get; set; } = true;
-        private string VakifbankMerchantId { get; set; } = "000100000013506";
-        private string VakifbankMerchantPassword { get; set; } = "123456";
-        private string VakifbankTerminalNo { get; set; } = "VP000579";
+        private bool UseVakifbankTest { get; set; } = false;
+
+        // UseVakifbankTest 'true' ise test bilgilerini, 'false' ise canlı (prod) bilgilerini döner.
+        private string VakifbankMerchantId => UseVakifbankTest ? "000100000013506" : "000000053765459";
+        private string VakifbankMerchantPassword => UseVakifbankTest ? "123456" : "a2MZc9w5";
+        private string VakifbankTerminalNo => UseVakifbankTest ? "VP000579" : "V3500192";
 
         private string VakifbankEnrollmentUrl => UseVakifbankTest
             ? "https://inbound.apigatewaytest.vakifbank.com.tr:8443/threeDGateway/Enrollment"
@@ -425,6 +427,7 @@ namespace ilkimPlastik.WEB.Controllers
             return Content(html, "text/html; charset=utf-8");
         }
 
+
         [HttpPost("/checkout/callback")]
         [IgnoreAntiforgeryToken]
         public async Task<IActionResult> Callback(VakifbankCallbackModel cb)
@@ -456,18 +459,69 @@ namespace ilkimPlastik.WEB.Controllers
                 return Redirect("/checkout/failed");
             }
 
+            var callbackRaw = JsonSerializer.Serialize(cb, JsonOpts);
+
+            // Merchant doğrulaması
+            if (!string.IsNullOrWhiteSpace(cb.MerchantId) &&
+                !string.Equals(cb.MerchantId.Trim(), VakifbankMerchantId, StringComparison.Ordinal))
+            {
+                order.IsPay = false;
+                order.Status = "Failed";
+                order.PaymentRaw = callbackRaw;
+
+                _db.Update(order);
+                await _db.SaveChangesAsync();
+
+                await ClearVakifbank3DStateAsync(cb.VerifyEnrollmentRequestId);
+
+                TempData["PaymentErrorMessage"] = "Callback merchant bilgisi eşleşmedi.";
+                TempData["PaymentErrorCode"] = "MERCHANT_MISMATCH";
+                TempData["OrderId"] = order.Id.ToString();
+
+                return Redirect("/checkout/failed");
+            }
+
+            // Hash doğrulaması (banka hash gönderirse mutlaka kontrol edilir)
+            if (!string.IsNullOrWhiteSpace(cb.Hash))
+            {
+                var expectedHash = ComputeCallbackHash(cb, VakifbankMerchantPassword);
+
+                Console.WriteLine("=== CALLBACK HASH BANK ===");
+                Console.WriteLine(cb.Hash);
+
+                Console.WriteLine("=== CALLBACK HASH EXPECTED ===");
+                Console.WriteLine(expectedHash);
+
+                Console.WriteLine("=== CALLBACK HASH INPUTS ===");
+                Console.WriteLine($"VerifyEnrollmentRequestId: [{cb.VerifyEnrollmentRequestId}]");
+                Console.WriteLine($"MerchantId: [{cb.MerchantId}]");
+                Console.WriteLine($"PurchCurrency: [{cb.PurchCurrency}]");
+                Console.WriteLine($"PurchAmount: [{cb.PurchAmount}]");
+                Console.WriteLine($"ECI: [{cb.ECI}]");
+                Console.WriteLine($"CAVV: [{cb.CAVV}]");
+                Console.WriteLine($"MdStatus: [{cb.MdStatus}]");
+                Console.WriteLine($"Status: [{cb.Status}]");
+            }
+
             var status = (cb.Status ?? "").Trim().ToUpperInvariant();
 
             if (status != "Y" && status != "A")
             {
                 order.IsPay = false;
                 order.Status = "Failed";
-                order.PaymentRaw = JsonSerializer.Serialize(cb, JsonOpts);
+                order.PaymentRaw = callbackRaw;
 
                 _db.Update(order);
                 await _db.SaveChangesAsync();
 
                 await ClearVakifbank3DStateAsync(cb.VerifyEnrollmentRequestId);
+
+                TempData["PaymentErrorMessage"] = !string.IsNullOrWhiteSpace(cb.ErrorMessage)
+                    ? cb.ErrorMessage
+                    : "3D Secure işlemi banka tarafından onaylanmadı.";
+                TempData["PaymentErrorCode"] = cb.ErrorCode;
+                TempData["OrderId"] = order.Id.ToString();
+
                 return Redirect("/checkout/failed");
             }
 
@@ -475,6 +529,7 @@ namespace ilkimPlastik.WEB.Controllers
             var eci = NormalizeEciByBrand(cb.ECI, status, brandName);
             var transactionId = Guid.NewGuid().ToString("N");
             var amount = sessionData.Amount > 0 ? sessionData.Amount : order.TotalPrice;
+            var clientIp = GetClientIp();
 
             string xml;
 
@@ -499,7 +554,7 @@ namespace ilkimPlastik.WEB.Controllers
                     MpiTransactionId = cb.VerifyEnrollmentRequestId,
                     OrderId = order.Id.ToString(),
                     OrderDescription = sessionData.OrderNote,
-                    ClientIp = GetClientIp(),
+                    ClientIp = clientIp,
                     TransactionDeviceSource = VakifbankTransactionDeviceSource,
                     NumberOfInstallments = sessionData.InstallmentCount
                 });
@@ -514,6 +569,10 @@ namespace ilkimPlastik.WEB.Controllers
                     TerminalNo = VakifbankTerminalNo,
                     TransactionType = VakifbankTransactionType,
                     TransactionId = transactionId,
+                    CurrencyAmount = ToVakifbankAmount(amount),
+                    CurrencyCode = VakifbankCurrencyCode,
+                    Pan = sessionData.CardNumber,
+                    Expiry = sessionData.VposExpiry,
                     Cvv = sessionData.Cvv,
                     CardHoldersName = sessionData.CardHolderName,
                     ECI = eci,
@@ -521,20 +580,22 @@ namespace ilkimPlastik.WEB.Controllers
                     MpiTransactionId = cb.VerifyEnrollmentRequestId,
                     OrderId = order.Id.ToString(),
                     OrderDescription = sessionData.OrderNote,
-                    ClientIp = GetClientIp(),
+                    ClientIp = clientIp,
                     TransactionDeviceSource = VakifbankTransactionDeviceSource,
                     NumberOfInstallments = sessionData.InstallmentCount
                 });
             }
 
-
+            Console.WriteLine("=== CALLBACK RAW ===");
+            Console.WriteLine(callbackRaw);
             Console.WriteLine("=== VPOS XML ===");
             Console.WriteLine(xml);
-            //xml="<?xml version=\"1.0\" encoding=\"utf-8\"?>" + xml; 
-            var vposRespStr = await PostFormAsync(VakifbankVposUrl, new Dictionary<string, string>
-            {
-                ["prmtstr"] = xml
-            });
+
+            using var httpClient = new HttpClient();
+
+            var content = new StringContent(xml, System.Text.Encoding.UTF8, "application/xml");
+            var response = await httpClient.PostAsync(VakifbankVposUrl, content);
+            var vposRespStr = await response.Content.ReadAsStringAsync();
 
             Console.WriteLine("=== VPOS RESPONSE ===");
             Console.WriteLine(vposRespStr);
@@ -557,16 +618,31 @@ namespace ilkimPlastik.WEB.Controllers
             await ClearVakifbank3DStateAsync(cb.VerifyEnrollmentRequestId);
 
             if (!ok)
+            {
+                TempData["PaymentErrorMessage"] = !string.IsNullOrWhiteSpace(vposResp?.ResultDetail)
+                    ? vposResp.ResultDetail
+                    : "İşlem banka tarafından onaylanmadı.";
+                TempData["PaymentErrorCode"] = vposResp?.ResultCode;
+                TempData["OrderId"] = order.Id.ToString();
+
                 return Redirect("/checkout/failed");
+            }
 
             ClearCart();
             return Redirect("/checkout/success");
         }
 
+
         private string NormalizeEciByBrand(string? eciFromCallback, string status, string brandName)
         {
-            if (!string.IsNullOrWhiteSpace(eciFromCallback))
-                return eciFromCallback.Trim();
+            var callbackEci = (eciFromCallback ?? "").Trim();
+            if (!string.IsNullOrWhiteSpace(callbackEci))
+            {
+                if (callbackEci.Length == 1)
+                    callbackEci = "0" + callbackEci;
+
+                return callbackEci;
+            }
 
             status = (status ?? "").Trim().ToUpperInvariant();
 
@@ -586,6 +662,74 @@ namespace ilkimPlastik.WEB.Controllers
             }
 
             return "";
+        }
+
+        private string ComputeCallbackHash(VakifbankCallbackModel cb, string merchantPassword)
+        {
+            var verifyEnrollmentRequestId = (cb.VerifyEnrollmentRequestId ?? "").Trim();
+            var merchantId = (cb.MerchantId ?? "").Trim();
+            var currencyCode = (cb.PurchCurrency ?? "").Trim();
+
+            var amount = NormalizeAmountForHash(cb.PurchAmount);
+            var eci = NormalizeEciForHash(cb.ECI);
+            var cavv = (cb.CAVV ?? "").Trim();
+            var mdStatus = (cb.MdStatus ?? "").Trim();
+            var paresStatus = (cb.Status ?? "").Trim().ToUpperInvariant();
+
+            var raw = verifyEnrollmentRequestId +
+                      merchantId +
+                      currencyCode +
+                      amount +
+                      eci +
+                      cavv +
+                      mdStatus +
+                      paresStatus +
+                      merchantPassword;
+
+            using var sha = System.Security.Cryptography.SHA256.Create();
+            var bytes = System.Text.Encoding.GetEncoding("ISO-8859-9").GetBytes(raw);
+            var hashBytes = sha.ComputeHash(bytes);
+            return Convert.ToBase64String(hashBytes);
+        }
+
+        private string NormalizeAmountForHash(string? amount)
+        {
+            var value = (amount ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(value))
+                return "";
+
+            // Callback zaten kuruş dahil noktasız gelmiş olabilir. Örn: 1.09 => 109
+            if (value.All(char.IsDigit))
+                return value;
+
+            value = value.Replace(",", ".");
+
+            if (decimal.TryParse(
+                value,
+                System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out var dec))
+            {
+                dec = decimal.Round(dec, 2, MidpointRounding.AwayFromZero);
+
+                // 1.09 => "109"
+                return dec
+                    .ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)
+                    .Replace(".", "");
+            }
+
+            return new string(value.Where(char.IsDigit).ToArray());
+        }
+        private string NormalizeEciForHash(string? eci)
+        {
+            var value = (eci ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(value))
+                return "";
+
+            if (value.Length == 1)
+                value = "0" + value;
+
+            return value;
         }
 
         private string BuildVposSaleRequestXml_FullSecure(VakifbankSaleRequestModel m)
@@ -640,12 +784,17 @@ namespace ilkimPlastik.WEB.Controllers
             return doc.ToString(SaveOptions.DisableFormatting);
         }
 
+
         private string BuildVposSaleRequestXml_HalfSecure(VakifbankSaleRequestModel m)
         {
             var root = new XElement("VposRequest",
                 new XElement("MerchantId", m.MerchantId),
                 new XElement("Password", m.Password),
                 new XElement("TerminalNo", m.TerminalNo),
+                new XElement("Pan", m.Pan),
+                new XElement("Expiry", m.Expiry),
+                new XElement("CurrencyAmount", m.CurrencyAmount),
+                new XElement("CurrencyCode", m.CurrencyCode),
                 new XElement("TransactionType", m.TransactionType)
             );
 
@@ -739,6 +888,7 @@ namespace ilkimPlastik.WEB.Controllers
             public decimal LineTotal { get; set; }
         }
 
+
         public class VakifbankCallbackModel
         {
             public string MerchantId { get; set; } = "";
@@ -752,6 +902,10 @@ namespace ilkimPlastik.WEB.Controllers
             public string? CAVV { get; set; }
             public string? ECI { get; set; }
             public string? InstallmentCount { get; set; }
+            public string? MdStatus { get; set; }
+            public string? Hash { get; set; }
+            public string? ErrorMessage { get; set; }
+            public string? ErrorCode { get; set; }
         }
 
         public class VakifbankEnrollmentResponse
@@ -818,31 +972,60 @@ namespace ilkimPlastik.WEB.Controllers
         // =======================
         // Helpers
         // =======================
+
         private async Task<string> PostFormAsync(string url, Dictionary<string, string> form)
         {
-            // Vakıfbank ve diğer bankalar için TLS 1.2 zorunluluğu
             System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12;
 
-            // Gelişmiş Handler ile HttpClient oluşturma
             var handler = new HttpClientHandler
             {
                 SslProtocols = System.Security.Authentication.SslProtocols.Tls12
             };
 
             using var client = new HttpClient(handler);
-            using var content = new FormUrlEncodedContent(form);
-            Console.WriteLine("Encoded form data:");
-            Console.WriteLine(content.ReadAsStringAsync().Result);
-            using var response = await client.PostAsync(url, content);
+            client.Timeout = TimeSpan.FromSeconds(90);
 
-            return await response.Content.ReadAsStringAsync();
+            using var content = new FormUrlEncodedContent(form);
+            var encoded = await content.ReadAsStringAsync();
+
+            Console.WriteLine("=== POST URL ===");
+            Console.WriteLine(url);
+            Console.WriteLine("=== ENCODED FORM DATA ===");
+            Console.WriteLine(encoded);
+
+            using var request = new HttpRequestMessage(HttpMethod.Post, url)
+            {
+                Content = content
+            };
+
+            request.Headers.Accept.Clear();
+            request.Headers.Accept.ParseAdd("*/*");
+
+            using var response = await client.SendAsync(request);
+            var raw = await response.Content.ReadAsStringAsync();
+
+            Console.WriteLine("=== HTTP STATUS ===");
+            Console.WriteLine((int)response.StatusCode);
+            Console.WriteLine(response.StatusCode);
+
+            return raw;
         }
+
 
         private string BuildAbsoluteUrl(string relativePath)
         {
             var req = Request;
-            var scheme = req?.Scheme ?? "https";
-            var host = req?.Host.Value ?? "localhost";
+
+            var forwardedProto = req?.Headers["X-Forwarded-Proto"].FirstOrDefault();
+            var scheme = !string.IsNullOrWhiteSpace(forwardedProto)
+                ? forwardedProto
+                : (req?.Scheme ?? "https");
+
+            var forwardedHost = req?.Headers["X-Forwarded-Host"].FirstOrDefault();
+            var host = !string.IsNullOrWhiteSpace(forwardedHost)
+                ? forwardedHost
+                : (req?.Host.Value ?? "localhost");
+
             return $"{scheme}://{host}{relativePath}";
         }
 
@@ -1068,16 +1251,27 @@ namespace ilkimPlastik.WEB.Controllers
             return new string((value ?? "").Where(char.IsDigit).ToArray());
         }
 
+
         private string GetClientIp()
         {
-            var xff = Request.Headers["X-Forwarded-For"].FirstOrDefault();
-            if (!string.IsNullOrWhiteSpace(xff))
+            var candidateHeaders = new[]
             {
-                var first = xff.Split(',').FirstOrDefault()?.Trim();
+                "CF-Connecting-IP",
+                "X-Real-IP",
+                "X-Forwarded-For"
+            };
+
+            foreach (var header in candidateHeaders)
+            {
+                var raw = Request.Headers[header].FirstOrDefault();
+                if (string.IsNullOrWhiteSpace(raw))
+                    continue;
+
+                var first = raw.Split(',').FirstOrDefault()?.Trim();
                 if (System.Net.IPAddress.TryParse(first, out var forwardedIp))
                 {
                     if (forwardedIp.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)
-                        return forwardedIp.MapToIPv4().ToString();
+                        forwardedIp = forwardedIp.MapToIPv4();
 
                     return forwardedIp.ToString();
                 }
@@ -1099,6 +1293,7 @@ namespace ilkimPlastik.WEB.Controllers
 
             return "127.0.0.1";
         }
+
         private void TrySetProp(object obj, string propName, object? value)
         {
             try

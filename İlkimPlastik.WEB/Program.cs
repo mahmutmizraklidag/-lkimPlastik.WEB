@@ -1,8 +1,18 @@
 ﻿using ilkimPlastik.WEB;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders =
+        ForwardedHeaders.XForwardedFor |
+        ForwardedHeaders.XForwardedProto |
+        ForwardedHeaders.XForwardedHost;
 
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 // 1. MVC ve Veritabanı Servisleri
 builder.Services.AddControllersWithViews();
 builder.Services.AddSqlServer<EfCoreContext>(builder.Configuration.GetConnectionString("dbConnection"));

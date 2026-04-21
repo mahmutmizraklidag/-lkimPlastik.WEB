@@ -221,8 +221,8 @@
         height: 220px;
         border-radius: 16px;
         overflow: hidden;
-        border: 1px solid #eee;
-        background: #f4f4f4;
+       /*  border: 1px solid #eee;
+        background: #f4f4f4; */
         margin: 10px auto 0;
     }
 
@@ -273,6 +273,7 @@
         position: relative;
         z-index: 2;
         margin-bottom: 12px;
+        margin-top:10px;
     }
 
     #saleup-section .saleup-product-hero {
@@ -380,17 +381,7 @@
                         <h5>Vitrin önerileri</h5>
                         <div class="cta-soft">Görselleri inceleyin, en doğru ürünü seçin ve hemen satın alın.</div>
 
-                        @if (bannerFeatured.Count > 0)
-                        {
-                            <div class="box-thumbs">
-                                @foreach (var p in bannerFeatured)
-                                {
-                                    <a href="/product/details/@p.Id" title="@p.Title">
-                                        <img src="@FirstImg(p)" alt="@p.Title" />
-                                    </a>
-                                }
-                            </div>
-                        }
+                       
                     </div>
                     <a href="/product" class="shop-now" title="Ürünleri Gör">Ürünleri Gör<i class="fa fa-caret-right" aria-hidden="true"></i></a>
                 </div>
@@ -401,17 +392,7 @@
                         <h5>Uyumlu ürünleri hızlıca bulun</h5>
                         <div class="cta-soft">Cihazınız ile uyumlu ürünlere göz atın, doğru ürünü kaçırmayın.</div>
 
-                        @if (bannerDevice.Count > 0)
-                        {
-                            <div class="box-thumbs">
-                                @foreach (var p in bannerDevice)
-                                {
-                                    <a href="/product/details/@p.Id" title="@p.Title">
-                                        <img src="@FirstImg(p)" alt="@p.Title" />
-                                    </a>
-                                }
-                            </div>
-                        }
+                     
                     </div>
                     <div class="col-md-7 col-sm-6 col-xs-6">
                         <img src="/images/ad-banner-5.png" alt="ad-banner" />
@@ -429,17 +410,7 @@
                         <h3 class="ad-heading">Yeni Eklenenler</h3>
                         <div class="cta-soft">Yeni ürünleri görsellerle inceleyin ve hızlıca satın almaya geçin.</div>
 
-                        @if (bannerLatest.Count > 0)
-                        {
-                            <div class="box-thumbs">
-                                @foreach (var p in bannerLatest)
-                                {
-                                    <a href="/product/details/@p.Id" title="@p.Title">
-                                        <img src="@FirstImg(p)" alt="@p.Title" />
-                                    </a>
-                                }
-                            </div>
-                        }
+                       
                     </div>
                     <a href="/product" class="shop-now" title="Yeni Ürünler">Yeni Ürünler<i class="fa fa-caret-right" aria-hidden="true"></i></a>
                 </div>
@@ -456,27 +427,7 @@
                     <a href="/product" class="shop-now" title="Kategorileri Gör">Kategorileri Gör<i class="fa fa-caret-right" aria-hidden="true"></i></a>
                 </div>
 
-                <div class="row">
-                    <div class="col-md-6 col-sm-6 col-xs-12">
-                        <div class="discount-box">
-                            <h3>Hızlı Arama</h3>
-                            <p>Ürün adını yazarak anında bulun</p>
-                            <a href="/product" title="Ürün Ara">Ürün Ara</a>
-                            <div class="cta-soft">Arama sonrası kategori + cihaz filtreleriyle sonuçları daraltın.</div>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6 col-sm-6 col-xs-12">
-                        <div class="discount-img-box">
-                            <img src="/images/ad-banner-bg.jpg" width="318" height="270" alt="ad-banner-bg" />
-                        </div>
-                        <div class="discount-img-content">
-                            <h3>Uyumlu Ürünler</h3>
-                            <a href="/product" title="Cihaza Göre Bul">Cihaza Göre Bul</a>
-                            <div class="cta-soft">Uyumlu ürünlere göz atın, güvenle satın alın.</div>
-                        </div>
-                    </div>
-                </div>
+              
             </div>
 
            
@@ -667,24 +618,12 @@
                         <span>@saleupHero.Title</span>
                         <p>Görselleri inceleyin, sepete ekleyin ve hızlıca satın alın.</p>
 
-                            var pct = OfferPct(saleupHero);
-                            var (oldP, newP, pctOut) = CalcOffer(saleupHero.Price, pct);
-
-                        @if (pctOut > 0)
-                        {
-                            <span class="onsale">% @pctOut</span>
-                        }
-
-                        <h5>₺ @Money(newP)</h5>
-                        @if (pctOut > 0)
-                        {
-                            <del>₺ @Money(oldP)</del>
-                        }
+                           
 
                         @if (saleupThumbs.Count > 0)
                         {
                             <div class="saleup-product-thumbs">
-                                @foreach (var p in saleupThumbs)
+                                @foreach (var p in saleupThumbs.Take(4))
                                 {
                                     <a href="/product/details/@p.Id" title="@p.Title">
                                         <img src="@FirstImg(p)" alt="@p.Title" />
@@ -704,10 +643,9 @@
         </div>
 
         <div class="col-md-6 col-sm-12 co-xs-12 saleup-img no-padding">
-            <h3>Günün Öne Çıkan Ürünleri</h3>
+            <h3>Tornado Toptan</h3>
             <p>
-                Ürün görselleriyle hızlı karar verin: kategoriyi seçin, uygun ürünü sepete ekleyin ve güvenle satın alın.
-                Cihazınız için uyumlu ürünleri görmek isterseniz cihaz filtresini kullanın.
+                Her marka ve modele uygun geniş ürün yelpazemizle Tornado Toptan, plastik ürünlerde güvenilir adresiniz. Kaliteli ürünlerimizi görsellerle inceleyin, ihtiyacınıza uygun olanı hızlıca seçin ve satın almaya geçin.
             </p>
             <a href="/product" title="Ürünleri Gör">Ürünleri Gör<i class="fa fa-angle-right" aria-hidden="true"></i></a>
         </div>
