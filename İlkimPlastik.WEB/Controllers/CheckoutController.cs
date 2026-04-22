@@ -8,6 +8,8 @@ using System.Net;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Xml.Linq;
+using ilkimPlastik.WEB.Tools;
+using ilkimPlastik.WEB.Utils;
 
 namespace ilkimPlastik.WEB.Controllers
 {
@@ -39,6 +41,7 @@ namespace ilkimPlastik.WEB.Controllers
 
         private readonly EfCoreContext _db;
         private readonly IDistributedCache _cache;
+        private readonly IMailSender _mailSender;
 
         private static readonly JsonSerializerOptions JsonOpts = new JsonSerializerOptions
         {
@@ -46,10 +49,11 @@ namespace ilkimPlastik.WEB.Controllers
             WriteIndented = false
         };
 
-        public CheckoutController(EfCoreContext db, IDistributedCache cache)
+        public CheckoutController(EfCoreContext db, IDistributedCache cache, IMailSender mailSender)
         {
             _db = db;
             _cache = cache;
+            _mailSender = mailSender;
         }
 
         // ===== Offer helpers =====
@@ -374,6 +378,8 @@ namespace ilkimPlastik.WEB.Controllers
             var discTotal = R2(subBefore - subAfter);
             if (discTotal < 0m) discTotal = 0m;
 
+          
+            
             var order = new Order
             {
                 UserId = userId ?? 0,
@@ -591,6 +597,8 @@ namespace ilkimPlastik.WEB.Controllers
             Console.WriteLine("=== VPOS XML ===");
             Console.WriteLine(xml);
 
+            //var vposRespStr = await PostFormAsync(VakifbankVposUrl, new Dictionary<string, string> { ["prmtstr"] = xml });
+
             using var httpClient = new HttpClient();
 
             var content = new StringContent(xml, System.Text.Encoding.UTF8, "application/xml");
@@ -626,6 +634,47 @@ namespace ilkimPlastik.WEB.Controllers
                 TempData["OrderId"] = order.Id.ToString();
 
                 return Redirect("/checkout/failed");
+            }
+
+            // =======================
+            // MAIL GÖNDERİMİ
+            // =======================
+            try
+            {
+                var siteSettings = await _db.SiteSettings
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync();
+
+                var baseUrl = BuildAbsoluteUrl("").TrimEnd('/');
+
+                var customerHtml = MailTemplates.OrderCustomerTemplate(order, baseUrl, siteSettings);
+                var adminHtml = MailTemplates.OrderAdminTemplate(order, baseUrl, siteSettings);
+
+                var customerEmail = await ResolveCustomerEmailFromOrderAsync(order);
+                var adminEmail = siteSettings?.NotificationEmail;
+
+                if (!string.IsNullOrWhiteSpace(customerEmail))
+                {
+                    await _mailSender.SendMailAsync(
+                        customerEmail,
+                        $"Siparişiniz Alındı - Tornado Toptan | Sipariş #{order.Id}",
+                        customerHtml,
+                        "Tornado Toptan");
+                }
+
+                if (!string.IsNullOrWhiteSpace(adminEmail))
+                {
+                    await _mailSender.SendMailAsync(
+                        adminEmail,
+                        $"Yeni Sipariş Bildirimi - Sipariş #{order.Id}",
+                        adminHtml,
+                        "Tornado Toptan");
+                }
+            }
+            catch (Exception ex)
+            {
+                // Mail gönderimi sipariş akışını bozmasın
+                Console.WriteLine("Mail gönderim hatası: " + ex.Message);
             }
 
             ClearCart();
@@ -972,7 +1021,21 @@ namespace ilkimPlastik.WEB.Controllers
         // =======================
         // Helpers
         // =======================
+        private async Task<string> ResolveCustomerEmailFromOrderAsync(Order order)
+        {
+            if (order.UserId > 0)
+            {
+                var email = await _db.Users.AsNoTracking()
+                    .Where(x => x.Id == order.UserId)
+                    .Select(x => x.Email)
+                    .FirstOrDefaultAsync();
 
+                if (!string.IsNullOrWhiteSpace(email))
+                    return email.Trim();
+            }
+
+            return "";
+        }
         private async Task<string> PostFormAsync(string url, Dictionary<string, string> form)
         {
             System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12;

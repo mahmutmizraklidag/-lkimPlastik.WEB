@@ -25,7 +25,7 @@ namespace ilkimPlastik.WEB
         public DbSet<OrderProduct> OrderProducts { get; set; }
         public DbSet<SiteSettings> SiteSettings { get; set; }
         public DbSet<ContactMessage> ContactMessages { get; set; }
-
+        public DbSet<Slider> Sliders { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

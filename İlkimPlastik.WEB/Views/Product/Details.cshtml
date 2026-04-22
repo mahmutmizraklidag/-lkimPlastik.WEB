@@ -844,7 +844,7 @@
 
                         <h1 class="detail-title">@Model.Title</h1>
 
-                        <div class="detail-meta-row">
+                       @*  <div class="detail-meta-row">
                             <span class="detail-pill">
                                 <i class="fa fa-cubes"></i>
                                 <span>Toplam stok: <strong>@totalStock</strong></span>
@@ -865,7 +865,7 @@
                                     <span>İndirim: <strong>% @pctOut</strong></span>
                                 </span>
                             }
-                        </div>
+                        </div> *@
 
                         <div class="detail-price-box">
                             <div class="price-wrap">
@@ -880,9 +880,6 @@
                                 }
                             </div>
 
-                            <div class="detail-price-note">
-                                Fiyat bilgisi seçtiğiniz beden ve stok durumuna göre sepete ekleme aşamasında doğrulanır.
-                            </div>
                         </div>
 
                         <form id="addToCartForm" method="post" action="/cart/add" onsubmit="return validateCart()">
@@ -915,14 +912,14 @@
                                 @if (defaultSizeId == 0)
                                 {
                                     <div class="notice warn" id="sizeHint">
-                                        Bu üründe stoklu beden bulunamadı. Sepete ekleme devre dışı.
+                                        Bu üründe stoklu beden bulunamadı.
                                     </div>
                                 }
                             }
                             else
                             {
                                 <div class="notice warn">
-                                    Bu ürün için beden/ölçü seçeneği bulunmuyor. Sepete ekleme devre dışı.
+                                    Bu ürün için beden/ölçü seçeneği bulunmuyor.
                                 </div>
                             }
 
@@ -1191,10 +1188,10 @@
             if (qtyInput) qtyInput.value = qty;
 
             if (stock > 0) {
-                if (qtyHint) {
-                    qtyHint.style.display = 'block';
-                    qtyHint.textContent = 'Seçilen beden için maksimum adet: ' + stock;
-                }
+                // if (qtyHint) {
+                //     qtyHint.style.display = 'block';
+                //     qtyHint.textContent = 'Seçilen beden için maksimum adet: ' + stock;
+                // }
                 if (qtyInput) qtyInput.max = stock;
             } else {
                 if (qtyHint) {

@@ -1173,14 +1173,7 @@
                                     <i class="fa fa-envelope-o"></i><span>E-posta :</span> @email
                                 </a>
                             </li>
-                            @if (!string.IsNullOrWhiteSpace(workingHours))
-                            {
-                                <li>
-                                    <a href="javascript:void(0)">
-                                        <i class="fa fa-clock-o"></i><span>Saat :</span> @workingHours
-                                    </a>
-                                </li>
-                            }
+                          
                         </ul>
                     </div>
 
@@ -1571,11 +1564,11 @@
 
             html += '<li><a href="/product?categoryId=' + encodeURIComponent(cid) + '"><span>Kategoriyi Gör</span><span class="ikmHdr-pill"><i class="fa-solid fa-chevron-right"></i></span></a></li>';
 
-            if (!subs || subs.length === 0) {
-                html += '<li><div class="ikmHdr-suggestEmpty">Bu kategoride alt kategori yok.</div></li>';
-                subList.innerHTML = html;
-                return;
-            }
+            // if (!subs || subs.length === 0) {
+            //     html += '<li><div class="ikmHdr-suggestEmpty">Bu kategoride alt kategori yok.</div></li>';
+            //     subList.innerHTML = html;
+            //     return;
+            // }
 
             for (var j = 0; j < subs.length; j++) {
                 var s = subs[j];

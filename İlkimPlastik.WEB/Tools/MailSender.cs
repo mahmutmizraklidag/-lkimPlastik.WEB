@@ -8,9 +8,9 @@ namespace ilkimPlastik.WEB.Tools
     public class MailSender : IMailSender
     {
         // SMTP bilgilerini config veya appsettings.json'dan almak daha güvenli olur
-        private readonly string _smtpServer = "webmail.test.com";
+        private readonly string _smtpServer = "webmail.tornadotoptan.com";
         private readonly int _smtpPort = 465;
-        private readonly string _fromEmail = "satis@test.com";
+        private readonly string _fromEmail = "satis@tornadotoptan.com";
         private readonly string _password = "EDKutests39Mv";
         public async Task SendMailAsync(string toEmail, string subject, string htmlBody, string name)
         {

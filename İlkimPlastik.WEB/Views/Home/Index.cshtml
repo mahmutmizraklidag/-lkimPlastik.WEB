@@ -104,28 +104,16 @@
     }
 
     var copyPool = new (string Head, string Body)[]
-    {
-        ("{0} kategorisinde öne çıkan ürünler", "{0} kategorisinde görselleri karşılaştırın, ihtiyacınıza uygun ürünü hızlıca sepete ekleyin."),
-        ("{0} kategorisinde yeni ürünleri keşfedin", "{0} kategorisinde güncel seçenekleri inceleyin; filtrelerle hızlıca doğru ürüne ulaşın."),
-        ("{0} kategorisinde hızlı seçim yapın", "{0} kategorisinde ürün detaylarında uyumluluk bilgilerini kontrol ederek güvenle ilerleyin."),
-        ("{0} kategorisinde seçilmiş ürün önerileri", "{0} kategorisinde özenle seçilmiş ürünleri tek ekranda görün; görsellerle kolay karar verin."),
-        ("{0} kategorisinde kalite odaklı tercih", "{0} kategorisinde ürün görselleri ve açıklamalarla değerlendirin, doğru ürünü netleştirin."),
-        ("{0} kategorisinde en çok tercih edilenler", "{0} kategorisinde popüler ürünleri inceleyin; benzerleri karşılaştırıp sepete ekleyin."),
-        ("{0} kategorisinde pratik ürün keşfi", "{0} kategorisinde arama + filtre ile ürünü hızlı bulun; görsellerle doğrulayın, satın alın."),
-        ("{0} kategorisinde doğru ürün eşleştirmesi", "{0} kategorisinde cihaz uyumluluğunu kontrol ederek hatasız seçim yapın."),
-        ("{0} kategorisinde net görsel karşılaştırma", "{0} kategorisinde benzer ürünleri görsellere göre kıyaslayın ve en uygun seçeneği belirleyin."),
-        ("{0} kategorisinde güncel çözümler", "{0} kategorisinde yeni eklenenleri kaçırmayın; detaylara girip hızlıca sipariş verin."),
-        ("{0} kategorisinde güvenle ilerleyin", "{0} kategorisinde ürün görselleri üzerinden seçimi hızlandırın; detay sayfasında son kontrolü yapın."),
-        ("{0} kategorisinde kolay filtreleme", "{0} kategorisinde kategori + cihaz filtreleriyle aradığınızı daraltın, doğru ürünü bulun."),
-        ("{0} kategorisinde kısa yoldan doğru ürün", "{0} kategorisinde görsellerden başlayın; ürün detayında bilgileri doğrulayıp satın alın."),
-        ("{0} kategorisinde ihtiyaca göre seçim", "{0} kategorisinde kullanım amacınıza uygun ürünleri inceleyin; hızlı satın alma akışıyla ilerleyin."),
-        ("{0} kategorisinde ürünleri hemen inceleyin", "{0} kategorisinde öne çıkan görseller üzerinden karşılaştırma yapın ve hızlı karar verin."),
-        ("{0} kategorisinde akıllı seçim önerileri", "{0} kategorisinde önerilen ürünleri inceleyin; uyum bilgileriyle doğru tercihi yapın."),
-        ("{0} kategorisinde düzenli ürün görünümü", "{0} kategorisinde görseller net; ürün detaylarında ek bilgileri görüp sepete ekleyin."),
-        ("{0} kategorisinde kolay gezinme", "{0} kategorisinde kategoriden başlayın; arama ve filtrelerle en doğru ürüne ulaşın."),
-        ("{0} kategorisinde hızlı satın alma akışı", "{0} kategorisinde ürünü bulun, detayları kontrol edin ve sepete ekleyerek tamamlayın."),
-        ("{0} kategorisinde seçimi hızlandırın", "{0} kategorisinde görselleri ve uyumluluğu kontrol ederek zaman kaybetmeden satın alın.")
-            };
+ {
+    ("{0} kategorisinde Öne Çıkan Ürünler", "{0} kategorisindeki öne çıkan ürünleri inceleyin, ihtiyacınıza uygun seçeneği kolayca sepete ekleyin."),
+    ("{0} kategorisinde Yeni Ürünleri Keşfedin", "{0} kategorisindeki yeni ürünleri keşfedin, filtrelerle aradığınız ürüne hızla ulaşın."),
+    ("{0} kategorisinde Seçilmiş Ürün Önerileri", "{0} kategorisinde özenle seçilmiş ürünleri tek ekranda görün, görselleri karşılaştırarak kolayca karar verin."),
+    ("{0} kategorisinde En Çok Tercih Edilenler", "{0} kategorisindeki popüler ürünleri inceleyin, benzer seçenekleri karşılaştırıp kolayca satın alın."),
+    ("{0} kategorisinde Güncel Ürün Seçenekleri", "{0} kategorisine eklenen yeni ürünleri inceleyin, detayları görüntüleyip hızlıca sipariş verin."),
+    ("{0} kategorisinde Aradığınız Ürünü Kolayca Bulun", "{0} kategorisindeki ürünleri görseller üzerinden inceleyin, detay bilgileri doğrulayıp hemen satın alın."),
+    ("{0} kategorisinde İhtiyacınıza Uygun Seçim", "{0} kategorisindeki ürünleri kullanım amacınıza göre değerlendirin, hızlı ve kolay alışverişin keyfini çıkarın."),
+    ("{0} kategorisindeki Ürünleri Hemen İnceleyin", "{0} kategorisindeki öne çıkan ürünleri karşılaştırın, size en uygun seçeneğe hızlıca karar verin."),
+ };
 
     var catCopyMap = new Dictionary<int, (string Head, string Body)>();
     int offset = (sliderCats.Count > 0 ? (sliderCats[0].Id % copyPool.Length) : 0);
@@ -299,9 +287,9 @@
         <div id="main-carousel" class="carousel slide carousel-fade" data-ride="carousel">
 
             <ol class="carousel-indicators">
-                @if (sliderCats.Count > 0)
+                @if (Model.Sliders.Count > 0)
                 {
-                    for (int i = 0; i < sliderCats.Count; i++)
+                    for (int i = 0; i < Model.Sliders.Count; i++)
                     {
                         <li data-target="#main-carousel" data-slide-to="@i" class="@(i == 0 ? "active" : "")"></li>
                     }
@@ -311,55 +299,27 @@
                     <li data-target="#main-carousel" data-slide-to="0" class="active"></li>
                 }
             </ol>
-
             <div role="listbox" class="carousel-inner">
-                @if (sliderCats.Count > 0)
-                {
-                    for (int i = 0; i < sliderCats.Count; i++)
-                    {
-                        var c = sliderCats[i];
-                        var thumbs = CatThumbs(c);
-                        var copy = catCopyMap.ContainsKey(c.Id)
-                            ? catCopyMap[c.Id]
-                            : (string.Format(copyPool[0].Head, c.Name), string.Format(copyPool[0].Body, c.Name));
-
-                        <div class="item @(i == 0 ? "active" : (i == 1 ? "slide-1" : (i == 2 ? "slide-2" : "")))">
-                            <div class="carousel-caption">
-                                <h3 data-animation="animated fadeInLeft">@copy.Item1</h3>
-                                <p data-animation="animated fadeInRight">@copy.Item2</p>
-
-                                <div class="homeSliderCta" data-animation="animated fadeInUp">
-                                    <a href="/product?categoryId=@c.Id" title="@c.Name kategorisini gör" class="shop-now">
-                                        @c.Name kategorisini gör
-                                    </a>
-                                </div>
-
-                                @if (thumbs.Count > 0)
-                                {
-                                    <div class="homeSliderThumbs" data-animation="animated fadeInUp">
-                                        @foreach (var t in thumbs)
-                                        {
-                                            <a class="homeSliderThumb" href="/product?categoryId=@c.Id" title="@c.Name kategorisinde ürünler">
-                                                <img src="@t" alt="@c.Name kategorisinde ürün görseli" />
-                                            </a>
-                                        }
-                                    </div>
-                                }
-                            </div>
-                        </div>
-                    }
+                @{
+                    var isFirst = true;
                 }
-                else
+
+                @foreach (var item in Model.Sliders)
                 {
-                    <div class="item active">
+                    <div class="item @(isFirst ? "active" : "")">
                         <div class="carousel-caption">
-                            <h3 data-animation="animated fadeInLeft">Ürünlerde hızlı seçim yapın</h3>
-                            <p data-animation="animated fadeInRight">Görselleri inceleyin, filtrelerle daraltın ve sepete ekleyin.</p>
-                            <div class="homeSliderCta" data-animation="animated fadeInUp">
-                                <a href="/product" title="Ürünleri Gör" class="shop-now">Ürünleri Gör</a>
+                            <h3 data-animation="animated fadeInLeft">@item.Title</h3>
+                            <p data-animation="animated fadeInRight">@item.Description</p>
+                            <div class="col-md-12">
+                                <a href="@item.sefUrl" data-animation="animated fadeInUp" title="Shop Now" class="shop-now">
+                                    Hemen Satın Al
+                                </a>
                             </div>
+                            <img data-animation="animated fadeInDown" src="~/img/@item.Image" alt="slider" width="900" height="342" />
                         </div>
                     </div>
+
+                    isFirst = false;
                 }
             </div>
 
@@ -374,59 +334,59 @@
             <div class="col-md-5 col-sm-5 col-xs-12">
                 <div class="modern-box">
                     <div class="col-md-7 col-sm-6 col-xs-6">
-                        <img src="/images/ad-banner-4.png" alt="ad-banner" />
+                        <img src="/images/emici.png" alt="ad-banner" />
                     </div>
                     <div class="col-md-5 col-sm-6 col-xs-6">
-                        <h3 class="ad-heading">Seçilmiş Ürünler</h3>
-                        <h5>Vitrin önerileri</h5>
-                        <div class="cta-soft">Görselleri inceleyin, en doğru ürünü seçin ve hemen satın alın.</div>
+                        <h3 class="ad-heading">Emiciler</h3>
+                        <h5>Geniş Ürün Yelpazesi</h5>
+                        <div class="cta-soft">Ürünlerimizi inceleyin ve cihazınıza uyumlu emiciyi hızlıca satın alın.</div>
 
                        
                     </div>
-                    <a href="/product" class="shop-now" title="Ürünleri Gör">Ürünleri Gör<i class="fa fa-caret-right" aria-hidden="true"></i></a>
+                    <a href="https://localhost:7202/product?categoryId=8" class="shop-now" title="Ürünleri Gör">Ürünleri Gör<i class="fa fa-caret-right" aria-hidden="true"></i></a>
                 </div>
 
                 <div class="modern-box modern-ads">
                     <div class="col-md-5 col-sm-6 col-xs-6">
-                        <h3 class="ad-heading">Cihaza Göre Filtrele</h3>
-                        <h5>Uyumlu ürünleri hızlıca bulun</h5>
-                        <div class="cta-soft">Cihazınız ile uyumlu ürünlere göz atın, doğru ürünü kaçırmayın.</div>
+                        <h3 class="ad-heading">Hortumlar</h3>
+                        <h5>Geniş Ürün Yelpazesi</h5>
+                        <div class="cta-soft">Ürünlerimizi inceleyin ve cihazınıza uyumlu hortumu hızlıca satın alın.</div>
 
                      
                     </div>
                     <div class="col-md-7 col-sm-6 col-xs-6">
-                        <img src="/images/ad-banner-5.png" alt="ad-banner" />
+                        <img src="/images/havuz.png" alt="ad-banner" />
                     </div>
-                    <a href="/product" class="shop-now" title="Uyumlu Ürünleri Bul">Uyumlu Ürünleri Bul<i class="fa fa-caret-right" aria-hidden="true"></i></a>
+                    <a href="https://localhost:7202/product?categoryId=7" class="shop-now" title="Uyumlu Ürünleri Bul">Ürünleri Gör<i class="fa fa-caret-right" aria-hidden="true"></i></a>
                 </div>
             </div>
 
             <div class="col-md-7 col-sm-7 col-xs-12">
                 <div class="modern-box modern-shop">
                     <div class="col-md-7 col-sm-6 col-xs-6">
-                        <img src="/images/ad-banner-6.png" alt="ad-banner" />
+                        <img src="/images/aksesuar.png" alt="ad-banner" />
                     </div>
                     <div class="col-md-5 col-sm-6 col-xs-6">
-                        <h3 class="ad-heading">Yeni Eklenenler</h3>
-                        <div class="cta-soft">Yeni ürünleri görsellerle inceleyin ve hızlıca satın almaya geçin.</div>
+                        <h3 class="ad-heading">Aksesuarlar</h3>
+                        <div class="cta-soft">Ürünlerimizi inceleyin ve cihazınıza uyumlu aksesuarı hızlıca satın alın.</div>
 
                        
                     </div>
-                    <a href="/product" class="shop-now" title="Yeni Ürünler">Yeni Ürünler<i class="fa fa-caret-right" aria-hidden="true"></i></a>
+                    <a href="https://localhost:7202/product?categoryId=10" class="shop-now" title="Yeni Ürünler">Ürünleri Gör<i class="fa fa-caret-right" aria-hidden="true"></i></a>
                 </div>
-
-                <div class="modern-box modern-shop-1">
-                    <div class="col-md-5 col-sm-6 col-xs-6">
-                        <h3 class="ad-heading">Kategoriler</h3>
-                        <h5>İhtiyaca göre seçin</h5>
-                        <div class="cta-soft">Kategorilerden ilerleyin, cihaz filtresiyle uyumlu ürünleri yakalayın.</div>
-                    </div>
+                <div class="modern-box modern-shop">
                     <div class="col-md-7 col-sm-6 col-xs-6">
-                        <img src="/images/ad-banner-7.png" alt="ad-banner" />
+                        <img src="/images/supurgehortumu.png" alt="ad-banner" />
                     </div>
-                    <a href="/product" class="shop-now" title="Kategorileri Gör">Kategorileri Gör<i class="fa fa-caret-right" aria-hidden="true"></i></a>
-                </div>
+                    <div class="col-md-5 col-sm-6 col-xs-6">
+                        <h3 class="ad-heading">Süpürge Hortumları</h3>
+                        <div class="cta-soft">Ürünlerimizi inceleyin ve cihazınıza uyumlu süpürge hortumunu hızlıca satın alın.</div>
 
+                       
+                    </div>
+                    <a href="https://localhost:7202/product?categoryId=9" class="shop-now" title="Yeni Ürünler">Ürünleri Gör<i class="fa fa-caret-right" aria-hidden="true"></i></a>
+                </div>
+               
               
             </div>
 
@@ -600,57 +560,307 @@
         <div class="section-padding"></div>
     </div>
 
-    <!-- Saleup (görseller) -->
-    <div id="saleup-section" class="saleup-section container-fluid no-padding">
-        <div class="col-md-6 col-sm-12 col-xs-12 saleup-info no-padding">
-            <ul id="imageGallery">
-                <li data-thumb="@(saleupHero != null ? FirstImg(saleupHero) : "/images/thumb-1.jpg")">
-                    <h3>Günün Fırsatı</h3>
+    <!-- Bottom Showcase Section -->
+    @{
+        var randomProducts = new List<dynamic>();
 
-                    @if (saleupHero != null)
+        if (saleupThumbs != null && saleupThumbs.Any())
+        {
+            randomProducts = saleupThumbs
+                .OrderBy(x => Guid.NewGuid())
+                .Take(4)
+                .Cast<dynamic>()
+                .ToList();
+        }
+    }
+
+    <section class="home-bottom-showcase">
+        <div class="container">
+            <div class="home-bottom-showcase__inner">
+
+                <div class="home-bottom-showcase__content">
+                    <span class="home-bottom-showcase__eyebrow">Tornado Toptan</span>
+                    <h2>İhtiyacınıza uygun yedek parçalarda hızlı ve kolay alışveriş</h2>
+                    <p>
+                        Geniş ürün yelpazemizle ihtiyacınıza uygun seçenekleri kolayca inceleyebilir,
+                        ürün detaylarını karşılaştırabilir ve siparişinizi hızlıca oluşturabilirsiniz.
+                    </p>
+
+                    <div class="home-bottom-showcase__actions">
+                        <a href="/product" class="home-bottom-showcase__btn primary">Tüm Ürünleri Gör</a>
+                        <a href="/contact" class="home-bottom-showcase__btn secondary">Bizimle İletişime Geçin</a>
+                    </div>
+                </div>
+
+                <div class="home-bottom-showcase__products">
+                    @if (randomProducts.Any())
                     {
-                        <div class="saleup-product-hero">
-                            <a href="/product/details/@saleupHero.Id" title="@saleupHero.Title">
-                                <img src="@FirstImg(saleupHero)" alt="@saleupHero.Title" />
-                            </a>
-                        </div>
-
-                        <span>@saleupHero.Title</span>
-                        <p>Görselleri inceleyin, sepete ekleyin ve hızlıca satın alın.</p>
-
-                           
-
-                        @if (saleupThumbs.Count > 0)
+                        @foreach (var item in randomProducts)
                         {
-                            <div class="saleup-product-thumbs">
-                                @foreach (var p in saleupThumbs.Take(4))
-                                {
-                                    <a href="/product/details/@p.Id" title="@p.Title">
-                                        <img src="@FirstImg(p)" alt="@p.Title" />
-                                    </a>
-                                }
-                            </div>
+                            <a href="/product/details/@item.Id" class="home-bottom-showcase__card" title="@item.Title">
+                                <div class="home-bottom-showcase__image">
+                                    <img src="@FirstImg(item)" alt="@item.Title" />
+                                </div>
+                                <div class="home-bottom-showcase__card-body">
+                                    <h3>@item.Title</h3>
+                                    <span>Ürünü İncele</span>
+                                </div>
+                            </a>
                         }
+                    }
+                    else if (saleupHero != null)
+                    {
+                        <a href="/product/details/@saleupHero.Id" class="home-bottom-showcase__card large" title="@saleupHero.Title">
+                            <div class="home-bottom-showcase__image">
+                                <img src="@FirstImg(saleupHero)" alt="@saleupHero.Title" />
+                            </div>
+                            <div class="home-bottom-showcase__card-body">
+                                <h3>@saleupHero.Title</h3>
+                                <span>Öne çıkan ürünü incele</span>
+                            </div>
+                        </a>
                     }
                     else
                     {
-                        <img src="/images/large-thumb.png" alt="large-thumb" width="485" height="181" />
-                        <span>Öne Çıkan Ürün</span>
-                        <p>Kategorilere göre filtreleyin, uyumlu ürünü seçin, satın almaya geçin.</p>
+                        <div class="home-bottom-showcase__empty">
+                            <div class="home-bottom-showcase__empty-icon">
+                                <i class="fa fa-cube" aria-hidden="true"></i>
+                            </div>
+                            <h3>Ürünlerimizi keşfedin</h3>
+                            <p>Kategorilere göz atarak size uygun ürünleri hızlıca bulabilirsiniz.</p>
+                            <a href="/product">Ürünlere Git</a>
+                        </div>
                     }
-                </li>
-            </ul>
-        </div>
+                </div>
 
-        <div class="col-md-6 col-sm-12 co-xs-12 saleup-img no-padding">
-            <h3>Tornado Toptan</h3>
-            <p>
-                Her marka ve modele uygun geniş ürün yelpazemizle Tornado Toptan, plastik ürünlerde güvenilir adresiniz. Kaliteli ürünlerimizi görsellerle inceleyin, ihtiyacınıza uygun olanı hızlıca seçin ve satın almaya geçin.
-            </p>
-            <a href="/product" title="Ürünleri Gör">Ürünleri Gör<i class="fa fa-angle-right" aria-hidden="true"></i></a>
+            </div>
         </div>
-    </div>
+    </section>
+    <style>
+            .home-bottom-showcase {
+                padding: 70px 0;
+                background: #f8f8f8;
+            }
 
+            .home-bottom-showcase__inner {
+                display: flex;
+                align-items: center;
+                gap: 40px;
+                flex-wrap: wrap;
+                background: #ffffff;
+                border-radius: 18px;
+                padding: 40px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+            }
+
+            .home-bottom-showcase__content {
+                flex: 1 1 380px;
+                max-width: 500px;
+            }
+
+            .home-bottom-showcase__eyebrow {
+                display: inline-block;
+                font-size: 13px;
+                font-weight: 700;
+                letter-spacing: 1px;
+                text-transform: uppercase;
+                color: #888;
+                margin-bottom: 14px;
+            }
+
+            .home-bottom-showcase__content h2 {
+                margin: 0 0 18px;
+                font-size: 34px;
+                line-height: 1.25;
+                font-weight: 700;
+                color: #222;
+            }
+
+            .home-bottom-showcase__content p {
+                margin: 0 0 24px;
+                font-size: 15px;
+                line-height: 1.8;
+                color: #666;
+            }
+
+            .home-bottom-showcase__actions {
+                display: flex;
+                gap: 12px;
+                flex-wrap: wrap;
+            }
+
+            .home-bottom-showcase__btn {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 170px;
+                height: 46px;
+                padding: 0 18px;
+                border-radius: 10px;
+                text-decoration: none;
+                font-size: 14px;
+                font-weight: 600;
+                transition: all 0.25s ease;
+            }
+
+                .home-bottom-showcase__btn.primary {
+                    background: #1daaa3;
+                    color: #fff;
+                }
+
+                    .home-bottom-showcase__btn.primary:hover {
+                        background: #000;
+                        color: #fff;
+                    }
+
+                .home-bottom-showcase__btn.secondary {
+                    background: #f1f1f1;
+                    color: #222;
+                }
+
+                    .home-bottom-showcase__btn.secondary:hover {
+                        background: #e7e7e7;
+                        color: #222;
+                    }
+
+            .home-bottom-showcase__products {
+                flex: 1 1 420px;
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 16px;
+            }
+
+            .home-bottom-showcase__card {
+                display: block;
+                background: #fafafa;
+                border: 1px solid #ececec;
+                border-radius: 14px;
+                overflow: hidden;
+                text-decoration: none;
+                transition: all 0.25s ease;
+            }
+
+                .home-bottom-showcase__card:hover {
+                    transform: translateY(-4px);
+                    box-shadow: 0 12px 25px rgba(0,0,0,0.08);
+                    text-decoration: none;
+                }
+
+            .home-bottom-showcase__image {
+                height: 180px;
+                background: #fff;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 16px;
+            }
+
+                .home-bottom-showcase__image img {
+                    max-width: 100%;
+                    max-height: 100%;
+                    object-fit: contain;
+                }
+
+            .home-bottom-showcase__card-body {
+                padding: 16px;
+            }
+
+                .home-bottom-showcase__card-body h3 {
+                    margin: 0 0 8px;
+                    font-size: 16px;
+                    line-height: 1.4;
+                    color: #222;
+                    font-weight: 600;
+                    min-height: 44px;
+                }
+
+                .home-bottom-showcase__card-body span {
+                    font-size: 13px;
+                    color: #777;
+                }
+
+            .home-bottom-showcase__empty {
+                grid-column: 1 / -1;
+                background: #fafafa;
+                border: 1px dashed #ddd;
+                border-radius: 14px;
+                padding: 40px 24px;
+                text-align: center;
+            }
+
+            .home-bottom-showcase__empty-icon {
+                width: 62px;
+                height: 62px;
+                margin: 0 auto 18px;
+                border-radius: 50%;
+                background: #f0f0f0;
+                color: #222;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 24px;
+            }
+
+            .home-bottom-showcase__empty h3 {
+                margin: 0 0 10px;
+                font-size: 22px;
+                color: #222;
+            }
+
+            .home-bottom-showcase__empty p {
+                margin: 0 0 16px;
+                color: #666;
+                font-size: 14px;
+                line-height: 1.7;
+            }
+
+            .home-bottom-showcase__empty a {
+                display: inline-block;
+                padding: 10px 18px;
+                border-radius: 8px;
+                background: #222;
+                color: #fff;
+                text-decoration: none;
+            }
+
+            @@media (max-width: 991px) {
+                .home-bottom-showcase {
+                    padding: 50px 0;
+                }
+
+                .home-bottom-showcase__inner {
+                    padding: 28px;
+                    gap: 28px;
+                }
+
+                .home-bottom-showcase__content h2 {
+                    font-size: 28px;
+                }
+            }
+
+            @@media (max-width: 767px) {
+                .home-bottom-showcase__inner {
+                    padding: 20px;
+                    border-radius: 14px;
+                }
+
+                .home-bottom-showcase__products {
+                    grid-template-columns: 1fr;
+                }
+
+                .home-bottom-showcase__content h2 {
+                    font-size: 24px;
+                }
+
+                .home-bottom-showcase__btn {
+                    width: 100%;
+                }
+
+                .home-bottom-showcase__image {
+                    height: 220px;
+                }
+            }
+    </style>
     <!-- Yorumlar -->
     @* <div class="testimonial-section container-fluid no-padding">
         <div class="section-padding"></div>

@@ -1935,7 +1935,7 @@ main,footer {
 /* * Page Banner */
 
 .page-banner {
-    background-image: url("/images/contact-banner.jpg");
+    background-image: url("/images/bread.png");
     background-position: center center;
     background-repeat: no-repeat;
     background-size: cover;
@@ -1973,16 +1973,16 @@ main,footer {
 	background-image: url("/images/blogpost-banner.jpg");
 }
 .page-banner.shop-banner-1 {
-	background-image: url("/images/shop-banner-1.jpg");
+	background-image: url("/images/bread.png");
 }
 .page-banner.shop-banner {
 	background-image: url("/images/shop-banner.jpg");
 }
 .page-banner.product-detail {
-	background-image: url("/images/product-banner.jpg");
+	background-image: url("/images/bread.png");
 }
 .page-banner.cart-banner {
-	background-image: url("/images/cart-banner.jpg");
+	background-image: url("/images/bread.png");
 }
 .page-banner.checkout-banner {
 	background-image: url("/images/checkout-banner.jpg");

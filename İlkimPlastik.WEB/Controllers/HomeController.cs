@@ -71,14 +71,17 @@ namespace ilkimPlastik.WEB.Controllers
                 .OrderBy(x => x.Name)
                 .Take(6)
                 .ToListAsync();
-
+            var sliders = await _db.Sliders.AsNoTracking()
+                .OrderBy(x => x.Id)
+                .ToListAsync();
             var vm = new HomeVm
             {
                 Latest = latest,
                 Featured = featured,
                 BestSeller = bestSeller,
                 CategoryCards = catCards,
-                Devices = devices
+                Devices = devices,
+                Sliders = sliders
             };
 
             return View(vm);
@@ -91,6 +94,7 @@ namespace ilkimPlastik.WEB.Controllers
             public List<Product> BestSeller { get; set; } = new();
             public List<CategoryCardVm> CategoryCards { get; set; } = new();
             public List<ProductDevice> Devices { get; set; } = new();
+            public List<Slider> Sliders { get; set; } = new();
         }
 
         public class CategoryCardVm

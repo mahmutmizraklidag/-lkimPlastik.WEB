@@ -372,6 +372,7 @@
                     <a class="@(isActive("/admin/order") ? "active" : "")" href="/Admin/Order">Siparişler <small>→</small></a>
                     <a class="@(isActive("/admin/device") ? "active" : "")" href="/Admin/Device">Cihazlar <small>→</small></a>
                     <a class="@(isActive("/admin/user") ? "active" : "")" href="/Admin/User">Kullanıcılar <small>→</small></a>
+                    <a class="@(isActive("/admin/slider") ? "active" : "")" href="/Admin/Slider">Slider <small>→</small></a>
                     <a class="@(isActive("/admin/sitesettings") ? "active" : "")" href="/Admin/SiteSettings">Site Ayarları <small>→</small></a>
                     <a class="@(isActive("/admin/contactmessage") ? "active" : "")" href="/Admin/contactmessage">Gelen Mesajlar  <small>→</small></a>
                 </nav>
@@ -402,6 +403,6 @@
             document.getElementById('overlay').classList.remove('open');
         }
     </script>
-
+    @RenderSection("Scripts", required: false)
 </body>
 </html>

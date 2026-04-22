@@ -1,4 +1,5 @@
 ﻿using ilkimPlastik.WEB;
+using ilkimPlastik.WEB.Tools;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.HttpOverrides;
 
@@ -13,6 +14,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownNetworks.Clear();
     options.KnownProxies.Clear();
 });
+builder.Services.AddScoped<IMailSender, MailSender>();
 // 1. MVC ve Veritabanı Servisleri
 builder.Services.AddControllersWithViews();
 builder.Services.AddSqlServer<EfCoreContext>(builder.Configuration.GetConnectionString("dbConnection"));
