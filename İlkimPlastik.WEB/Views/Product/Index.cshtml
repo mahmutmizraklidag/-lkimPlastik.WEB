@@ -870,14 +870,21 @@
                                         <h3>@p.Title</h3>
 
                                         <span class="price">
-                                            @if (pctOut > 0)
+                                            @if (User.Identity?.IsAuthenticated == true)
                                             {
-                                                <span class="amount">₺ @Money(newP)</span>
-                                                <del>₺ @Money(oldP)</del>
+                                                @if (pctOut > 0)
+                                                {
+                                                    <span class="amount">₺ @Money(newP)</span>
+                                                    <del>₺ @Money(oldP)</del>
+                                                }
+                                                else
+                                                {
+                                                    <span class="amount">₺ @Money(p.Price)</span>
+                                                }
                                             }
                                             else
                                             {
-                                                <span class="amount">₺ @Money(p.Price)</span>
+                                                <span style="font-size: 13px; color: #1daaa3; font-weight: 600;">Fiyatları görmek için giriş yapın</span>
                                             }
                                         </span>
                                     </a>

@@ -8,6 +8,7 @@
         public string? Keywords { get; set; }
         public string Barcode { get; set; }
         public string ModelCode { get; set; } // ürünlerin birbirinin alternetifi olduğunu anlayabilmek için örnek; kırmızı , beyaz gibi renk farkı olan ürünlerde aynı model kodu verilecek
+        public string? AverageDeliveryTime { get; set; } // ortalama teslim süresi (örnek: 2-3 iş günü)
 
         // fiyat string olmasın (hatalı/riski yüksek). decimal daha doğru
         public decimal Price { get; set; }

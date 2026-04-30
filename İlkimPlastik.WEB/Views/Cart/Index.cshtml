@@ -423,6 +423,7 @@
                                         <ul class="cart-meta">
                                             <li><strong>Barkod:</strong> @(string.IsNullOrWhiteSpace(it.Barcode) ? "-" : it.Barcode)</li>
                                             <li><strong>Beden:</strong> @it.SizeName</li>
+                                            <li><strong>Ortalama Teslim Süresi:</strong> @(string.IsNullOrWhiteSpace(it.AverageDeliveryTime) ? "Stok durumuna göre" : it.AverageDeliveryTime)</li>
                                         </ul>
                                     </div>
 

@@ -61,6 +61,7 @@
     var defaultStock = firstAvailableSize?.StockCount ?? 0;
 
     var totalStock = sizesAll.Sum(x => x.StockCount);
+    var AverageDeliveryTime = !string.IsNullOrWhiteSpace(Model.AverageDeliveryTime) ? Model.AverageDeliveryTime : "Stok durumuna göre";
 }
 
 <style>
@@ -869,14 +870,21 @@
 
                         <div class="detail-price-box">
                             <div class="price-wrap">
-                                @if (pctOut > 0)
+                                @if (User.Identity?.IsAuthenticated == true)
                                 {
-                                    <span class="amount">₺ @Money(newPrice)</span>
-                                    <del>₺ @Money(oldPrice)</del>
+                                    @if (pctOut > 0)
+                                    {
+                                        <span class="amount">₺ @Money(newPrice)</span>
+                                        <del>₺ @Money(oldPrice)</del>
+                                    }
+                                    else
+                                    {
+                                        <span class="amount">₺ @Money(Model.Price)</span>
+                                    }
                                 }
                                 else
                                 {
-                                    <span class="amount">₺ @Money(Model.Price)</span>
+                                    <span style="font-size: 16px; color: #1daaa3; font-weight: 600;">Fiyatı görmek için giriş yapın</span>
                                 }
                             </div>
 
@@ -884,7 +892,7 @@
 
                         <form id="addToCartForm" method="post" action="/cart/add" onsubmit="return validateCart()">
                             @Html.AntiForgeryToken()
-
+                            <input type="hidden" name="averageDeliveryTime" value="@Model.AverageDeliveryTime" />
                             <input type="hidden" name="productId" value="@Model.Id" />
                             <input type="hidden" name="sizeId" id="sizeId" value="@(defaultSizeId > 0 ? defaultSizeId.ToString() : "")" />
                             <input type="hidden" name="returnUrl" value="@returnUrl" />
@@ -922,7 +930,14 @@
                                     Bu ürün için beden/ölçü seçeneği bulunmuyor.
                                 </div>
                             }
-
+                            
+                            @if(!string.IsNullOrWhiteSpace(Model.AverageDeliveryTime))
+                            {
+                                <div class="detail-price-note">
+                                    Ortalama teslim süresi: @Model.AverageDeliveryTime
+                                </div>
+                            }
+                            
                             <div class="qty-row">
                                 <label class="qty-label">Adet</label>
                                 <input type="number" name="quantity" id="qty" class="form-control qty-input" value="1" min="1" />
@@ -931,13 +946,22 @@
 
                             <div id="cartError" class="notice error"></div>
 
-                            <button type="submit"
-                                    id="addCartBtn"
-                                    class="add-cart-btn"
-                                @((!sizesAll.Any() || defaultSizeId == 0) ? "disabled" : "")>
-                                <span id="btnText"><i class="fa fa-shopping-cart"></i> Sepete Ekle</span>
-                                <span id="btnSpinner" style="display:none"><i class="fa fa-spinner fa-spin"></i></span>
-                            </button>
+                            @if (User.Identity?.IsAuthenticated == true)
+                            {
+                                <button type="submit"
+                                        id="addCartBtn"
+                                        class="add-cart-btn"
+                                    @((!sizesAll.Any() || defaultSizeId == 0) ? "disabled" : "")>
+                                    <span id="btnText"><i class="fa fa-shopping-cart"></i> Sepete Ekle</span>
+                                    <span id="btnSpinner" style="display:none"><i class="fa fa-spinner fa-spin"></i></span>
+                                </button>
+                            }
+                            else
+                            {
+                                <div class="notice warn" style="text-align:center; font-weight:bold;">
+                                    <i class="fa fa-lock"></i> Sepete eklemek için üye girişi yapmalısınız.
+                                </div>
+                            }
                         </form>
 
                         @if (!string.IsNullOrWhiteSpace(Model.Description))
@@ -983,16 +1007,22 @@
 
                                                 <div class="alt-info">
                                                     <p class="alt-title">@alt.Title</p>
-
                                                     <div class="alt-price">
-                                                        @if (pctAltOut > 0)
+                                                        @if (User.Identity?.IsAuthenticated == true)
                                                         {
-                                                            <strong>₺ @Money(newAlt)</strong>
-                                                            <del>₺ @Money(oldAlt)</del>
+                                                            @if (pctAltOut > 0)
+                                                            {
+                                                                <strong>₺ @Money(newAlt)</strong>
+                                                                <del>₺ @Money(oldAlt)</del>
+                                                            }
+                                                            else
+                                                            {
+                                                                <strong>₺ @Money(alt.Price)</strong>
+                                                            }
                                                         }
                                                         else
                                                         {
-                                                            <strong>₺ @Money(alt.Price)</strong>
+                                                            <span style="font-size: 12px; color: #1daaa3; font-weight: 600;">Fiyatı görmek için giriş yapın</span>
                                                         }
                                                     </div>
 
@@ -1126,16 +1156,22 @@
                                     </span>
 
                                     <h3>@p.Title</h3>
-
                                     <span class="price">
-                                        @if (pctLout > 0)
+                                        @if (User.Identity?.IsAuthenticated == true)
                                         {
-                                            <span class="amount">₺ @Money(newL)</span>
-                                            <del>₺ @Money(oldL)</del>
+                                            @if (pctLout > 0)
+                                            {
+                                                <span class="amount">₺ @Money(newL)</span>
+                                                <del>₺ @Money(oldL)</del>
+                                            }
+                                            else
+                                            {
+                                                <span class="amount">₺ @Money(p.Price)</span>
+                                            }
                                         }
                                         else
                                         {
-                                            <span class="amount">₺ @Money(p.Price)</span>
+                                            <span style="font-size: 13px; color: #1daaa3; font-weight: 600;">Fiyatı görmek için giriş yapın</span>
                                         }
                                     </span>
                                 </a>

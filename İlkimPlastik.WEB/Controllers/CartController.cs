@@ -88,6 +88,7 @@ namespace ilkimPlastik.WEB.Controllers
                     UnitPrice = newUnit,
 
                     Quantity = ci.Quantity,
+                    AverageDeliveryTime = ci.AverageDeliveryTime, // ✅ Session'dan alıp VM'e aktarıyoruz
                     OldLineTotal = oldLineTotal,
                     LineTotal = lineTotal,
                     LineDiscount = lineDiscount
@@ -143,7 +144,7 @@ namespace ilkimPlastik.WEB.Controllers
 
         [HttpPost("/cart/add")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Add(int productId, int sizeId, int quantity, string? returnUrl = null)
+        public async Task<IActionResult> Add(int productId, int sizeId, int quantity, string? averageDeliveryTime, string? returnUrl = null)
         {
             if (quantity < 1) quantity = 1;
 
@@ -176,12 +177,16 @@ namespace ilkimPlastik.WEB.Controllers
             var line = cart.Items.FirstOrDefault(x => x.ProductId == productId && x.SizeId == sizeId);
 
             if (line == null)
-                cart.Items.Add(new CartItemDto { ProductId = productId, SizeId = sizeId, Quantity = quantity });
+                cart.Items.Add(new CartItemDto { ProductId = productId, SizeId = sizeId, Quantity = quantity,
+                    AverageDeliveryTime = averageDeliveryTime
+                });
             else
             {
                 var newQty = line.Quantity + quantity;
                 if (newQty > size.StockCount) newQty = size.StockCount;
                 line.Quantity = newQty;
+                // Mevcut satır güncellenirken de teslim süresini tazeleyebilirsiniz:
+                line.AverageDeliveryTime = averageDeliveryTime;
             }
 
             SaveCart(cart);
@@ -220,6 +225,8 @@ namespace ilkimPlastik.WEB.Controllers
                 var qty = u.Quantity < 1 ? 1 : u.Quantity;
                 if (qty > s.StockCount) qty = s.StockCount;
                 line.Quantity = qty;
+                // ✅ Teslim süresini veritabanındaki güncel haliyle tazeliyoruz
+                line.AverageDeliveryTime = p?.AverageDeliveryTime;
             }
 
             SaveCart(cart);
@@ -273,6 +280,9 @@ namespace ilkimPlastik.WEB.Controllers
 
             if (quantity > size.StockCount) quantity = size.StockCount;
             line.Quantity = quantity;
+
+            // ✅ Satır güncellenirken teslim süresini de veritabanından tekrar alalım
+            line.AverageDeliveryTime = product?.AverageDeliveryTime;
 
             SaveCart(cart);
 
@@ -390,6 +400,7 @@ namespace ilkimPlastik.WEB.Controllers
             public int ProductId { get; set; }
             public int SizeId { get; set; }
             public int Quantity { get; set; }
+            public string? AverageDeliveryTime { get; set; } // ✅ Yeni eklendi
         }
 
         public class CartUpdateDto
@@ -397,6 +408,7 @@ namespace ilkimPlastik.WEB.Controllers
             public int ProductId { get; set; }
             public int SizeId { get; set; }
             public int Quantity { get; set; }
+            public string? AverageDeliveryTime { get; set; } // ✅ Eklendi
         }
 
         public class CartIndexVm
@@ -430,7 +442,7 @@ namespace ilkimPlastik.WEB.Controllers
             public decimal UnitPrice { get; set; }              // ✅ indirimli birim
 
             public int Quantity { get; set; }
-
+            public string? AverageDeliveryTime { get; set; }    // ✅ ortalama teslim süresi
             public decimal OldLineTotal { get; set; }           // ✅ indirimsiz satır toplam
             public decimal LineTotal { get; set; }              // ✅ indirimli satır toplam
             public decimal LineDiscount { get; set; }           // ✅ satır indirimi
