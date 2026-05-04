@@ -92,6 +92,7 @@ namespace ilkimPlastik.WEB.Controllers
                 Status = order.Status,
                 IsPay = order.IsPay,
                 TotalPrice = order.TotalPrice,
+
                 Name = order.Name,
                 Surname = order.Surname,
                 Phone = order.Phone,
@@ -99,6 +100,10 @@ namespace ilkimPlastik.WEB.Controllers
                 District = order.District,
                 PostCode = order.PostCode,
                 Details = order.Details,
+
+                CargoCompany = order.CargoCompany,
+                CargoTrackingNumber = order.CargoTrackingNumber,
+
                 Items = items
             };
 
@@ -129,6 +134,8 @@ namespace ilkimPlastik.WEB.Controllers
             public string District { get; set; } = "";
             public string Name { get; set; } = "";
             public string Surname { get; set; } = "";
+            public string CargoCompany { get; set; } = "";
+            public string CargoTrackingNumber { get; set; } = "";
         }
 
         public class OrderDetailVm
@@ -146,6 +153,9 @@ namespace ilkimPlastik.WEB.Controllers
             public string District { get; set; } = "";
             public string? PostCode { get; set; }
             public string? Details { get; set; }
+
+            public string? CargoCompany { get; set; }
+            public string? CargoTrackingNumber { get; set; }
 
             public List<OrderItemVm> Items { get; set; } = new();
         }

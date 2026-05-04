@@ -481,6 +481,32 @@
          border-top: 1px solid var(--line);
          margin: 14px 0
      }
+
+    .cargoDetailBox {
+        margin-top: 12px;
+        border: 1px solid #bfdbfe;
+        background: linear-gradient(180deg, #eff6ff, #ffffff);
+        border-radius: 16px;
+        padding: 12px;
+    }
+
+        .cargoDetailBox .cargoTitle {
+            font-weight: 900;
+            color: #1d4ed8;
+            margin-bottom: 10px;
+        }
+
+        .cargoDetailBox .cargoGrid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+    @@media(max-width:520px) {
+        .cargoDetailBox .cargoGrid {
+            grid-template-columns: 1fr;
+        }
+    }
 </style>
 
 <main class="site-main page-spacing myord">
@@ -770,6 +796,21 @@
             var addrLine = [d.city, d.district].filter(Boolean).join(' / ');
             var post = d.postCode ? (' - ' + d.postCode) : '';
             var details = d.details ? esc(d.details) : '';
+            var cargoCompany = (d.cargoCompany || d.CargoCompany || '').trim();
+            var cargoTrackingNumber = (d.cargoTrackingNumber || d.CargoTrackingNumber || '').trim();
+
+            var cargoHtml = '';
+
+            if (cargoCompany || cargoTrackingNumber) {
+                cargoHtml =
+                    '<div class="cargoDetailBox">' +
+                    '<div class="cargoTitle">Kargo Bilgileri</div>' +
+                    '<div class="cargoGrid">' +
+                    '<div><div class="k">Kargo Firması: </div><div class="v">' + (cargoCompany ? esc(cargoCompany) : '<span class="muted">-</span>') + '</div></div>' +
+                    '<div><div class="k">Kargo Takip No: </div><div class="v">' + (cargoTrackingNumber ? esc(cargoTrackingNumber) : '<span class="muted">-</span>') + '</div></div>' +
+                    '</div>' +
+                    '</div>';
+            }
 
             var items = Array.isArray(d.items) ? d.items : [];
             var itemsHtml = items.map(function (x) {
@@ -815,6 +856,9 @@
                 '<div><div class="k">Telefon</div><div class="v">' + esc(d.phone || '') + '</div></div>' +
                 '<div><div class="k">Konum</div><div class="v">' + esc(addrLine + post) + '</div></div>' +
                 '<div><div class="k">Adres</div><div class="v">' + (details ? details : '<span class="muted">-</span>') + '</div></div>' +
+                '</div>' +
+                cargoHtml +
+                '</div>' +
                 '</div>' +
                 '</div>' +
 

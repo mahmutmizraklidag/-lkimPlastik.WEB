@@ -59,6 +59,7 @@ namespace ilkimPlastik.WEB.Utils
         private static string BuildHeaderLogoHtml(SiteSettings? siteSettings, string? baseUrl)
         {
             var logoUrl = BuildLogoUrl(siteSettings, baseUrl);
+
             if (string.IsNullOrWhiteSpace(logoUrl))
             {
                 return $@"
@@ -126,7 +127,97 @@ namespace ilkimPlastik.WEB.Utils
             }
 
             sb.Append("</table>");
+
             return sb.ToString();
+        }
+
+        private static string OrderStatusText(string? status, bool isPay = false)
+        {
+            status = (status ?? "Pending").Trim();
+
+            if (status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase))
+                return "İptal";
+
+            if (status.Equals("Shipped", StringComparison.OrdinalIgnoreCase))
+                return "Kargoda";
+
+            if (status.Equals("Paid", StringComparison.OrdinalIgnoreCase) || isPay)
+                return "Ödendi";
+
+            return "Beklemede";
+        }
+
+        private static string BuildStatusTitle(string? status)
+        {
+            status = (status ?? "Pending").Trim();
+
+            if (status.Equals("Shipped", StringComparison.OrdinalIgnoreCase))
+                return "Siparişiniz Kargoya Verildi";
+
+            if (status.Equals("Paid", StringComparison.OrdinalIgnoreCase))
+                return "Siparişiniz Onaylandı";
+
+            if (status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase))
+                return "Siparişiniz İptal Edildi";
+
+            return "Sipariş Durumunuz Güncellendi";
+        }
+
+        private static string BuildStatusMessage(string? status)
+        {
+            status = (status ?? "Pending").Trim();
+
+            if (status.Equals("Shipped", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Siparişiniz kargo firmasına teslim edildi. Kargo takip bilgilerinizi aşağıda görüntüleyebilirsiniz.";
+            }
+
+            if (status.Equals("Paid", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Siparişinizin ödeme durumu onaylandı. Siparişiniz hazırlanma sürecine alınmıştır.";
+            }
+
+            if (status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Siparişiniz iptal edildi. Detaylı bilgi almak için bizimle iletişime geçebilirsiniz.";
+            }
+
+            return "Siparişinizin durumu güncellendi. Güncel sipariş bilgilerinizi aşağıda inceleyebilirsiniz.";
+        }
+
+        private static string BuildStatusBadgeHtml(string? status, bool isPay)
+        {
+            var text = OrderStatusText(status, isPay);
+
+            var bg = "#fff7ed";
+            var color = "#9a3412";
+            var border = "#fed7aa";
+
+            status = (status ?? "Pending").Trim();
+
+            if (status.Equals("Paid", StringComparison.OrdinalIgnoreCase) || isPay)
+            {
+                bg = "#ecfdf5";
+                color = "#065f46";
+                border = "#b8f2d4";
+            }
+            else if (status.Equals("Shipped", StringComparison.OrdinalIgnoreCase))
+            {
+                bg = "#eff6ff";
+                color = "#1d4ed8";
+                border = "#bfdbfe";
+            }
+            else if (status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase))
+            {
+                bg = "#fff1f2";
+                color = "#9f1239";
+                border = "#fecdd3";
+            }
+
+            return $@"
+<span style='display:inline-block; padding:8px 14px; border-radius:999px; background:{bg}; border:1px solid {border}; color:{color}; font-size:13px; font-weight:700;'>
+    {Encode(text)}
+</span>";
         }
 
         private static string BuildProductCardHtml(OrderProduct product, string? baseUrl)
@@ -235,7 +326,7 @@ namespace ilkimPlastik.WEB.Utils
             var postCode = Encode(order.PostCode);
             var createdAt = order.CreatedAt.ToString("dd.MM.yyyy HH:mm");
             var totalPrice = Money(order.TotalPrice);
-            var status = Encode(order.Status);
+            var status = Encode(OrderStatusText(order.Status, order.IsPay));
             var isPay = order.IsPay ? "Ödendi" : "Ödeme Bekliyor";
 
             return $@"
@@ -252,6 +343,65 @@ namespace ilkimPlastik.WEB.Utils
                 <div><strong>Ödeme Durumu:</strong> {isPay}</div>
                 <div><strong>Sipariş Durumu:</strong> {status}</div>
                 <div><strong>Adres:</strong> {details}, {district} / {city} {postCode}</div>
+            </div>
+        </td>
+    </tr>
+</table>";
+        }
+
+        private static string BuildCargoInfoHtml(Order order)
+        {
+            var hasCargoCompany = !string.IsNullOrWhiteSpace(order.CargoCompany);
+            var hasTrackingNumber = !string.IsNullOrWhiteSpace(order.CargoTrackingNumber);
+
+            if (!hasCargoCompany && !hasTrackingNumber)
+                return "";
+
+            var cargoCompany = Encode(order.CargoCompany);
+            var cargoTrackingNumber = Encode(order.CargoTrackingNumber);
+
+            return $@"
+<tr>
+    <td style='padding:12px 32px;'>
+        <div style='font-size:19px; font-weight:700; color:{DarkColor}; margin-bottom:14px;'>
+            Kargo Bilgileri
+        </div>
+
+        <table role='presentation' width='100%' cellspacing='0' cellpadding='0' border='0'
+               style='border-collapse:collapse; background:#eff6ff; border:1px solid #bfdbfe; border-radius:14px;'>
+            <tr>
+                <td style='padding:20px 22px;'>
+                    <div style='font-size:15px; color:{DarkColor}; line-height:1.95;'>
+                        <div><strong>Kargo Firması:</strong> {cargoCompany}</div>
+                        <div><strong>Kargo Takip No:</strong> {cargoTrackingNumber}</div>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </td>
+</tr>";
+        }
+
+        private static string BuildStatusInfoCard(Order order, string? oldStatus, string? newStatus)
+        {
+            var createdAt = order.CreatedAt.ToString("dd.MM.yyyy HH:mm");
+            var totalPrice = Money(order.TotalPrice);
+            var oldStatusText = OrderStatusText(oldStatus, false);
+            var newStatusBadge = BuildStatusBadgeHtml(newStatus, order.IsPay);
+
+            return $@"
+<table role='presentation' width='100%' cellspacing='0' cellpadding='0' border='0'
+       style='border-collapse:collapse; background:#fffdf1; border:1px solid #f2e5a2; border-radius:14px;'>
+    <tr>
+        <td style='padding:20px 22px;'>
+            <div style='font-size:15px; color:{DarkColor}; line-height:1.95;'>
+                <div><strong>Sipariş No:</strong> #{order.Id}</div>
+                <div><strong>Sipariş Tarihi:</strong> {createdAt}</div>
+                <div><strong>Toplam Tutar:</strong> {totalPrice}</div>
+                <div><strong>Önceki Durum:</strong> {Encode(oldStatusText)}</div>
+                <div style='margin-top:8px;'>
+                    <strong>Yeni Durum:</strong> {newStatusBadge}
+                </div>
             </div>
         </td>
     </tr>
@@ -432,6 +582,115 @@ namespace ilkimPlastik.WEB.Utils
 </html>";
         }
 
+        private static string BuildOrderStatusChangedCustomerTemplate(
+            Order order,
+            string? oldStatus,
+            string? newStatus,
+            string? baseUrl,
+            SiteSettings? siteSettings)
+        {
+            var customerName = Encode($"{order.Name} {order.Surname}".Trim());
+            var logoHtml = BuildHeaderLogoHtml(siteSettings, baseUrl);
+            var contactHtml = BuildContactInfoHtml(siteSettings);
+            var productsHtml = BuildProductsHtml(order.OrderProducts, baseUrl);
+            var statusTitle = BuildStatusTitle(newStatus);
+            var statusMessage = BuildStatusMessage(newStatus);
+            var statusInfoHtml = BuildStatusInfoCard(order, oldStatus, newStatus);
+            var cargoInfoHtml = BuildCargoInfoHtml(order);
+
+            return $@"
+<!DOCTYPE html>
+<html lang='tr'>
+<head>
+    <meta charset='utf-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>{Encode(statusTitle)}</title>
+</head>
+
+<body style='margin:0; padding:0; background-color:#f3f3f3; font-family:Arial, Helvetica, sans-serif; color:{DarkColor};'>
+    <table role='presentation' width='100%' cellspacing='0' cellpadding='0' border='0'
+           style='background-color:#f3f3f3; margin:0; padding:30px 0;'>
+        <tr>
+            <td align='center'>
+                <table role='presentation' width='100%' cellspacing='0' cellpadding='0' border='0'
+                       style='max-width:760px; background-color:{WhiteColor}; border-radius:18px; overflow:hidden; box-shadow:0 8px 30px rgba(0,0,0,0.08);'>
+
+                    <tr>
+                        <td style='background:{DarkColor}; padding:30px 32px; text-align:center;'>
+                            {logoHtml}
+
+                            <div style='margin-top:18px; font-size:28px; line-height:1.3; color:{PrimaryColor}; font-weight:700;'>
+                                {Encode(statusTitle)}
+                            </div>
+
+                            <div style='margin-top:10px; font-size:15px; line-height:1.7; color:{WhiteColor};'>
+                                Sipariş No: <strong>#{order.Id}</strong>
+                            </div>
+
+                            {contactHtml}
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style='padding:32px 32px 12px 32px;'>
+                            <p style='margin:0 0 16px 0; font-size:16px; line-height:1.8; color:{DarkColor};'>
+                                Merhaba <strong>{customerName}</strong>,
+                            </p>
+
+                            <p style='margin:0; font-size:15px; line-height:1.9; color:{TextColor};'>
+                                {Encode(statusMessage)}
+                            </p>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style='padding:12px 32px;'>
+                            <div style='font-size:19px; font-weight:700; color:{DarkColor}; margin-bottom:14px;'>
+                                Sipariş Durumu
+                            </div>
+
+                            {statusInfoHtml}
+                        </td>
+                    </tr>
+
+                    {cargoInfoHtml}
+
+                    <tr>
+                        <td style='padding:12px 32px 30px 32px;'>
+                            <div style='font-size:19px; font-weight:700; color:{DarkColor}; margin-bottom:16px;'>
+                                Sipariş Ürünleri
+                            </div>
+
+                            <table role='presentation' width='100%' cellspacing='0' cellpadding='0' border='0'>
+                                {productsHtml}
+                            </table>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style='padding:0 32px 30px 32px;'>
+                            <div style='background:{LightBg}; border:1px solid {BorderColor}; border-radius:12px; padding:16px 18px; font-size:14px; color:{TextColor}; line-height:1.8;'>
+                                Siparişiniz ile ilgili herhangi bir sorunuz olduğunda bizimle iletişime geçebilirsiniz.
+                            </div>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style='padding:22px 32px; text-align:center; background:{DarkColor};'>
+                            <p style='margin:0; font-size:12px; line-height:1.8; color:{WhiteColor};'>
+                                © {DateTime.Now.Year} Tornado Toptan
+                            </p>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>";
+        }
+
         public static string OrderCustomerTemplate(Order order, string baseUrl, SiteSettings? siteSettings)
         {
             return BuildCustomerTemplate(order, baseUrl, siteSettings);
@@ -440,6 +699,22 @@ namespace ilkimPlastik.WEB.Utils
         public static string OrderAdminTemplate(Order order, string baseUrl, SiteSettings? siteSettings)
         {
             return BuildAdminTemplate(order, baseUrl, siteSettings);
+        }
+
+        public static string OrderStatusChangedCustomerTemplate(
+            Order order,
+            string? oldStatus,
+            string? newStatus,
+            string baseUrl,
+            SiteSettings? siteSettings)
+        {
+            return BuildOrderStatusChangedCustomerTemplate(order, oldStatus, newStatus, baseUrl, siteSettings);
+        }
+
+        public static string OrderStatusChangedSubject(Order order, string? newStatus)
+        {
+            var statusText = OrderStatusText(newStatus, order.IsPay);
+            return $"Siparişinizin Durumu Güncellendi: {statusText} - #{order.Id}";
         }
     }
 }

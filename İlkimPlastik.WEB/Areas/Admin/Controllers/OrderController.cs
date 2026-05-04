@@ -1,4 +1,6 @@
 ﻿using ilkimPlastik.WEB.Entities;
+using ilkimPlastik.WEB.Tools;
+using ilkimPlastik.WEB.Utils;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OpenHtmlToPdf;
@@ -9,11 +11,12 @@ namespace ilkimPlastik.WEB.Areas.Admin.Controllers
     {
         private readonly EfCoreContext _db;
         private readonly IRazorViewToStringRenderer _razor;
-
-        public OrderController(EfCoreContext db, IRazorViewToStringRenderer razor)
+        private readonly IMailSender _mailSender;
+        public OrderController(EfCoreContext db, IRazorViewToStringRenderer razor, IMailSender mailSender)
         {
             _db = db;
             _razor = razor;
+            _mailSender = mailSender;
         }
 
         // Index, UpdateStatus, Delete aynı kalabilir (daha önceki typed vm’li sürüm)
@@ -121,27 +124,91 @@ namespace ilkimPlastik.WEB.Areas.Admin.Controllers
             return View(vm);
         }
 
-        [HttpPost, ValidateAntiForgeryToken]
-        public async Task<IActionResult> UpdateStatus(int id, string status)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateStatus(
+         int id,
+         string status,
+         string? cargoCompany,
+         string? cargoTrackingNumber)
         {
-            var order = await _db.Orders.FindAsync(id);
+            var order = await _db.Orders
+                .Include(x => x.User)
+                .Include(x => x.OrderProducts)
+                .FirstOrDefaultAsync(x => x.Id == id);
+
             if (order == null)
             {
                 TempData["ERR"] = "Sipariş bulunamadı.";
-                return RedirectToAction(nameof(Index));
+                return RedirectToAction("Index");
             }
 
-            var allowed = new[] { "Pending", "Paid", "Shipped", "Cancelled" };
-            if (!allowed.Contains(status))
-            {
-                TempData["ERR"] = "Geçersiz durum.";
-                return RedirectToAction(nameof(Index), new { viewId = id });
-            }
+            var oldStatus = order.Status;
 
             order.Status = status;
+
+            if (status == "Shipped")
+            {
+                if (string.IsNullOrWhiteSpace(cargoCompany) || string.IsNullOrWhiteSpace(cargoTrackingNumber))
+                {
+                    TempData["ERR"] = "Sipariş kargoya alındığında kargo firması ve takip numarası zorunludur.";
+                    return RedirectToAction("Index", new { viewId = id });
+                }
+
+                order.CargoCompany = cargoCompany.Trim();
+                order.CargoTrackingNumber = cargoTrackingNumber.Trim();
+            }
+
+            var statusChanged = !string.Equals(oldStatus, status, StringComparison.OrdinalIgnoreCase);
+
             await _db.SaveChangesAsync();
-            TempData["OK"] = "Durum güncellendi.";
-            return RedirectToAction(nameof(Index), new { viewId = id });
+
+            if (statusChanged)
+            {
+                try
+                {
+                    var baseUrl = $"{Request.Scheme}://{Request.Host}";
+
+                    var siteSettings = await _db.SiteSettings
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync();
+
+                    var customerEmail = order.User?.Email;
+
+                    if (!string.IsNullOrWhiteSpace(customerEmail))
+                    {
+                        var subject = MailTemplates.OrderStatusChangedSubject(order, status);
+
+                        var htmlBody = MailTemplates.OrderStatusChangedCustomerTemplate(
+                            order,
+                            oldStatus,
+                            status,
+                            baseUrl,
+                            siteSettings
+                        );
+
+                        await _mailSender.SendMailAsync(
+                            customerEmail,
+                            subject,
+                            htmlBody,
+                            "Tornado Toptan"
+                        );
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Sipariş durum maili gönderilemedi: {ex.Message}");
+
+                    TempData["ERR"] = "Sipariş durumu güncellendi fakat müşteriye mail gönderilemedi.";
+                    return RedirectToAction("Index", new { viewId = id });
+                }
+            }
+
+            TempData["OK"] = statusChanged
+                ? "Sipariş durumu güncellendi ve müşteriye bilgilendirme maili gönderildi."
+                : "Sipariş bilgileri güncellendi.";
+
+            return RedirectToAction("Index", new { viewId = id });
         }
 
         [HttpPost, ValidateAntiForgeryToken]

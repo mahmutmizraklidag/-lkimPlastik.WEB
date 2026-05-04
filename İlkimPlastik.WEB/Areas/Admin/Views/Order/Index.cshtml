@@ -89,6 +89,32 @@
     .detailKV div{padding:6px 0;border-bottom:1px solid var(--bd)}
     .detailKV b{color:var(--muted);font-size:12px}
     @@media(max-width:1100px){.wrap{grid-template-columns:1fr}.grid4{grid-template-columns:repeat(2,1fr)}}
+    .cargoBox{
+    display:none;
+    margin-top:12px;
+    padding:12px;
+    border:1px solid #dbeafe;
+    background:linear-gradient(180deg,#eff6ff,#fff);
+    border-radius:16px;
+}
+
+.cargoGrid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+}
+
+.cargoInfo{
+    margin-top:10px;
+    padding:10px 12px;
+    border:1px solid #dbeafe;
+    background:#eff6ff;
+    border-radius:14px;
+}
+
+@@media(max-width:700px){
+    .cargoGrid{grid-template-columns:1fr}
+}
     </style>
 </head>
 <body>
@@ -251,33 +277,104 @@
                 }
                 else
                 {
-                    <div class="detailKV">
-                        <b>Durum</b><div><span class="badge"><span class="dot @BadgeClass(detail.Status)"></span>@trStatus(detail.Status)</span></div>
-                        <b>Tarih</b><div>@detail.CreatedAt.ToString("yyyy-MM-dd HH:mm")</div>
-                        <b>Müşteri</b><div>@detail.Name @detail.Surname</div>
-                        <b>Telefon</b><div>@detail.Phone</div>
-                        <b>Adres</b><div class="muted">@detail.City / @detail.District<br />@detail.Details<br />@detail.PostCode</div>
-                        <b>Toplam</b><div style="font-weight:950">₺ @fmtMoney(detail.TotalPrice)</div>
-                    </div>
+                   <div class="detailKV">
+    <b>Durum</b>
+    <div>
+        <span class="badge">
+            <span class="dot @BadgeClass(detail.Status)"></span>@trStatus(detail.Status)
+        </span>
+    </div>
 
+    <b>Tarih</b>
+    <div>@detail.CreatedAt.ToString("yyyy-MM-dd HH:mm")</div>
+
+    <b>Müşteri</b>
+    <div>@detail.Name @detail.Surname</div>
+
+    <b>Telefon</b>
+    <div>@detail.Phone</div>
+
+    <b>Adres</b>
+    <div class="muted">
+        @detail.City / @detail.District<br />
+        @detail.Details<br />
+        @detail.PostCode
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(detail.CargoCompany) || !string.IsNullOrWhiteSpace(detail.CargoTrackingNumber))
+    {
+        <b>Kargo</b>
+        <div>
+            <div class="cargoInfo">
+                @if (!string.IsNullOrWhiteSpace(detail.CargoCompany))
+                {
+                    <div><strong>Firma:</strong> @detail.CargoCompany</div>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(detail.CargoTrackingNumber))
+                {
+                    <div style="margin-top:4px">
+                        <strong>Takip No:</strong> @detail.CargoTrackingNumber
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <b>Toplam</b>
+    <div style="font-weight:950">₺ @fmtMoney(detail.TotalPrice)</div>
+</div>
                     <div style="height:12px"></div>
 
-                    <form method="post" action="/Admin/Order/UpdateStatus">
-                        @Html.AntiForgeryToken()
-                        <input type="hidden" name="id" value="@detail.Id" />
-                        <div class="k" style="margin:0 0 6px 2px">Durum Güncelle</div>
-                        <select name="status">
-                            <option value="Pending" selected="@(detail.Status=="Pending")">Beklemede</option>
-                            <option value="Paid" selected="@(detail.Status=="Paid")">Ödendi</option>
-                            <option value="Shipped" selected="@(detail.Status=="Shipped")">Kargoda</option>
-                            <option value="Cancelled" selected="@(detail.Status=="Cancelled")">İptal</option>
-                        </select>
+                   <form method="post" action="/Admin/Order/UpdateStatus">
+    @Html.AntiForgeryToken()
 
-                        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:10px">
-                            <button class="btn pri" type="submit">Kaydet</button>
-                            <a class="btn" href="/Admin/Order?q=@Model.Query&status=@Model.Status">Kapat</a>
-                        </div>
-                    </form>
+    <input type="hidden" name="id" value="@detail.Id" />
+
+    <div class="k" style="margin:0 0 6px 2px">Durum Güncelle</div>
+
+    <select name="status" id="orderStatusSelect">
+        <option value="Pending" selected="@(detail.Status=="Pending")">Beklemede</option>
+        <option value="Paid" selected="@(detail.Status=="Paid")">Ödendi</option>
+        <option value="Shipped" selected="@(detail.Status=="Shipped")">Kargoda</option>
+        <option value="Cancelled" selected="@(detail.Status=="Cancelled")">İptal</option>
+    </select>
+
+    <div id="cargoFields" class="cargoBox">
+        <div style="font-weight:900;margin-bottom:8px">Kargo Bilgileri</div>
+
+        <div class="cargoGrid">
+            <div>
+                <div class="k" style="margin:0 0 6px 2px">Kargo Firması</div>
+                <input
+                    type="text"
+                    name="cargoCompany"
+                    id="cargoCompany"
+                    value="@detail.CargoCompany"
+                    placeholder="Örn: Yurtiçi Kargo, Aras Kargo" />
+            </div>
+
+            <div>
+                <div class="k" style="margin:0 0 6px 2px">Kargo Takip No</div>
+                <input
+                    type="text"
+                    name="cargoTrackingNumber"
+                    id="cargoTrackingNumber"
+                    value="@detail.CargoTrackingNumber"
+                    placeholder="Takip numarası" />
+            </div>
+        </div>
+
+        <div class="muted" style="margin-top:8px">
+            Sipariş durumu “Kargoda” seçildiğinde bu bilgiler kaydedilir.
+        </div>
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:10px">
+        <button class="btn pri" type="submit">Kaydet</button>
+        <a class="btn" href="/Admin/Order?q=@Model.Query&status=@Model.Status">Kapat</a>
+    </div>
+</form>
 
                     <div style="height:14px"></div>
 
@@ -315,5 +412,30 @@
         </div>
 
     </div>
+    <script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const statusSelect = document.getElementById("orderStatusSelect");
+        const cargoFields = document.getElementById("cargoFields");
+        const cargoCompany = document.getElementById("cargoCompany");
+        const cargoTrackingNumber = document.getElementById("cargoTrackingNumber");
+
+        function toggleCargoFields() {
+            if (!statusSelect || !cargoFields) return;
+
+            const isShipped = statusSelect.value === "Shipped";
+
+            cargoFields.style.display = isShipped ? "block" : "none";
+
+            if (cargoCompany) cargoCompany.required = isShipped;
+            if (cargoTrackingNumber) cargoTrackingNumber.required = isShipped;
+        }
+
+        toggleCargoFields();
+
+        if (statusSelect) {
+            statusSelect.addEventListener("change", toggleCargoFields);
+        }
+    });
+</script>
 </body>
 </html>

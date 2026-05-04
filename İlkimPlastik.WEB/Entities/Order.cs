@@ -14,7 +14,9 @@
         public string District { get; set; } = null!;
         public string? Details { get; set; }
         public string? PostCode { get; set; }
-
+        //Kargo bilgileri Yeni eklendi
+        public string? CargoCompany { get; set; }
+        public string? CargoTrackingNumber { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public bool IsPay { get; set; } = false;
