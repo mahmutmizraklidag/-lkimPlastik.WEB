@@ -19,7 +19,10 @@
     }
 
     // ====== Görseller ======
-    var images = Model.ImageItems?.ToList() ?? new();
+    var images = (Model.ImageItems ?? new List<ImageItem>())
+    .OrderBy(x => x.DisplayOrder)
+    .ThenBy(x => x.Id)
+    .ToList();
     var mainImg = images.FirstOrDefault()?.Filename;
 
     // ====== Alternatifler / Latest ======

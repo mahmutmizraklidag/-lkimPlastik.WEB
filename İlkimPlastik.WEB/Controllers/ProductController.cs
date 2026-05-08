@@ -161,7 +161,11 @@ namespace ilkimPlastik.WEB.Controllers
                     Title = p.Title,
                     Price = p.Price,
                     OfferRate = p.OfferRate,
-                    ImageUrl = p.ImageItems.Select(i => i.Filename).FirstOrDefault()
+                    ImageUrl = p.ImageItems
+    .OrderBy(i => i.DisplayOrder)
+    .ThenBy(i => i.Id)
+    .Select(i => i.Filename)
+    .FirstOrDefault()
                 })
                 .ToListAsync();
 

@@ -120,8 +120,10 @@ namespace ilkimPlastik.WEB.Areas.Admin.Controllers
             Product model,
             int[]? deviceIds,
             int[]? deleteImageIds,
-            List<IFormFile>? newImages,
-            string[]? featureNames,
+           List<IFormFile>? newImages,
+string? newImageOrder,
+string? existingImageOrder,
+string[]? featureNames,
             string[]? featureDescriptions,
             string[]? sizeNames,
             int[]? sizeStocks)
@@ -187,8 +189,12 @@ namespace ilkimPlastik.WEB.Areas.Admin.Controllers
 
                 if (newImages != null && newImages.Count > 0)
                 {
-                    var uploaded = await SaveImagesAndCreateImageItems(newImages);
-                    foreach (var img in uploaded) newItem.ImageItems.Add(img);
+                    var orderedImages = ApplyImageOrder(newImages, newImageOrder);
+                    var uploaded = await SaveImagesAndCreateImageItems(orderedImages);
+
+                    foreach (var img in uploaded)
+                        newItem.ImageItems.Add(img);
+
                     await _db.SaveChangesAsync();
                 }
 
@@ -244,10 +250,19 @@ namespace ilkimPlastik.WEB.Areas.Admin.Controllers
             if (deleteImageIds != null && deleteImageIds.Length > 0)
                 await RemoveImagesFromProduct(item, deleteImageIds);
 
+            ApplyExistingImageOrder(item, existingImageOrder);
+
             if (newImages != null && newImages.Count > 0)
             {
-                var uploaded = await SaveImagesAndCreateImageItems(newImages);
-                foreach (var img in uploaded) item.ImageItems.Add(img);
+                var nextOrder = item.ImageItems.Any()
+                    ? item.ImageItems.Max(x => x.DisplayOrder) + 1
+                    : 1;
+
+                var orderedImages = ApplyImageOrder(newImages, newImageOrder);
+                var uploaded = await SaveImagesAndCreateImageItems(orderedImages, nextOrder);
+
+                foreach (var img in uploaded)
+                    item.ImageItems.Add(img);
             }
 
             await _db.SaveChangesAsync();
@@ -412,35 +427,109 @@ namespace ilkimPlastik.WEB.Areas.Admin.Controllers
             return list;
         }
 
-        private async Task<List<ImageItem>> SaveImagesAndCreateImageItems(List<IFormFile> files)
+        private async Task<List<ImageItem>> SaveImagesAndCreateImageItems(
+    List<IFormFile> files,
+    int startOrder = 1)
         {
             var result = new List<ImageItem>();
             var root = Path.Combine(_env.WebRootPath, "uploads", "products");
-            if (!Directory.Exists(root)) Directory.CreateDirectory(root);
+
+            if (!Directory.Exists(root))
+                Directory.CreateDirectory(root);
+
+            int displayOrder = startOrder;
 
             foreach (var file in files)
             {
-                if (file == null || file.Length == 0) continue;
+                if (file == null || file.Length == 0)
+                    continue;
 
                 var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
                 var allowed = new[] { ".jpg", ".jpeg", ".png", ".webp" };
-                if (!allowed.Contains(ext)) continue;
+
+                if (!allowed.Contains(ext))
+                    continue;
 
                 var safeName = $"{Guid.NewGuid():N}{ext}";
                 var fullPath = Path.Combine(root, safeName);
 
                 using (var stream = System.IO.File.Create(fullPath))
+                {
                     await file.CopyToAsync(stream);
+                }
 
-                var img = new ImageItem { Filename = safeName };
-                _db.ImageItems.Add(img);
+                var img = new ImageItem
+                {
+                    Filename = safeName,
+                    DisplayOrder = displayOrder
+                };
+
                 result.Add(img);
+                displayOrder++;
             }
 
-            await _db.SaveChangesAsync();
             return result;
         }
+        private static List<IFormFile> ApplyImageOrder(List<IFormFile> files, string? newImageOrder)
+        {
+            if (files == null || files.Count == 0)
+                return new List<IFormFile>();
 
+            if (string.IsNullOrWhiteSpace(newImageOrder))
+                return files;
+
+            var orderedIndexes = newImageOrder
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(x => int.TryParse(x, out var index) ? index : -1)
+                .Where(x => x >= 0 && x < files.Count)
+                .Distinct()
+                .ToList();
+
+            if (orderedIndexes.Count == 0)
+                return files;
+
+            var orderedFiles = orderedIndexes
+                .Select(index => files[index])
+                .ToList();
+
+            var missingFiles = files
+                .Where((file, index) => !orderedIndexes.Contains(index))
+                .ToList();
+
+            orderedFiles.AddRange(missingFiles);
+
+            return orderedFiles;
+        }
+        private static void ApplyExistingImageOrder(Product product, string? existingImageOrder)
+        {
+            if (product.ImageItems == null || product.ImageItems.Count == 0)
+                return;
+
+            if (string.IsNullOrWhiteSpace(existingImageOrder))
+                return;
+
+            var ids = existingImageOrder
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(x => int.TryParse(x, out var id) ? id : 0)
+                .Where(x => x > 0)
+                .ToList();
+
+            if (ids.Count == 0)
+                return;
+
+            int order = 1;
+
+            foreach (var id in ids)
+            {
+                var img = product.ImageItems.FirstOrDefault(x => x.Id == id);
+
+                if (img == null)
+                    continue;
+
+                img.DisplayOrder = order;
+                order++;
+            }
+        }
         private async Task RemoveImagesFromProduct(Product product, int[] deleteImageIds)
         {
             var toRemove = product.ImageItems.Where(x => deleteImageIds.Contains(x.Id)).ToList();
