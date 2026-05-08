@@ -448,14 +448,24 @@
                                         <input type="hidden" name="items[@i].ProductId" value="@it.ProductId" />
                                         <input type="hidden" name="items[@i].SizeId" value="@it.SizeId" />
 
+                                        @* Mevcut adet inputu *@
                                         <div class="qty-wrap">
                                             <input type="number"
                                                    name="items[@i].Quantity"
                                                    value="@it.Quantity"
-                                                   min="1"
-                                                   class="form-control"
+                                                   min="@(it.MinimumOrderQuantity > 0 ? it.MinimumOrderQuantity : 1)"
+                                                   step="@(it.MinimumOrderQuantity > 0 ? it.MinimumOrderQuantity : 1)"
+                                                   data-min="@(it.MinimumOrderQuantity > 0 ? it.MinimumOrderQuantity : 1)"
+                                                   class="form-control cart-qty-input"
                                                    style="max-width:160px" />
                                         </div>
+
+                                        @if (it.MinimumOrderQuantity > 1)
+                                        {
+                                            <small style="color: #666; display: block; margin-top: 4px;">
+                                                Min: @it.MinimumOrderQuantity
+                                            </small>
+                                        }
                                     </div>
 
                                     <div class="cart-total">
@@ -600,3 +610,63 @@
         <div class="section-padding"></div>
     </div>
 </main>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+
+        const qtyInputs = document.querySelectorAll('.cart-qty-input');
+
+        function normalizeQty(input) {
+            const minVal = parseInt(input.getAttribute('data-min')) || 1;
+            let currentVal = parseInt(input.value || minVal);
+
+            if (isNaN(currentVal) || currentVal < minVal) {
+                currentVal = minVal;
+            }
+
+            if (currentVal % minVal !== 0) {
+                currentVal = Math.ceil(currentVal / minVal) * minVal;
+            }
+
+            input.value = currentVal;
+            input.min = minVal;
+            input.step = minVal;
+        }
+
+        qtyInputs.forEach(input => {
+            normalizeQty(input);
+
+            input.addEventListener('change', function() {
+                normalizeQty(this);
+            });
+
+            input.addEventListener('blur', function() {
+                normalizeQty(this);
+            });
+        });
+
+        const updateForm = document.getElementById('updateForm');
+
+        if (updateForm) {
+            updateForm.addEventListener('submit', function(e) {
+
+                let isValid = true;
+
+                qtyInputs.forEach(input => {
+                    normalizeQty(input);
+
+                    const minVal = parseInt(input.getAttribute('data-min')) || 1;
+                    const currentVal = parseInt(input.value || 0);
+
+                    if (currentVal < minVal || currentVal % minVal !== 0) {
+                        isValid = false;
+                    }
+                });
+
+                if (!isValid) {
+                    e.preventDefault();
+                    alert('Adetler minimum sipariş adedi ve katları olacak şekilde girilmelidir.');
+                }
+            });
+        }
+    });
+</script>

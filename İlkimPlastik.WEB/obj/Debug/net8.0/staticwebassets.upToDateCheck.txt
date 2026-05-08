@@ -288,6 +288,7 @@ wwwroot\uploads\products\544e8c21646b4a56bb8209d43540e2c2.jpg
 wwwroot\uploads\products\58a7c2701ba2401eae77a2b6dfae17a0.jpg
 wwwroot\uploads\products\59e817bdf87d4904bfbff036e8c63f0b.jpg
 wwwroot\uploads\products\5bd75c5a048f4a35bbd7390e084643ee.jpg
+wwwroot\uploads\products\60de592683e64ff195abf20a95de9b37.jpeg
 wwwroot\uploads\products\61624bb27d82412dac552f53d23d475d.jpg
 wwwroot\uploads\products\622dbf282bbd402983faf27d41fd88af.jpg
 wwwroot\uploads\products\63b4c6ed2e8f4a7397e80a1ddb6c9fb3.jpg

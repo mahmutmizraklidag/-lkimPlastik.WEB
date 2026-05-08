@@ -2,6 +2,7 @@
 using ilkimPlastik.WEB.Tools;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.DataProtection;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
@@ -42,6 +43,18 @@ builder.Services.AddSession(options =>
 // 4. Diğer Yardımcı Servisler
 builder.Services.AddScoped<IRazorViewToStringRenderer, RazorViewToStringRenderer>();
 
+// DataProtection Key'lerini kalıcı tut
+var keysFolder = Path.Combine(builder.Environment.ContentRootPath, "App_Data", "DataProtectionKeys");
+
+if (!Directory.Exists(keysFolder))
+{
+    Directory.CreateDirectory(keysFolder);
+}
+
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(keysFolder))
+    .SetApplicationName("ilkimPlastik.WEB");
+
 // 5. Authentication (Kimlik Doğrulama)
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(opt =>
@@ -53,12 +66,11 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         opt.ExpireTimeSpan = TimeSpan.FromDays(365);
         opt.SlidingExpiration = true;
 
+        opt.Cookie.Name = "ilkimPlastik.Auth";
         opt.Cookie.HttpOnly = true;
         opt.Cookie.IsEssential = true;
-
-        // Auth çerezi için de aynı SameSite politikasını uygulayalım
         opt.Cookie.SameSite = SameSiteMode.Lax;
-        opt.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+        opt.Cookie.SecurePolicy = CookieSecurePolicy.Always;
     });
 
 builder.Services.AddAuthorization();
@@ -74,6 +86,8 @@ if (!app.Environment.IsDevelopment())
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
 }
+
+app.UseForwardedHeaders();
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();

@@ -82,7 +82,7 @@ namespace ilkimPlastik.WEB.Controllers
                     Barcode = p.Barcode,
                     SizeName = sizeName,
                     ImageFile = img,
-
+                    MinimumOrderQuantity = p.MinimumOrderQuantity,
                     OfferRate = pct,
                     OldUnitPrice = oldUnit,
                     UnitPrice = newUnit,
@@ -164,6 +164,8 @@ namespace ilkimPlastik.WEB.Controllers
                 TempData["ERR"] = "Beden/ölçü seçimi geçersiz.";
                 return RedirectToAction(nameof(Index));
             }
+            int minQty = product.MinimumOrderQuantity ?? 1;
+            if (quantity < minQty) quantity = minQty;
 
             if (size.StockCount <= 0)
             {
@@ -222,7 +224,8 @@ namespace ilkimPlastik.WEB.Controllers
                     continue;
                 }
 
-                var qty = u.Quantity < 1 ? 1 : u.Quantity;
+                int minQty = p.MinimumOrderQuantity ?? 1;
+                var qty = u.Quantity < minQty ? minQty : u.Quantity;
                 if (qty > s.StockCount) qty = s.StockCount;
                 line.Quantity = qty;
                 // ✅ Teslim süresini veritabanındaki güncel haliyle tazeliyoruz
@@ -424,6 +427,7 @@ namespace ilkimPlastik.WEB.Controllers
             public string ShippingLabel { get; set; } = "Ücretsiz";
             public decimal ShippingCost { get; set; }
             public decimal GrandTotal { get; set; }
+            public int? MinimumOrderQuantity { get; set; } // ✅ Minimum sipariş adedi bilgisi
             public List<RelatedProductVm> Related { get; set; } = new();
         }
 
@@ -436,7 +440,7 @@ namespace ilkimPlastik.WEB.Controllers
             public string? Barcode { get; set; }
             public string SizeName { get; set; } = "-";
             public string? ImageFile { get; set; }
-
+            public int? MinimumOrderQuantity { get; set; }
             public int OfferRate { get; set; }                  // ✅ yüzde
             public decimal OldUnitPrice { get; set; }           // ✅ indirimsiz birim
             public decimal UnitPrice { get; set; }              // ✅ indirimli birim

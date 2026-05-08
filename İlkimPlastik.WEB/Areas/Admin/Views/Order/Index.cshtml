@@ -228,8 +228,16 @@
                                 <td style="font-weight:900">#@x.Id</td>
                                 <td class="muted">@x.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
                                 <td>
+                                    @if(x.User != null && x.User.IsCorporate == true)
+                                    {
+                                        <div style="font-weight:850">@x.User.CompanyName</div>
+                                        <div class="muted">@x.Phone</div>
+                                    }
+                                    else
+                                    {
                                     <div style="font-weight:850">@x.Name @x.Surname</div>
                                     <div class="muted">@x.Phone</div>
+                                    }
                                 </td>
                                 <td class="muted">@x.City / @x.District</td>
                                 <td style="font-weight:900">₺ @fmtMoney(x.TotalPrice)</td>

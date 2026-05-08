@@ -22,9 +22,10 @@ namespace ilkimPlastik.WEB.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Register(
-            string name, string surname, string email, string password, string? phone,
-            string addressName, string addressSurname, string addressPhone, string city, string district, string addressDetails, string? postCode,
-            string? returnUrl = null)
+    string name, string surname, string email, string password, string? phone,
+    bool isCorporate, string? companyName, string? taxNumber, string? taxOfficeName,
+    string addressName, string addressSurname, string addressPhone, string city, string district, string addressDetails, string? postCode,
+    string? returnUrl = null)
         {
             name = (name ?? "").Trim();
             surname = (surname ?? "").Trim();
@@ -39,10 +40,31 @@ namespace ilkimPlastik.WEB.Controllers
             addressDetails = (addressDetails ?? "").Trim();
             postCode = string.IsNullOrWhiteSpace(postCode) ? null : postCode.Trim();
 
-            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(surname) ||
-                string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+            companyName = string.IsNullOrWhiteSpace(companyName) ? null : companyName.Trim();
+            taxNumber = string.IsNullOrWhiteSpace(taxNumber) ? null : taxNumber.Trim();
+            taxOfficeName = string.IsNullOrWhiteSpace(taxOfficeName) ? null : taxOfficeName.Trim();
+
+            if (isCorporate)
             {
-                TempData["ERR"] = "Lütfen zorunlu alanları eksiksiz doldurun.";
+                if (string.IsNullOrWhiteSpace(companyName) ||
+                    string.IsNullOrWhiteSpace(taxNumber) ||
+                    string.IsNullOrWhiteSpace(taxOfficeName))
+                {
+                    TempData["ERR"] = "Kurumsal üyelik için şirket adı, vergi numarası ve vergi dairesi adı zorunludur.";
+                    return RedirectToAction(nameof(Register), new { returnUrl });
+                }
+            }
+
+            if (!isCorporate &&
+     (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(surname)))
+            {
+                TempData["ERR"] = "Bireysel üyelik için ad ve soyad zorunludur.";
+                return RedirectToAction(nameof(Register), new { returnUrl });
+            }
+
+            if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+            {
+                TempData["ERR"] = "E-posta ve şifre zorunludur.";
                 return RedirectToAction(nameof(Register), new { returnUrl });
             }
             if (!email.Contains("@") || email.Length < 6)
@@ -75,12 +97,17 @@ namespace ilkimPlastik.WEB.Controllers
             {
                 var user = new User
                 {
-                    Name = name,
-                    Surname = surname,
+                    Name = isCorporate ? (companyName ?? "-") : name,
+                    Surname = isCorporate ? "-" : surname,
                     Email = email,
                     Phone = phone,
                     IsAdmin = false,
-                    Password = Sha256(password)
+                    Password = Sha256(password),
+
+                    IsCorporate = isCorporate,
+                    CompanyName = isCorporate ? companyName : null,
+                    TaxNumber = isCorporate ? taxNumber : null,
+                    TaxOfficeName = isCorporate ? taxOfficeName : null
                 };
 
                 _db.Users.Add(user);

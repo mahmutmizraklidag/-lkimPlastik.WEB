@@ -73,7 +73,7 @@ namespace ilkimPlastik.WEB.Areas.Admin.Controllers
             }
 
             var list = await baseQuery
-                .OrderByDescending(x => x.Id)
+                .OrderByDescending(x => x.Id).Include(x => x.User)
                 .Take(500)
                 .ToListAsync();
 

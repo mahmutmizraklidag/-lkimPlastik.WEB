@@ -109,15 +109,31 @@ namespace ilkimPlastik.WEB.Controllers
                 query = query.Where(p => p.OfferRate > 0);
 
             // ============== SIRALAMA ==============
+            // ============== SIRALAMA ==============
             sort = (sort ?? "new").Trim().ToLowerInvariant();
 
+            // Önce IsFeatured (true olanlar başa), sonra seçilen sort kriteri
             query = sort switch
             {
-                "price_asc" => query.OrderBy(p => p.Price).ThenByDescending(p => p.Id),
-                "price_desc" => query.OrderByDescending(p => p.Price).ThenByDescending(p => p.Id),
-                "discount_desc" => query.OrderByDescending(p => p.OfferRate).ThenByDescending(p => p.Id),
-                "title_asc" => query.OrderBy(p => p.Title).ThenByDescending(p => p.Id),
-                _ => query.OrderByDescending(p => p.Id)
+                "price_asc" => query.OrderByDescending(p => p.IsFeatured)
+                                    .ThenBy(p => p.Price)
+                                    .ThenByDescending(p => p.Id),
+
+                "price_desc" => query.OrderByDescending(p => p.IsFeatured)
+                                     .ThenByDescending(p => p.Price)
+                                     .ThenByDescending(p => p.Id),
+
+                "discount_desc" => query.OrderByDescending(p => p.IsFeatured)
+                                        .ThenByDescending(p => p.OfferRate)
+                                        .ThenByDescending(p => p.Id),
+
+                "title_asc" => query.OrderByDescending(p => p.IsFeatured)
+                                    .ThenBy(p => p.Title)
+                                    .ThenByDescending(p => p.Id),
+
+                // Varsayılan (Yeni eklenenler ve Öne Çıkanlar)
+                _ => query.OrderByDescending(p => p.IsFeatured)
+                          .ThenByDescending(p => p.Id)
             };
 
             // ============== GLOBAL FİYAT ARALIĞI + GLOBAL COUNT ==============

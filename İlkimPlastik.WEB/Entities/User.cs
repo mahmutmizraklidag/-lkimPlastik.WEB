@@ -11,6 +11,12 @@
         public bool IsAdmin { get; set; } = false;   // ✅ EKLE
         public string? NotificationToken { get; set; }
 
+        // ✅ YENİ ALANLAR
+        public bool IsCorporate { get; set; } = false;
+
+        public string? CompanyName { get; set; }
+        public string? TaxNumber { get; set; }
+        public string? TaxOfficeName { get; set; }
 
         public List<Address> Addresses { get; set; } = new();
         public List<Order> Orders { get; set; } = new();

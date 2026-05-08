@@ -17,7 +17,10 @@
         public int? SubCategoryId { get; set; }          // ✅ EKLE
         // indrimli fiyat eklenebilir
         public int OfferRate { get; set; } // yüzde olarak indirim oranı
-
+        // İlk sayfada göster özelliği
+        public bool IsFeatured { get; set; } // ürünün ilk sayfada gösterilip gösterilmeyeceği bilgisi
+        // minimum satış adedi
+        public int? MinimumOrderQuantity { get; set; } // minimum satış adedi bilgisi
         public Category? Category { get; set; }
         public SubCategory? SubCategory { get; set; }
         public List<ImageItem> ImageItems { get; set; } = new();

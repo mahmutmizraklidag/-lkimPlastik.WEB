@@ -169,6 +169,8 @@ namespace ilkimPlastik.WEB.Areas.Admin.Controllers
                     Barcode = (model.Barcode ?? "").Trim(),
                     ModelCode = (model.ModelCode ?? "").Trim(),
                     AverageDeliveryTime = model.AverageDeliveryTime,
+                    IsFeatured = model.IsFeatured,
+                    MinimumOrderQuantity = model.MinimumOrderQuantity,
                     Price = model.Price,
                     CategoryId = model.CategoryId,
                     SubCategoryId = model.SubCategoryId,
@@ -222,6 +224,8 @@ namespace ilkimPlastik.WEB.Areas.Admin.Controllers
             item.ModelCode = (model.ModelCode ?? "").Trim();
             item.Price = model.Price;
             item.AverageDeliveryTime = model.AverageDeliveryTime;
+            item.IsFeatured = model.IsFeatured;
+            item.MinimumOrderQuantity = model.MinimumOrderQuantity;
             item.CategoryId = model.CategoryId;
             item.SubCategoryId = model.SubCategoryId;
             item.OfferRate = Clamp(model.OfferRate, 0, MaxOfferRate);

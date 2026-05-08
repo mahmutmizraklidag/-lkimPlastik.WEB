@@ -323,15 +323,48 @@
                     <input type="hidden" name="returnUrl" value="@returnUrl" />
 
                     <div class="sec-title">Hesap Bilgileri</div>
+                    <div class="grid" style="margin-bottom:12px;">
+                        <label class="field" style="display:flex;align-items:center;gap:8px;">
+                            <input type="radio" name="isCorporate" value="false" checked />
+                            <span class="label" style="margin:0;">Bireysel Üyelik</span>
+                        </label>
 
-                    <div class="grid">
+                        <label class="field" style="display:flex;align-items:center;gap:8px;">
+                            <input type="radio" name="isCorporate" value="true" />
+                            <span class="label" style="margin:0;">Kurumsal Üyelik</span>
+                        </label>
+                    </div>
+
+                    <div id="corporateFields" style="display:none;">
+                        <div class="sec-title">Kurumsal Bilgiler</div>
+
+                        <div class="grid">
+                            <div class="field">
+                                <label class="label">Şirket Adı *</label>
+                                <input class="input corporate-required" name="companyName" />
+                            </div>
+
+                            <div class="field">
+                                <label class="label">Vergi Numarası *</label>
+                                <input class="input corporate-required" name="taxNumber" />
+                            </div>
+                        </div>
+
+                        <div class="grid1" style="margin-top:12px;">
+                            <div class="field">
+                                <label class="label">Vergi Dairesi Adı *</label>
+                                <input class="input corporate-required" name="taxOfficeName" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="grid" id="personalFields">
                         <div class="field">
                             <label class="label">Ad *</label>
-                            <input class="input" name="name" required />
+                            <input class="input personal-required" name="name" />
                         </div>
                         <div class="field">
                             <label class="label">Soyad *</label>
-                            <input class="input" name="surname" required />
+                            <input class="input personal-required" name="surname" />
                         </div>
                     </div>
 
@@ -440,5 +473,64 @@
             b.disabled = true;
             b.textContent = 'Kaydediliyor...';
         });
+    })();
+</script>
+<script>
+    (function() {
+        var f = document.getElementById('f');
+        var b = document.getElementById('b');
+
+        var corporateBox = document.getElementById('corporateFields');
+        var personalBox = document.getElementById('personalFields');
+
+        var radios = document.querySelectorAll('input[name="isCorporate"]');
+        var corporateInputs = document.querySelectorAll('.corporate-required');
+        var personalInputs = document.querySelectorAll('.personal-required');
+
+        function toggleCorporateFields() {
+            var selected = document.querySelector('input[name="isCorporate"]:checked');
+            var isCorporate = selected && selected.value === 'true';
+
+            if (corporateBox) {
+                corporateBox.style.display = isCorporate ? 'block' : 'none';
+            }
+
+            if (personalBox) {
+                personalBox.style.display = isCorporate ? 'none' : 'grid';
+            }
+
+            corporateInputs.forEach(function(input) {
+                if (isCorporate) {
+                    input.setAttribute('required', 'required');
+                } else {
+                    input.removeAttribute('required');
+                    input.value = '';
+                }
+            });
+
+            personalInputs.forEach(function(input) {
+                if (isCorporate) {
+                    input.removeAttribute('required');
+                    input.value = '';
+                } else {
+                    input.setAttribute('required', 'required');
+                }
+            });
+        }
+
+        radios.forEach(function(radio) {
+            radio.addEventListener('change', toggleCorporateFields);
+        });
+
+        toggleCorporateFields();
+
+        if (f && b) {
+            f.addEventListener('submit', function() {
+                if (b.disabled) return;
+
+                b.disabled = true;
+                b.textContent = 'Kaydediliyor...';
+            });
+        }
     })();
 </script>

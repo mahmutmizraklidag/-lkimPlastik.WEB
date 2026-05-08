@@ -155,6 +155,99 @@
 
     @@media(max-width:1150px){.shell{grid-template-columns:1fr}.imgGrid{grid-template-columns:repeat(3,1fr)}}
     @@media(max-width:760px){.grid,.grid3{grid-template-columns:1fr}.imgGrid{grid-template-columns:repeat(2,1fr)}}
+    /* Ürün listesi kendi içinde scroll olsun */
+.shell {
+    height: calc(100vh - 36px);
+}
+
+.shell > .card:first-child {
+    position: sticky;
+    top: 18px;
+    height: calc(100vh - 36px);
+    display: flex;
+    flex-direction: column;
+}
+
+.shell > .card:first-child .groups {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 4px;
+}
+
+/* Sağdaki form da kendi içinde kayabilir */
+.shell > .card:nth-child(2) {
+    max-height: calc(100vh - 36px);
+    overflow-y: auto;
+}
+
+/* Scrollbar daha temiz */
+.shell > .card:first-child .groups::-webkit-scrollbar,
+.shell > .card:nth-child(2)::-webkit-scrollbar {
+    width: 8px;
+}
+
+.shell > .card:first-child .groups::-webkit-scrollbar-thumb,
+.shell > .card:nth-child(2)::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 999px;
+}
+
+.shell > .card:first-child .groups::-webkit-scrollbar-track,
+.shell > .card:nth-child(2)::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+@@media(max-width:1150px){
+    .shell {
+        height: auto;
+    }
+
+    .shell > .card:first-child {
+        position: relative;
+        top: auto;
+        height: 520px;
+    }
+
+    .shell > .card:nth-child(2) {
+        max-height: none;
+        overflow: visible;
+    }
+}
+.productFilterBar {
+    display: grid;
+    grid-template-columns: 1fr 190px;
+}
+
+.productFilterBar select {
+    height: 42px;
+    border-radius: 14px;
+    border: 1px solid var(--bd);
+    padding: 0 12px;
+    outline: none;
+    background: #fff;
+    color: var(--text);
+    font-size: 14px;
+}
+
+.productFilterBar select:focus {
+    border-color: rgba(93,18,210,.35);
+    box-shadow: var(--focus);
+}
+
+@@media(max-width:760px){
+    .productFilterBar {
+        grid-template-columns: 1fr;
+    }
+}
+.shell > .card:first-child .groups {
+    scroll-snap-type: y mandatory;
+}
+
+.shell > .card:first-child .item {
+    scroll-snap-align: start;
+    scroll-margin-top: 10px;
+}
 </style>
 
 <div class="page">
@@ -164,14 +257,22 @@
             <div class="cardHead">
                 <div class="title">
                     <b>Ürünler</b>
-                    <span>ModelCode’a göre gruplanır • Hızlı arama + indirim yönetimi</span>
+                  
                 </div>
                 <a class="btn pri" href="/Admin/Product">+ Yeni Ürün</a>
             </div>
 
-            <div class="searchBar">
-                <input id="listSearch" placeholder="Ürün / model / barkod / kategori ara…" />
-            </div>
+           <div class="searchBar productFilterBar">
+    <input id="listSearch" placeholder="Ürün / model / barkod / kategori ara…" />
+
+    <select id="categoryFilter">
+        <option value="">Tüm Kategoriler</option>
+        @foreach (var c in categories.OrderBy(x => x.Name))
+        {
+            <option value="@c.Name.ToLower()">@c.Name</option>
+        }
+    </select>
+</div>
 
             <div class="groups">
                 @foreach (var g in grouped)
@@ -194,7 +295,8 @@
                                 var discounted = isSale ? Math.Round(p.Price * (100 - p.OfferRate) / 100m, 2) : p.Price;
 
                                 <div class="item @(isSale ? "sale" : "")"
-                                     data-search="@($"{p.Title} {p.ModelCode} {p.Barcode} {catName} {(p.SubCategory?.Name ?? "")}".ToLower())">
+     data-category="@catName.ToLower()"
+     data-search="@($"{p.Title} {p.ModelCode} {p.Barcode} {catName} {(p.SubCategory?.Name ?? "")}".ToLower())">
 
                                     <div class="t">
                                         <div class="pTitle" title="@p.Title">@p.Title</div>
@@ -301,6 +403,23 @@
                                 <div class="fieldErr">@ErrText(nameof(vm.Slug))</div>
                             }
                         </div>
+                        <div style="display: flex; align-items: flex-end; gap: 12px;">
+    <div style="flex: 1;">
+        <label>Min. Sipariş Adedi</label>
+        <input type="number" name="MinimumOrderQuantity" min="1" value="@(vm.MinimumOrderQuantity ?? 1)" class="@(HasErr(nameof(vm.MinimumOrderQuantity)) ? "inputErr" : "")" />
+        @if (HasErr(nameof(vm.MinimumOrderQuantity)))
+        {
+            <div class="fieldErr">@ErrText(nameof(vm.MinimumOrderQuantity))</div>
+        }
+    </div>
+    <div style="padding-bottom: 12px;">
+        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0;">
+            <input type="checkbox" name="IsFeatured" value="true" @(vm.IsFeatured ? "checked" : "") style="width: 18px; height: 18px;" />
+            <b style="font-size: 13px; color: var(--text);">Öne Çıkan Ürün</b>
+        </label>
+        <input type="hidden" name="IsFeatured" value="false" />
+    </div>
+</div>
                     </div>
 
 
@@ -400,7 +519,12 @@
                         </div>
                         <button type="button" class="btn" onclick="openDeviceModal()">+ Yeni Cihaz</button>
                     </div>
-
+                    <!-- Mevcut Yeni Cihaz butonunun yanına veya hemen altına ekleyebilirsin -->
+<div style="display:flex; justify-content: flex-end; margin-bottom: 8px; margin-top: 8px;">
+    <button type="button" class="btn sm" onclick="toggleAllDevices(this)" data-state="none">
+        <span id="selectAllText">Tümünü Seç</span>
+    </button>
+</div>
                     <div class="chipbox" id="devBox">
                         @foreach (var d in devices)
                         {
@@ -586,17 +710,50 @@ function toggleGroup(el){
 }
 
 /* Sol liste arama */
+/* Sol liste arama + kategori filtresi */
+/* Sol liste arama + kategori filtresi + seçimi koruma */
 const search = document.getElementById('listSearch');
-search?.addEventListener('input', () => {
-    const q = (search.value || '').trim().toLowerCase();
+const categoryFilter = document.getElementById('categoryFilter');
+
+const FILTER_SEARCH_KEY = 'adminProductSearch';
+const FILTER_CATEGORY_KEY = 'adminProductCategory';
+
+function filterProductList() {
+    const q = (search?.value || '').trim().toLowerCase();
+    const selectedCategory = (categoryFilter?.value || '').trim().toLowerCase();
+
+    sessionStorage.setItem(FILTER_SEARCH_KEY, q);
+    sessionStorage.setItem(FILTER_CATEGORY_KEY, selectedCategory);
+
     document.querySelectorAll('.item').forEach(it => {
         const s = it.getAttribute('data-search') || '';
-        it.style.display = s.includes(q) ? '' : 'none';
+        const cat = it.getAttribute('data-category') || '';
+
+        const matchSearch = !q || s.includes(q);
+        const matchCategory = !selectedCategory || cat === selectedCategory;
+
+        it.style.display = (matchSearch && matchCategory) ? '' : 'none';
     });
+
     document.querySelectorAll('.group').forEach(g => {
-        const anyVisible = Array.from(g.querySelectorAll('.item')).some(x => x.style.display !== 'none');
+        const anyVisible = Array.from(g.querySelectorAll('.item'))
+            .some(x => x.style.display !== 'none');
+
         g.style.display = anyVisible ? '' : 'none';
     });
+}
+
+search?.addEventListener('input', filterProductList);
+categoryFilter?.addEventListener('change', filterProductList);
+
+window.addEventListener('DOMContentLoaded', () => {
+    const savedSearch = sessionStorage.getItem(FILTER_SEARCH_KEY) || '';
+    const savedCategory = sessionStorage.getItem(FILTER_CATEGORY_KEY) || '';
+
+    if (search) search.value = savedSearch;
+    if (categoryFilter) categoryFilter.value = savedCategory;
+
+    filterProductList();
 });
 
 /* Device search + modal */
@@ -608,9 +765,28 @@ devSearch?.addEventListener('input', () => {
         ch.style.display = s.includes(q) ? '' : 'none';
     });
 });
+
 function openDeviceModal(){ document.getElementById('devModal').style.display='flex'; }
 function closeDeviceModal(){ document.getElementById('devModal').style.display='none'; }
+function toggleAllDevices(btn) {
+    // Sadece şu an filtreleme sonucu görünür olan checkbox'ları bulur
+    // Eğer gizli olanları da etkilemek istersen '.chip input' yapabilirsin
+    const visibleChips = document.querySelectorAll('#devBox .chip:not([style*="display: none"]) input[type="checkbox"]');
+    const state = btn.getAttribute('data-state');
+    const textSpan = document.getElementById('selectAllText');
 
+    if (state === 'none' || state === 'partial') {
+        // Hepsini seç
+        visibleChips.forEach(cb => cb.checked = true);
+        btn.setAttribute('data-state', 'all');
+        textSpan.textContent = 'Seçimi Kaldır';
+    } else {
+        // Seçimi temizle
+        visibleChips.forEach(cb => cb.checked = false);
+        btn.setAttribute('data-state', 'none');
+        textSpan.textContent = 'Tümünü Seç';
+    }
+}
 /* Repeater */
 function removeRow(btn){
     const tr = btn.closest('tr');
@@ -782,5 +958,65 @@ document.getElementById('discountModal')?.addEventListener('click', (e) => {
 });
 document.getElementById('devModal')?.addEventListener('click', (e) => {
     if (e.target && e.target.id === 'devModal') closeDeviceModal();
+});
+/* Ürün listesinin scroll konumunu koru - zıplama yapmaz */
+const productGroupsScroll = document.querySelector('.shell > .card:first-child .groups');
+const PRODUCT_SCROLL_KEY = 'adminProductListScroll';
+
+function saveProductListScroll() {
+    if (!productGroupsScroll) return;
+    sessionStorage.setItem(PRODUCT_SCROLL_KEY, productGroupsScroll.scrollTop);
+}
+
+function restoreProductListScroll() {
+    if (!productGroupsScroll) return;
+
+    const savedScroll = sessionStorage.getItem(PRODUCT_SCROLL_KEY);
+    if (savedScroll === null) return;
+
+    productGroupsScroll.style.scrollBehavior = 'auto';
+    productGroupsScroll.scrollTop = parseInt(savedScroll, 10) || 0;
+
+    requestAnimationFrame(() => {
+        productGroupsScroll.style.scrollBehavior = '';
+    });
+}
+
+/* Sayfa görünmeden mümkün olduğunca erken scroll konumunu bas */
+restoreProductListScroll();
+
+window.addEventListener('load', () => {
+    restoreProductListScroll();
+
+    if (productGroupsScroll) {
+        productGroupsScroll.addEventListener('scroll', saveProductListScroll, { passive: true });
+    }
+});
+
+document.querySelectorAll('form').forEach(form => {
+    form.addEventListener('submit', saveProductListScroll);
+});
+
+document.querySelectorAll('a[href*="/Admin/Product?editId="]').forEach(link => {
+    link.addEventListener('mousedown', saveProductListScroll);
+    link.addEventListener('click', saveProductListScroll);
+});
+
+/* Form gönderilmeden önce ürün listesi scroll konumunu kaydet */
+document.querySelectorAll('form').forEach(form => {
+    form.addEventListener('submit', () => {
+        if (productGroupsScroll) {
+            sessionStorage.setItem('adminProductListScroll', productGroupsScroll.scrollTop);
+        }
+    });
+});
+
+/* Düzenle linklerine tıklanınca da konumu kaydet */
+document.querySelectorAll('a[href*="/Admin/Product?editId="]').forEach(link => {
+    link.addEventListener('click', () => {
+        if (productGroupsScroll) {
+            sessionStorage.setItem('adminProductListScroll', productGroupsScroll.scrollTop);
+        }
+    });
 });
 </script>

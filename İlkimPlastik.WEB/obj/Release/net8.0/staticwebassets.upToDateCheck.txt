@@ -413,3 +413,4 @@ wwwroot\uploads\products\e2ceb422f9bc491c869b551e71dd04f4.jpg
 wwwroot\uploads\products\e7ae1662904e42a5a77820b4c4ca58cb.jpg
 wwwroot\uploads\products\e916251f5c6642dea89fe1aa2fc7423a.jpg
 wwwroot\uploads\products\ef72d1d5964a45d281da36fe1ef3c4b0.jpg
+wwwroot\uploads\products\60de592683e64ff195abf20a95de9b37.jpeg
