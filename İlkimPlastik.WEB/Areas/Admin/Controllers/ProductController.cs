@@ -22,10 +22,12 @@ namespace ilkimPlastik.WEB.Areas.Admin.Controllers
         public async Task<IActionResult> Index(int? editId = null)
         {
             var list = await _db.Products.AsNoTracking()
-                .Include(x => x.Category)
-                .Include(x => x.SubCategory)
-                .OrderByDescending(x => x.Id)
-                .ToListAsync();
+     .Include(x => x.Category)
+     .Include(x => x.SubCategory)
+     .Include(x => x.ProductSizes)
+     .Include(x => x.ImageItems)
+     .OrderByDescending(x => x.Id)
+     .ToListAsync();
 
             Product? edit = null;
             if (editId.HasValue)

@@ -214,12 +214,16 @@
         overflow: visible;
     }
 }
-.productFilterBar {
+.productFilterWrap {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--bd);
+    background: #fff;
     display: grid;
-    grid-template-columns: 1fr 190px;
+    gap: 10px;
 }
 
-.productFilterBar select {
+.productSearchRow input {
+    width: 100%;
     height: 42px;
     border-radius: 14px;
     border: 1px solid var(--bd);
@@ -230,13 +234,33 @@
     font-size: 14px;
 }
 
-.productFilterBar select:focus {
+.productSelectRow {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.productSelectRow select {
+    width: 100%;
+    min-width: 0;
+    height: 42px;
+    border-radius: 14px;
+    border: 1px solid var(--bd);
+    padding: 0 12px;
+    outline: none;
+    background: #fff;
+    color: var(--text);
+    font-size: 14px;
+}
+
+.productSearchRow input:focus,
+.productSelectRow select:focus {
     border-color: rgba(93,18,210,.35);
     box-shadow: var(--focus);
 }
 
-@@media(max-width:760px){
-    .productFilterBar {
+@@media(max-width:520px) {
+    .productSelectRow {
         grid-template-columns: 1fr;
     }
 }
@@ -339,16 +363,32 @@
                 <a class="btn pri" href="/Admin/Product">+ Yeni Ürün</a>
             </div>
 
-           <div class="searchBar productFilterBar">
-    <input id="listSearch" placeholder="Ürün / model / barkod / kategori ara…" />
+           <div class="productFilterWrap">
+    <div class="productSearchRow">
+        <input id="listSearch" placeholder="Ürün / model / barkod / kategori ara…" />
+    </div>
 
-    <select id="categoryFilter">
-        <option value="">Tüm Kategoriler</option>
-        @foreach (var c in categories.OrderBy(x => x.Name))
-        {
-            <option value="@c.Name.ToLower()">@c.Name</option>
-        }
-    </select>
+    <div class="productSelectRow">
+        <select id="categoryFilter">
+            <option value="">Tüm Kategoriler</option>
+            @foreach (var c in categories.OrderBy(x => x.Name))
+            {
+                <option value="@c.Name.ToLower()">@c.Name</option>
+            }
+        </select>
+
+        <select id="statusFilter">
+            <option value="">Tüm Ürünler</option>
+            <option value="outofstock">Stok 0 Olanlar</option>
+            <option value="lowstock">Düşük Stok ≤ 5</option>
+            <option value="missingbarcode">Eksik Barkod</option>
+            <option value="missingmodelcode">Eksik Model Kodu</option>
+            <option value="missingprice">Fiyat ≤ 0</option>
+            <option value="noimage">Görseli Olmayanlar</option>
+            <option value="sale">İndirimli Ürünler</option>
+            <option value="featured">Öne Çıkan Ürünler</option>
+        </select>
+    </div>
 </div>
 
             <div class="groups">
@@ -370,9 +410,22 @@
                                 var catName = p.Category?.Name ?? "Kategori";
                                 var subName = p.SubCategory != null ? " • " + p.SubCategory.Name : "";
                                 var discounted = isSale ? Math.Round(p.Price * (100 - p.OfferRate) / 100m, 2) : p.Price;
+                                var totalStock = p.ProductSizes != null ? p.ProductSizes.Sum(x => x.StockCount) : 0;
+                                var hasImage = p.ImageItems != null && p.ImageItems.Any();
+                                var missingBarcode = string.IsNullOrWhiteSpace(p.Barcode);
+                                var missingModelCode = string.IsNullOrWhiteSpace(p.ModelCode);
+                                var missingPrice = p.Price <= 0;
+                                var isFeatured = p.IsFeatured;
 
-                                <div class="item @(isSale ? "sale" : "")"
+                               <div class="item @(isSale ? "sale" : "")"
      data-category="@catName.ToLower()"
+     data-stock="@totalStock"
+     data-sale="@(isSale ? "true" : "false")"
+     data-featured="@(isFeatured ? "true" : "false")"
+     data-has-image="@(hasImage ? "true" : "false")"
+     data-missing-barcode="@(missingBarcode ? "true" : "false")"
+     data-missing-modelcode="@(missingModelCode ? "true" : "false")"
+     data-missing-price="@(missingPrice ? "true" : "false")"
      data-search="@($"{p.Title} {p.ModelCode} {p.Barcode} {catName} {(p.SubCategory?.Name ?? "")}".ToLower())">
 
                                     <div class="t">
@@ -380,7 +433,32 @@
 
                                         <div class="meta">
                                             <span class="badge">@catName@subName</span>
-                                            <span class="badge">Barkod: @p.Barcode</span>
+                                            <span class="badge">Barkod: @(missingBarcode ? "Yok" : p.Barcode)</span>
+                                            <span class="badge">Stok: @totalStock</span>
+
+                                            @if (totalStock <= 0)
+                                            {
+                                                <span class="badge sale">Stok Yok</span>
+                                            }
+                                            else if (totalStock <= 5)
+                                            {
+                                                <span class="badge sale">Düşük Stok</span>
+                                            }
+
+                                            @if (missingBarcode)
+                                            {
+                                                <span class="badge sale">Barkod Eksik</span>
+                                            }
+
+                                            @if (missingModelCode)
+                                            {
+                                                <span class="badge sale">Model Kodu Eksik</span>
+                                            }
+
+                                            @if (missingPrice)
+                                            {
+                                                <span class="badge sale">Fiyat Hatalı</span>
+                                            }
 
                                             @if (isSale)
                                             {
@@ -411,7 +489,7 @@
                                         </div>
 
                                         <div class="mini" style="margin-top:10px">
-                                            Model: <b>@p.ModelCode</b> • ID: <b>#@p.Id</b>
+                                            Model: <b>@(missingModelCode ? "Yok" : p.ModelCode)</b> • ID: <b>#@p.Id</b>
                                         </div>
                                     </div>
 
@@ -818,25 +896,64 @@ function toggleGroup(el){
 /* Sol liste arama + kategori filtresi + seçimi koruma */
 const search = document.getElementById('listSearch');
 const categoryFilter = document.getElementById('categoryFilter');
+const statusFilter = document.getElementById('statusFilter');
 
 const FILTER_SEARCH_KEY = 'adminProductSearch';
 const FILTER_CATEGORY_KEY = 'adminProductCategory';
+const FILTER_STATUS_KEY = 'adminProductStatus';
 
 function filterProductList() {
     const q = (search?.value || '').trim().toLowerCase();
     const selectedCategory = (categoryFilter?.value || '').trim().toLowerCase();
+    const selectedStatus = (statusFilter?.value || '').trim().toLowerCase();
 
     sessionStorage.setItem(FILTER_SEARCH_KEY, q);
     sessionStorage.setItem(FILTER_CATEGORY_KEY, selectedCategory);
+    sessionStorage.setItem(FILTER_STATUS_KEY, selectedStatus);
 
     document.querySelectorAll('.item').forEach(it => {
         const s = it.getAttribute('data-search') || '';
         const cat = it.getAttribute('data-category') || '';
+        const stock = Number(it.getAttribute('data-stock') || 0);
+
+        const isSale = it.getAttribute('data-sale') === 'true';
+        const isFeatured = it.getAttribute('data-featured') === 'true';
+        const hasImage = it.getAttribute('data-has-image') === 'true';
+        const missingBarcode = it.getAttribute('data-missing-barcode') === 'true';
+        const missingModelCode = it.getAttribute('data-missing-modelcode') === 'true';
+        const missingPrice = it.getAttribute('data-missing-price') === 'true';
 
         const matchSearch = !q || s.includes(q);
         const matchCategory = !selectedCategory || cat === selectedCategory;
 
-        it.style.display = (matchSearch && matchCategory) ? '' : 'none';
+        let matchStatus = true;
+
+        if (selectedStatus === 'outofstock') {
+            matchStatus = stock <= 0;
+        }
+        else if (selectedStatus === 'lowstock') {
+            matchStatus = stock > 0 && stock <= 5;
+        }
+        else if (selectedStatus === 'missingbarcode') {
+            matchStatus = missingBarcode;
+        }
+        else if (selectedStatus === 'missingmodelcode') {
+            matchStatus = missingModelCode;
+        }
+        else if (selectedStatus === 'missingprice') {
+            matchStatus = missingPrice;
+        }
+        else if (selectedStatus === 'noimage') {
+    matchStatus = !hasImage;
+}
+        else if (selectedStatus === 'sale') {
+            matchStatus = isSale;
+        }
+        else if (selectedStatus === 'featured') {
+            matchStatus = isFeatured;
+        }
+
+        it.style.display = (matchSearch && matchCategory && matchStatus) ? '' : 'none';
     });
 
     document.querySelectorAll('.group').forEach(g => {
@@ -849,13 +966,16 @@ function filterProductList() {
 
 search?.addEventListener('input', filterProductList);
 categoryFilter?.addEventListener('change', filterProductList);
+statusFilter?.addEventListener('change', filterProductList);
 
 window.addEventListener('DOMContentLoaded', () => {
     const savedSearch = sessionStorage.getItem(FILTER_SEARCH_KEY) || '';
     const savedCategory = sessionStorage.getItem(FILTER_CATEGORY_KEY) || '';
+    const savedStatus = sessionStorage.getItem(FILTER_STATUS_KEY) || '';
 
     if (search) search.value = savedSearch;
     if (categoryFilter) categoryFilter.value = savedCategory;
+    if (statusFilter) statusFilter.value = savedStatus;
 
     filterProductList();
 });

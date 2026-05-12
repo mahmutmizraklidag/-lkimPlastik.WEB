@@ -226,7 +226,7 @@ wwwroot\lib\jquery\dist\jquery.js
 wwwroot\lib\jquery\dist\jquery.min.js
 wwwroot\lib\jquery\dist\jquery.min.map
 wwwroot\lib\jquery\LICENSE.txt
-wwwroot\images\aksesuar.png
+wwwroot\images\supurgehortumu.png
 wwwroot\uploads\products\144de53400b443bc95ec8c1e176d44e9.jpg
 wwwroot\uploads\products\413e1851483b48c8b3909f8d960c5cdc.jpg
 wwwroot\uploads\products\5bd75c5a048f4a35bbd7390e084643ee.jpg
@@ -366,7 +366,7 @@ wwwroot\images\deneme.jpg
 wwwroot\images\deneme.png
 wwwroot\images\emici.png
 wwwroot\images\havuz.png
-wwwroot\images\supurgehortumu.png
+wwwroot\images\aksesuar.png
 wwwroot\img\275378b7-f83d-41bf-9ba4-c0af5bf89f56_deneme.png
 wwwroot\img\d9ad1a81-7115-41cc-ab6f-932833a6cabd_dc5ee488-0b2e-4fbc-94b5-bf4769cd1ed8.png
 wwwroot\style.css
