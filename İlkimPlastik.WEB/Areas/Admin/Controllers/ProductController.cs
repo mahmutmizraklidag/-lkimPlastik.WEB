@@ -2,6 +2,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection.Metadata;
+using ClosedXML.Excel;
+
 
 namespace ilkimPlastik.WEB.Areas.Admin.Controllers
 {
@@ -44,6 +46,105 @@ namespace ilkimPlastik.WEB.Areas.Admin.Controllers
 
             await FillLookupViewBags();
             return View(list);
+        }
+
+        // ------------------------------ EXPORT EXCEL ------------------------------
+        [HttpGet]
+        public async Task<IActionResult> ExportToExcel()
+        {
+            var products = await _db.Products.AsNoTracking()
+                .Include(x => x.Category)
+                .Include(x => x.SubCategory)
+                .Include(x => x.ProductSizes)
+                .Include(x => x.ProductDevices)
+                .OrderBy(x => x.Category != null ? x.Category.Name : "")
+                .ThenBy(x => x.SubCategory != null ? x.SubCategory.Name : "")
+                .ThenBy(x => x.Title)
+                .ToListAsync();
+
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("Ürün Listesi");
+
+            // Başlıklar
+            worksheet.Cell(1, 1).Value = "Kategori";
+            worksheet.Cell(1, 2).Value = "Alt Kategori";
+            worksheet.Cell(1, 3).Value = "Ürün Adı";
+            worksheet.Cell(1, 4).Value = "Stok Bilgisi";
+            worksheet.Cell(1, 5).Value = "Uyumlu Olduğu Cihazlar";
+            worksheet.Cell(1, 6).Value = "Fiyat Bilgisi";
+
+            var headerRange = worksheet.Range(1, 1, 1, 6);
+            headerRange.Style.Font.Bold = true;
+            headerRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#5D12D2");
+            headerRange.Style.Font.FontColor = XLColor.White;
+            headerRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+            int row = 2;
+
+            foreach (var p in products)
+            {
+                var categoryName = p.Category?.Name ?? "-";
+                var subCategoryName = p.SubCategory?.Name ?? "-";
+
+                var totalStock = p.ProductSizes != null
+                    ? p.ProductSizes.Sum(x => x.StockCount)
+                    : 0;
+
+                var stockDetail = p.ProductSizes != null && p.ProductSizes.Any()
+                    ? $"Toplam: {totalStock} | " + string.Join(" / ", p.ProductSizes
+                        .OrderBy(x => x.Name)
+                        .Select(x => $"{x.Name}: {x.StockCount}"))
+                    : $"Toplam: {totalStock}";
+
+                var deviceText = p.ProductDevices != null && p.ProductDevices.Any()
+                    ? string.Join(", ", p.ProductDevices.OrderBy(x => x.Name).Select(x => x.Name))
+                    : "-";
+
+                string priceText;
+
+                if (p.OfferRate > 0)
+                {
+                    var discountedPrice = Math.Round(p.Price * (100 - p.OfferRate) / 100m, 2);
+                    priceText = $"Liste: ₺{p.Price:0.00} | İndirim: %{p.OfferRate} | Satış: ₺{discountedPrice:0.00}";
+                }
+                else
+                {
+                    priceText = $"₺{p.Price:0.00}";
+                }
+
+                worksheet.Cell(row, 1).Value = categoryName;
+                worksheet.Cell(row, 2).Value = subCategoryName;
+                worksheet.Cell(row, 3).Value = p.Title ?? "-";
+                worksheet.Cell(row, 4).Value = stockDetail;
+                worksheet.Cell(row, 5).Value = deviceText;
+                worksheet.Cell(row, 6).Value = priceText;
+
+                row++;
+            }
+
+            worksheet.Columns().AdjustToContents();
+
+            // Uzun cihaz/stok metinleri için satır içinde kırılım
+            worksheet.Column(4).Width = 35;
+            worksheet.Column(5).Width = 45;
+            worksheet.Column(6).Width = 35;
+
+            worksheet.Column(4).Style.Alignment.WrapText = true;
+            worksheet.Column(5).Style.Alignment.WrapText = true;
+            worksheet.Column(6).Style.Alignment.WrapText = true;
+
+            worksheet.Rows().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+
+            var fileName = $"urun-listesi-{DateTime.Now:dd-MM-yyyy-HH-mm}.xlsx";
+
+            return File(
+                stream.ToArray(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                fileName
+            );
         }
 
         // ------------------------------ LOOKUPS ------------------------------

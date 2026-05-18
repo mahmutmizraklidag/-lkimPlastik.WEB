@@ -17,6 +17,7 @@ build_property._SupportedPlatformList = Linux,macOS,Windows
 build_property._SupportedPlatformList = Linux,macOS,Windows
 build_property.TargetFrameworkIdentifier = .NETCoreApp
 build_property.TargetFrameworkVersion = v8.0
+build_property.EntryPointFilePath = 
 build_property.RootNamespace = ilkimPlastik.WEB
 build_property.RootNamespace = ilkimPlastik.WEB
 build_property.ProjectDir = C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\

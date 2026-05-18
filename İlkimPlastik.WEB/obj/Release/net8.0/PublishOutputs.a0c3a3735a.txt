@@ -8,6 +8,11 @@ C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Relea
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Release\net8.0\PubTmp\Out\Azure.Core.dll
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Release\net8.0\PubTmp\Out\Azure.Identity.dll
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Release\net8.0\PubTmp\Out\BouncyCastle.Cryptography.dll
+C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Release\net8.0\PubTmp\Out\ClosedXML.dll
+C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Release\net8.0\PubTmp\Out\ClosedXML.Parser.dll
+C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Release\net8.0\PubTmp\Out\DocumentFormat.OpenXml.dll
+C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Release\net8.0\PubTmp\Out\DocumentFormat.OpenXml.Framework.dll
+C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Release\net8.0\PubTmp\Out\ExcelNumberFormat.dll
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Release\net8.0\PubTmp\Out\Humanizer.dll
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Release\net8.0\PubTmp\Out\MailKit.dll
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Release\net8.0\PubTmp\Out\Microsoft.AspNetCore.Razor.Language.dll
@@ -69,6 +74,8 @@ C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Relea
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Release\net8.0\PubTmp\Out\NuGet.Protocol.dll
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Release\net8.0\PubTmp\Out\NuGet.Versioning.dll
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Release\net8.0\PubTmp\Out\OpenHtmlToPdf.dll
+C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Release\net8.0\PubTmp\Out\RBush.dll
+C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Release\net8.0\PubTmp\Out\SixLabors.Fonts.dll
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Release\net8.0\PubTmp\Out\System.CodeDom.dll
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Release\net8.0\PubTmp\Out\System.Composition.AttributedModel.dll
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Release\net8.0\PubTmp\Out\System.Composition.Convention.dll
@@ -77,6 +84,7 @@ C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Relea
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Release\net8.0\PubTmp\Out\System.Composition.TypedParts.dll
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Release\net8.0\PubTmp\Out\System.Configuration.ConfigurationManager.dll
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Release\net8.0\PubTmp\Out\System.IdentityModel.Tokens.Jwt.dll
+C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Release\net8.0\PubTmp\Out\System.IO.Packaging.dll
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Release\net8.0\PubTmp\Out\System.Memory.Data.dll
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Release\net8.0\PubTmp\Out\System.Reflection.MetadataLoadContext.dll
 C:\Users\IdeioYazilim2\source\repos\ilkimPlastik.WEB\İlkimPlastik.WEB\obj\Release\net8.0\PubTmp\Out\System.Runtime.Caching.dll

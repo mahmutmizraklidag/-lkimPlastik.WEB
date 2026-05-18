@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ilkimPlastik.WEB")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b0dde369d89a8d1101cdae1750c6c5798973997a")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+615f02f78642b1614e99fe6ef3a522217c8a747e")]
 [assembly: System.Reflection.AssemblyProductAttribute("ilkimPlastik.WEB")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ilkimPlastik.WEB")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

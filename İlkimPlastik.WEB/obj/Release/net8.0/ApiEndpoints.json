@@ -1,0 +1,134 @@
+[
+  {
+    "ContainingType": "ilkimPlastik.WEB.APIController.MobileController",
+    "Method": "ChangeOrderStatus",
+    "RelativePath": "api/Mobile/change/order/status",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "model",
+        "Type": "ilkimPlastik.WEB.APIController.ChangeStatusModel",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ilkimPlastik.WEB.APIController.MobileController",
+    "Method": "GetMessages",
+    "RelativePath": "api/Mobile/francheses",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ilkimPlastik.WEB.APIController.MobileController",
+    "Method": "DeleteMessage",
+    "RelativePath": "api/Mobile/francheses/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ilkimPlastik.WEB.APIController.MobileController",
+    "Method": "Login",
+    "RelativePath": "api/Mobile/login",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "model",
+        "Type": "ilkimPlastik.WEB.APIController.LoginModel",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ilkimPlastik.WEB.APIController.MobileController",
+    "Method": "GetOrders",
+    "RelativePath": "api/Mobile/orders",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ilkimPlastik.WEB.APIController.MobileController",
+    "Method": "GetOrderById",
+    "RelativePath": "api/Mobile/orders/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ilkimPlastik.WEB.APIController.MobileController",
+    "Method": "CancelPayment",
+    "RelativePath": "api/Mobile/orders/cancel",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "model",
+        "Type": "ilkimPlastik.WEB.APIController.CancelModel",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ilkimPlastik.WEB.APIController.MobileController",
+    "Method": "UpdateCargo",
+    "RelativePath": "api/Mobile/orders/cargo",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "model",
+        "Type": "ilkimPlastik.WEB.APIController.CargoUpdateModel",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ilkimPlastik.WEB.APIController.MobileController",
+    "Method": "UserInfo",
+    "RelativePath": "api/Mobile/user/info",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "notificationToken",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  }
+]
